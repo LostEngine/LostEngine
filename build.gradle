@@ -66,8 +66,14 @@ node {
 }
 
 tasks.register('buildNpm', NpmTask) {
+    dependsOn installNpm
     workingDir = file('webeditor')
     args = ['run', 'build']
+}
+
+tasks.register('installNpm', NpmTask) {
+    workingDir = file('webeditor')
+    args = ['install']
 }
 
 tasks.processResources {
