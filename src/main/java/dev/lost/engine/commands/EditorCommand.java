@@ -35,6 +35,15 @@ public class EditorCommand implements BasicCommand {
                                                                                     WebServer.getToken()
                                                                             )
                                                                     )
+                                                    ),
+                                                    DialogBody.plainMessage(
+                                                            Component.text("Read-only link\uD83E\uDC55")
+                                                                    .clickEvent(
+                                                                            ClickEvent.openUrl(LostEngine.getResourcePackUrl() +
+                                                                                    "?token=" +
+                                                                                    WebServer.getReadOnlyToken()
+                                                                            )
+                                                                    )
                                                     )
                                             )
                                     )
@@ -48,7 +57,12 @@ public class EditorCommand implements BasicCommand {
                     "Web editor link: " +
                             LostEngine.getResourcePackUrl() +
                             "?token=" +
-                            WebServer.getToken()
+                            WebServer.getToken() +
+                            "\n" +
+                            "Read-only link: " +
+                            LostEngine.getResourcePackUrl() +
+                            "?token=" +
+                            WebServer.getReadOnlyToken()
             );
         }
     }

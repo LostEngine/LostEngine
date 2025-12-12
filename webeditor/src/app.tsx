@@ -104,10 +104,11 @@ export function App() {
         //files: ["loading..."],
         files: [["default", ["assets", ["textures", ["block", "block.png", "ore.png", "tnt.png"], ["item", "axe.png", "baguette.png", "hoe.png", "ingot.png", "pickaxe.png", "shovel.png", "sword.png",],],], "items.yml",],],
     });
+    const [readonly, setReadonly] = useState(false);
     const [token] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
         const text = params.get("token");
-        console.log(text);
+        if (text?.endsWith("_readonly")) setReadonly(true);
         return text;
     });
     const [openedFile, setOpenedFile] = useState<string | null>(null);
@@ -185,6 +186,7 @@ export function App() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (readonly) return;
             if (e.ctrlKey && e.key === "s") {
                 e.preventDefault();
                 if (openedFile !== null && fileContent !== null && token !== null) {
@@ -215,8 +217,13 @@ export function App() {
         <>
             <header
                 className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between p-4 bg-blue-200 dark:bg-blue-800">
-                <div className="flex items-center gap-4">
-                    <TextHoverEffect text="LostEngine"/>
+                <div className="flex items-center">
+                    <div>
+                        <TextHoverEffect text="LostEngine"/>
+                    </div>
+                    <div className="-ml-18 pt-2">
+                        {readonly && <span className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
+                    </div>
                 </div>
                 <div className="flex items-center gap-4">
                     <Button
@@ -277,11 +284,13 @@ export function App() {
                                         <DropdownMenuContent className="w-40" align="end">
                                             <DropdownMenuGroup>
                                                 <DropdownMenuItem
+                                                    disabled={readonly}
                                                     onSelect={() => handleNewTextFileClick()}
                                                 >
                                                     New Text File
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
+                                                    disabled={readonly}
                                                     onSelect={() => setFileUploadDialogOpen(true)}
                                                 >
                                                     Upload File
@@ -305,6 +314,7 @@ export function App() {
                                             fileInput.click();
                                             document.body.removeChild(fileInput);
                                         }}
+                                        disabled={readonly}
                                     >
                                         <FolderPlus/>
                                     </Button>
@@ -330,6 +340,7 @@ export function App() {
                                                 setNewFilePath={setNewFilePath}
                                                 setFileNameDialogOpen={setFileNameDialogOpen}
                                                 handleNewTextFile={handleNewTextFile}
+                                                readonly={readonly}
                                             />
                                         ))}
                                     </SidebarMenu>
@@ -377,6 +388,7 @@ export function App() {
                                                 reload,
                                             )
                                         }
+                                        disabled={readonly}
                                     >
                                         <Upload/> Upload File
                                     </Button>
@@ -561,6 +573,7 @@ function Tree({
                   setFileNameDialogOpen,
                   newFilePath,
                   handleNewTextFile,
+                  readonly
               }: {
     item: TreeItem;
     parentPath?: string;
@@ -571,6 +584,7 @@ function Tree({
     setFileNameDialogOpen: (open: boolean) => void;
     newFilePath: string;
     handleNewTextFile: () => void;
+    readonly: boolean;
 }) {
     const [rawName, ...items] = Array.isArray(item) ? item : [item];
     const name: string = typeof rawName === "string" ? rawName : "";
@@ -628,10 +642,10 @@ function Tree({
 
                     <ContextMenuContent>
                         <ContextMenuItem onClick={handleOpen}>Open</ContextMenuItem>
-                        <ContextMenuItem onClick={handleNewTextFileClick}>
+                        <ContextMenuItem onClick={handleNewTextFileClick} disabled={readonly}>
                             New Text File
                         </ContextMenuItem>
-                        <ContextMenuItem onClick={handleDeleteClick} variant="destructive">
+                        <ContextMenuItem onClick={handleDeleteClick} disabled={readonly} variant="destructive">
                             Delete File
                         </ContextMenuItem>
                     </ContextMenuContent>
@@ -677,10 +691,10 @@ function Tree({
                     </CollapsibleTrigger>
 
                     <ContextMenuContent>
-                        <ContextMenuItem onClick={handleNewTextFileClick}>
+                        <ContextMenuItem onClick={handleNewTextFileClick} disabled={readonly}>
                             New Text File
                         </ContextMenuItem>
-                        <ContextMenuItem onClick={handleDeleteClick} variant="destructive">
+                        <ContextMenuItem onClick={handleDeleteClick} disabled={readonly} variant="destructive">
                             Delete Folder
                         </ContextMenuItem>
                     </ContextMenuContent>
@@ -700,6 +714,7 @@ function Tree({
                                 newFilePath={newFilePath}
                                 setFileNameDialogOpen={setFileNameDialogOpen}
                                 setNewFilePath={setNewFilePath}
+                                readonly={readonly}
                             />
                         ))}
                     </SidebarMenuSub>

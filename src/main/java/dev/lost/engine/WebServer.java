@@ -23,6 +23,8 @@ public class WebServer {
     private static HttpServer server;
     @Getter
     private static final String token;
+    @Getter
+    static final String readOnlyToken;
 
     static {
         // 32 alphanumeric (A-Z+a-z) characters
@@ -33,6 +35,13 @@ public class WebServer {
             sb.append(charset.charAt(random.nextInt(charset.length())));
         }
         token = sb.toString();
+
+        sb = new StringBuilder(32);
+        for (int i = 0; i < 32; i++) {
+            sb.append(charset.charAt(random.nextInt(charset.length())));
+        }
+        sb.append("_readonly");
+        readOnlyToken = sb.toString();
     }
 
     public static void start(int port) throws IOException {
@@ -75,9 +84,15 @@ public class WebServer {
         String query = exchange.getRequestURI().getQuery();
         String token = getToken(query);
 
-        if (token == null || !token.equals(WebServer.token)) {
-            sendResponse(exchange, 403, "Forbidden", "text/html");
-            return;
+        boolean isReadOnlyToken;
+        if (token != null && token.equals(readOnlyToken)) {
+            isReadOnlyToken = true;
+        } else {
+            isReadOnlyToken = false;
+            if (token == null || !token.equals(WebServer.token)) {
+                sendResponse(exchange, 403, "Forbidden", "text/html");
+                return;
+            }
         }
 
         if (path.equals("/api/status") && method.equals("GET")) {
@@ -135,6 +150,10 @@ public class WebServer {
         }
 
         if (path.equals("/api/upload_resource") && method.equals("POST")) {
+            if (isReadOnlyToken) {
+                sendResponse(exchange, 403, "Forbidden", "text/html");
+                return;
+            }
             String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
             if (contentType == null || !contentType.startsWith("multipart/form-data")) {
                 sendResponse(exchange, 400, "{\"error\": \"Content-Type must be multipart/form-data\"}", "application/json");
@@ -192,6 +211,10 @@ public class WebServer {
         }
 
         if (path.equals("/api/delete_resource") && method.equals("DELETE")) {
+            if (isReadOnlyToken) {
+                sendResponse(exchange, 403, "Forbidden", "text/html");
+                return;
+            }
             String rawPath = extractQueryParam(query, "path");
 
             if (rawPath == null || rawPath.isEmpty()) {
@@ -251,7 +274,7 @@ public class WebServer {
         String query = exchange.getRequestURI().getQuery();
         String token = getToken(query);
 
-        if (token == null || !token.equals(WebServer.token)) {
+        if (token == null || (!token.equals(WebServer.token) && !token.equals(readOnlyToken))) {
             sendResponse(exchange, 403, "Forbidden", "text/html");
             return;
         }

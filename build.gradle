@@ -66,8 +66,14 @@ node {
 }
 
 tasks.register('buildNpm', NpmTask) {
+    dependsOn installNpm
     workingDir = file('webeditor')
     args = ['run', 'build']
+}
+
+tasks.register('installNpm', NpmTask) {
+    workingDir = file('webeditor')
+    args = ['install']
 }
 
 tasks.processResources {
@@ -89,10 +95,6 @@ processResources {
 
 tasks.shadowJar {
     archiveClassifier.set("")
-    exclude 'com/google/**'
-    exclude 'it/unimi/dsi/fastutil/**'
-    relocate 'org.apache', 'dev.lost.libs.apache'
-    // TODO: Remove apache commons
     minimize()
     from("LICENSE.MD") {
         into("META-INF")
