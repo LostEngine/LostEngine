@@ -21,6 +21,7 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.item.component.Consumables;
 import net.minecraft.world.item.component.DamageResistant;
+import net.minecraft.world.item.component.UseCooldown;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -195,6 +196,25 @@ public class ResourceInjector {
 
         if (itemSection.getBoolean("glowing", false)) {
             components.put(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+        }
+
+        if (itemSection.getBoolean("enchantable", false)) {
+            components.put(DataComponents.ENCHANTABLE, true);
+        }
+
+        if (itemSection.contains("use_cooldown")) {
+            float useCooldown = (float) itemSection.getDouble("use_cooldown.use_cooldown", 0.0F);
+
+            String groupString = itemSection.getString("use_cooldown.group");
+            Optional<ResourceLocation> group;
+            if (groupString == null) {
+                group = Optional.empty();
+            } else {
+                String[] splitString = groupString.split(":");
+                group = Optional.of(ResourceLocation.fromNamespaceAndPath(splitString[0], splitString[1]));
+            }
+
+            components.put(DataComponents.USE_COOLDOWN, new UseCooldown(useCooldown, group));
         }
     }
 
