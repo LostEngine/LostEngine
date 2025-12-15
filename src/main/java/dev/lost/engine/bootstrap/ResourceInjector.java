@@ -45,11 +45,11 @@ public class ResourceInjector {
 
         Stream<Class<? extends ComponentProperty>> propertyClasses = Stream.of(
                 EnchantableProperty.class,
+                EnchantmentGlintOverrideProperty.class,
                 FireResistantProperty.class,
                 FoodProperty.class,
-                GlowingProperty.class,
                 HideTooltipProperty.class, // Must be before TooltipDisplayProperty
-                MaxDurabilityProperty.class,
+                MaxDamageProperty.class,
                 MaxStackSizeProperty.class,
                 RarityProperty.class,
                 TooltipDisplayProperty.class,
