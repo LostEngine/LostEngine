@@ -1,42 +1,30 @@
 package dev.lost.engine.bootstrap;
 
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
-import dev.lost.engine.bootstrap.components.ComponentProperty;
-import dev.lost.engine.bootstrap.components.EnchantableProperty;
-import dev.lost.engine.bootstrap.components.GlowingProperty;
+import dev.lost.engine.bootstrap.components.*;
 import dev.lost.engine.customblocks.BlockInjector;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
-import dev.lost.engine.utils.EnumUtils;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
-import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.Unit;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
-import net.minecraft.world.item.component.Consumables;
-import net.minecraft.world.item.component.DamageResistant;
-import net.minecraft.world.item.component.TooltipDisplay;
-import net.minecraft.world.item.component.UseCooldown;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Stream;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -57,7 +45,16 @@ public class ResourceInjector {
 
         Stream<Class<? extends ComponentProperty>> propertyClasses = Stream.of(
                 EnchantableProperty.class,
-                GlowingProperty.class
+                FireResistantProperty.class,
+                FoodProperty.class,
+                GlowingProperty.class,
+                HideTooltipProperty.class, // Must be before TooltipDisplayProperty
+                MaxDurabilityProperty.class,
+                MaxStackSizeProperty.class,
+                RarityProperty.class,
+                TooltipDisplayProperty.class,
+                UnbreakableProperty.class,
+                UseCooldownProperty.class
         );
 
         List<ComponentProperty> instances = propertyClasses
@@ -185,78 +182,6 @@ public class ResourceInjector {
     private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
         for (ComponentProperty property : propertyClassInstances) {
             property.applyComponent(context, itemSection, components);
-        }
-
-        if (itemSection.contains("food")) {
-            int nutrition = itemSection.getInt("food.nutrition", 6);
-            float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
-            boolean canAlwaysEat = itemSection.getBoolean("food.can_always_eat", false);
-            FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier, canAlwaysEat);
-            components.put(DataComponents.FOOD, foodProperties);
-            components.put(DataComponents.CONSUMABLE, Consumables.DEFAULT_FOOD);
-        }
-
-        if (itemSection.getBoolean("fire_resistant", false)) {
-            components.put(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE));
-        }
-
-        if (itemSection.contains("max_durability")) {
-            int maxDurability = itemSection.getInt("max_durability");
-            components.put(DataComponents.MAX_DAMAGE, maxDurability);
-        }
-
-        if (itemSection.contains("max_stack_size")) {
-            int maxStackSize = itemSection.getInt("max_stack_size");
-            components.put(DataComponents.MAX_STACK_SIZE, maxStackSize);
-        }
-
-        if (itemSection.getBoolean("unbreakable", false)) {
-            components.put(DataComponents.UNBREAKABLE, Unit.INSTANCE);
-        }
-
-        if (itemSection.contains("rarity")) {
-            String rarityString = itemSection.getString("rarity");
-            Optional<Rarity> rarity = EnumUtils.match(rarityString, Rarity.class);
-            if (rarity.isPresent()) {
-                components.put(DataComponents.RARITY, rarity.get());
-            } else {
-                context.getLogger().warn("Message TODO");
-            }
-        }
-
-        if (itemSection.contains("use_cooldown")) {
-            float useCooldown = (float) itemSection.getDouble("use_cooldown.use_cooldown", 0.0F);
-
-            String groupString = itemSection.getString("use_cooldown.group");
-            Optional<ResourceLocation> group = groupString == null ? Optional.empty() : Optional.of(ResourceLocation.parse(groupString));
-
-            components.put(DataComponents.USE_COOLDOWN, new UseCooldown(useCooldown, group));
-        }
-
-        boolean hideTooltip = itemSection.getBoolean("hide_tooltip", false);
-        if (hideTooltip) {
-            components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(hideTooltip, LinkedHashSet.newLinkedHashSet(0)));
-        }
-
-        if (itemSection.contains("tooltip_display") && !hideTooltip) {
-            List<String> tooltipList = itemSection.getStringList("tooltip_display");
-            SequencedSet<DataComponentType<?>> tooltipTypes = new LinkedHashSet<>();
-            for (String s : tooltipList) {
-                try {
-                    ResourceLocation id = ResourceLocation.parse(s);
-                    Holder.Reference<DataComponentType<?>> typeReference = BuiltInRegistries.DATA_COMPONENT_TYPE.get(id).orElse(null);
-                    if (typeReference == null) {
-                        context.getLogger().warn("Unknown data component: {} for item", s);
-                        continue;
-                    }
-
-                    tooltipTypes.add(typeReference.value());
-                } catch (Exception e) {
-                    context.getLogger().warn("Invalid data component id: {} for item", s);
-                }
-            }
-
-            components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(false, tooltipTypes));
         }
     }
 
