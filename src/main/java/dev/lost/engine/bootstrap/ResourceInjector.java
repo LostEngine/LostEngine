@@ -1,6 +1,9 @@
 package dev.lost.engine.bootstrap;
 
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
+import dev.lost.engine.bootstrap.components.ComponentProperty;
+import dev.lost.engine.bootstrap.components.EnchantableProperty;
+import dev.lost.engine.bootstrap.components.GlowingProperty;
 import dev.lost.engine.customblocks.BlockInjector;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
@@ -8,6 +11,8 @@ import dev.lost.engine.utils.EnumUtils;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -30,12 +35,15 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.stream.Stream;
 
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>();
+    static ObjectList<ComponentProperty> propertyClassInstances = new ObjectArrayList<>();
 
     static {
         toolMaterials.putAll(Map.of(
@@ -46,6 +54,24 @@ public class ResourceInjector {
                 "GOLD", ToolMaterial.GOLD,
                 "NETHERITE", ToolMaterial.NETHERITE
         ));
+
+        Stream<Class<? extends ComponentProperty>> propertyClasses = Stream.of(
+                EnchantableProperty.class,
+                GlowingProperty.class
+        );
+
+        List<ComponentProperty> instances = propertyClasses
+                .map(clazz -> {
+                    try {
+                        return (ComponentProperty) clazz.getDeclaredConstructor().newInstance();
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                             NoSuchMethodException e) {
+                        throw new RuntimeException("Failed to instantiate component property: " + clazz.getSimpleName(), e);
+                    }
+                })
+                .toList();
+
+        propertyClassInstances.addAll(instances);
     }
 
     public static void injectResources(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator) throws Exception {
@@ -157,6 +183,10 @@ public class ResourceInjector {
     }
 
     private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
+        for (ComponentProperty property : propertyClassInstances) {
+            property.applyComponent(context, itemSection, components);
+        }
+
         if (itemSection.contains("food")) {
             int nutrition = itemSection.getInt("food.nutrition", 6);
             float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
@@ -192,14 +222,6 @@ public class ResourceInjector {
             } else {
                 context.getLogger().warn("Message TODO");
             }
-        }
-
-        if (itemSection.getBoolean("glowing", false)) {
-            components.put(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
-        }
-
-        if (itemSection.getBoolean("enchantable", false)) {
-            components.put(DataComponents.ENCHANTABLE, true);
         }
 
         if (itemSection.contains("use_cooldown")) {
