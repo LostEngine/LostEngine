@@ -17,6 +17,6 @@ public class FireResistantProperty implements ComponentProperty {
         if (!itemSection.getBoolean("fire_resistant", false))
             return;
 
-        components.put(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE));
+        components.put(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE)); // TODO: DamageResistantProperty & Remove FireResistantProperty
     }
 }
