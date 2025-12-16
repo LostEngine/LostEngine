@@ -9,10 +9,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 
 @SuppressWarnings("UnstableApiUsage")
-public class EnchantmentGlintOverrideProperty implements ComponentProperty {
+public class GlowingProperty implements ComponentProperty {
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (!itemSection.getBoolean("enchantment_glint_override", false))
+        if (!itemSection.getBoolean("glowing", false))
             return;
 
         components.put(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);

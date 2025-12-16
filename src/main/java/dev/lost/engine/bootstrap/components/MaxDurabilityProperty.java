@@ -9,13 +9,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 
 @SuppressWarnings("UnstableApiUsage")
-public class MaxDamageProperty implements ComponentProperty {
+public class MaxDurabilityProperty implements ComponentProperty {
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (!itemSection.contains("max_damage"))
+        if (!itemSection.contains("max_durability"))
             return;
 
-        int maxDamage = itemSection.getInt("max_damage");
-        components.put(DataComponents.MAX_DAMAGE, maxDamage);
+        int maxDurability = itemSection.getInt("max_durability");
+        components.put(DataComponents.MAX_DAMAGE, maxDurability);
     }
 }
