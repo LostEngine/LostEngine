@@ -16,7 +16,10 @@ public class MaxStackSizeProperty implements ComponentProperty {
             return;
 
         int maxStackSize = itemSection.getInt("max_stack_size");
-        if (maxStackSize < 1 || maxStackSize > 99) context.getLogger().warn("max_stack_size must be within 1 and 99 for item: {}", itemSection.getName());
+        if (maxStackSize < 1 || maxStackSize > 99) {
+            context.getLogger().warn("max_stack_size must be within 1 and 99 for item: {}", itemSection.getName());
+            return;
+        }
         components.put(DataComponents.MAX_STACK_SIZE, maxStackSize);
     }
 }
