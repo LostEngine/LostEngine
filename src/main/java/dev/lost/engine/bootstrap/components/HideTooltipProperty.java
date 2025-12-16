@@ -17,7 +17,6 @@ public class HideTooltipProperty implements ComponentProperty {
         if (!itemSection.getBoolean("hide_tooltip", false))
             return;
 
-        LinkedHashSet<DataComponentType<?>> emptySet = LinkedHashSet.newLinkedHashSet(0);
-        components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(true, emptySet));
+        components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(true, LinkedHashSet.newLinkedHashSet(0)));
     }
 }
