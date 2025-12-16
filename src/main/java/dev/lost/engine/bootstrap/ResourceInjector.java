@@ -1,40 +1,37 @@
 package dev.lost.engine.bootstrap;
 
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
+import dev.lost.engine.bootstrap.components.*;
 import dev.lost.engine.customblocks.BlockInjector;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
-import dev.lost.engine.utils.EnumUtils;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.Unit;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
-import net.minecraft.world.item.component.Consumables;
-import net.minecraft.world.item.component.DamageResistant;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Stream;
 
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>();
+    static ObjectList<ComponentProperty> propertyClassInstances = new ObjectArrayList<>();
 
     static {
         toolMaterials.putAll(Map.of(
@@ -45,6 +42,33 @@ public class ResourceInjector {
                 "GOLD", ToolMaterial.GOLD,
                 "NETHERITE", ToolMaterial.NETHERITE
         ));
+
+        Stream<Class<? extends ComponentProperty>> propertyClasses = Stream.of(
+                EnchantableProperty.class,
+                EnchantmentGlintOverrideProperty.class,
+                FireResistantProperty.class,
+                FoodProperty.class,
+                HideTooltipProperty.class, // Must be before TooltipDisplayProperty
+                MaxDamageProperty.class,
+                MaxStackSizeProperty.class,
+                RarityProperty.class,
+                TooltipDisplayProperty.class,
+                UnbreakableProperty.class,
+                UseCooldownProperty.class
+        );
+
+        List<ComponentProperty> instances = propertyClasses
+                .map(clazz -> {
+                    try {
+                        return (ComponentProperty) clazz.getDeclaredConstructor().newInstance();
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                             NoSuchMethodException e) {
+                        throw new RuntimeException("Failed to instantiate component property: " + clazz.getSimpleName(), e);
+                    }
+                })
+                .toList();
+
+        propertyClassInstances.addAll(instances);
     }
 
     public static void injectResources(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator) throws Exception {
@@ -76,7 +100,7 @@ public class ResourceInjector {
             float attackDamageBonus = (float) materialSection.getDouble("attack_damage_bonus", 0.0);
             int enchantmentValue = materialSection.getInt("enchantment_value", 15);
             String repairItem = materialSection.getString("repair_item", null);
-            TagKey<Item> repairItems = TagKey.create(Registries.ITEM, ResourceLocation.parse(key.toLowerCase() + "_tool_materials"));
+            TagKey<Item> repairItems = TagKey.create(Registries.ITEM, Identifier.parse(key.toLowerCase() + "_tool_materials"));
             dataPackGenerator.addToolMaterial(repairItems.location().getPath(), repairItem);
             ToolMaterial baseMaterial = getOrThrow(toolMaterials, base, "Invalid base material: " + base);
 
@@ -156,45 +180,8 @@ public class ResourceInjector {
     }
 
     private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
-        if (itemSection.contains("food")) {
-            int nutrition = itemSection.getInt("food.nutrition", 6);
-            float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
-            boolean canAlwaysEat = itemSection.getBoolean("food.can_always_eat", false);
-            FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier, canAlwaysEat);
-            components.put(DataComponents.FOOD, foodProperties);
-            components.put(DataComponents.CONSUMABLE, Consumables.DEFAULT_FOOD);
-        }
-
-        if (itemSection.getBoolean("fire_resistant", false)) {
-            components.put(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE));
-        }
-
-        if (itemSection.contains("max_durability")) {
-            int maxDurability = itemSection.getInt("max_durability");
-            components.put(DataComponents.MAX_DAMAGE, maxDurability);
-        }
-
-        if (itemSection.contains("max_stack_size")) {
-            int maxStackSize = itemSection.getInt("max_stack_size");
-            components.put(DataComponents.MAX_STACK_SIZE, maxStackSize);
-        }
-
-        if (itemSection.getBoolean("unbreakable", false)) {
-            components.put(DataComponents.UNBREAKABLE, Unit.INSTANCE);
-        }
-
-        if (itemSection.contains("rarity")) {
-            String rarityString = itemSection.getString("rarity");
-            Optional<Rarity> rarity = EnumUtils.match(rarityString, Rarity.class);
-            if (rarity.isPresent()) {
-                components.put(DataComponents.RARITY, rarity.get());
-            } else {
-                context.getLogger().warn("Message TODO");
-            }
-        }
-
-        if (itemSection.getBoolean("glowing", false)) {
-            components.put(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+        for (ComponentProperty property : propertyClassInstances) {
+            property.applyComponent(context, itemSection, components);
         }
     }
 

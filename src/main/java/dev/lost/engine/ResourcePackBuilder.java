@@ -15,7 +15,7 @@ import dev.lost.furnace.resourcepack.ResourcePack;
 import dev.lost.furnace.utils.PngOptimizer;
 import net.kyori.adventure.key.Key;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.intellij.lang.annotations.Pattern;
@@ -115,7 +115,7 @@ public class ResourcePackBuilder {
                                     Key.key("lost_engine", textureName)
                             );
                             createItemFile(resourcePack, "assets/lost_engine/items/" + key + ".json", "lost_engine:block/" + key);
-                            ResourceLocation resourceLocation = ResourceLocation.parse("lost_engine:" + key);
+                            Identifier resourceLocation = Identifier.parse("lost_engine:" + key);
                             if (BuiltInRegistries.BLOCK.containsKey(resourceLocation)) {
                                 Block block = BuiltInRegistries.BLOCK.getValue(resourceLocation);
                                 if (block instanceof CustomBlock customBlock) {
