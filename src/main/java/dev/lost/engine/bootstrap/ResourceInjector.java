@@ -8,10 +8,8 @@ import dev.lost.engine.utils.EnumUtils;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.DamageTypeTags;
@@ -23,8 +21,6 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.item.component.Consumables;
 import net.minecraft.world.item.component.DamageResistant;
-import net.minecraft.world.item.component.TooltipDisplay;
-import net.minecraft.world.item.component.UseCooldown;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -196,45 +192,6 @@ public class ResourceInjector {
 
         if (itemSection.getBoolean("glowing", false)) {
             components.put(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
-        }
-
-        if (itemSection.getBoolean("enchantable", false)) {
-            components.put(DataComponents.ENCHANTABLE, true);
-        }
-
-        if (itemSection.contains("use_cooldown")) {
-            float useCooldown = (float) itemSection.getDouble("use_cooldown.use_cooldown", 0.0F);
-
-            String groupString = itemSection.getString("use_cooldown.group");
-            Optional<Identifier> group = groupString == null ? Optional.empty() : Optional.of(Identifier.parse(groupString));
-
-            components.put(DataComponents.USE_COOLDOWN, new UseCooldown(useCooldown, group));
-        }
-
-        boolean hideTooltip = itemSection.getBoolean("hide_tooltip", false);
-        if (hideTooltip) {
-            components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(hideTooltip, LinkedHashSet.newLinkedHashSet(0)));
-        }
-
-        if (itemSection.contains("tooltip_display") && !hideTooltip) {
-            List<String> tooltipList = itemSection.getStringList("tooltip_display");
-            SequencedSet<DataComponentType<?>> tooltipTypes = new LinkedHashSet<>();
-            for (String s : tooltipList) {
-                try {
-                    Identifier id = Identifier.parse(s);
-                    Holder.Reference<DataComponentType<?>> typeReference = BuiltInRegistries.DATA_COMPONENT_TYPE.get(id).orElse(null);
-                    if (typeReference == null) {
-                        context.getLogger().warn("Unknown data component: {} for item", s);
-                        continue;
-                    }
-
-                    tooltipTypes.add(typeReference.value());
-                } catch (Exception e) {
-                    context.getLogger().warn("Invalid data component id: {} for item", s);
-                }
-            }
-
-            components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(false, tooltipTypes));
         }
     }
 
