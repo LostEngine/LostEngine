@@ -18,10 +18,12 @@ public class UseCooldownProperty implements ComponentProperty {
         if (!itemSection.contains("use_cooldown"))
             return;
 
-        float useCooldown = (float) itemSection.getDouble("use_cooldown.use_cooldown", 0.0F);
+        float useCooldown = (float) itemSection.getDouble("use_cooldown.use_cooldown", 1.0F);
 
         String groupString = itemSection.getString("use_cooldown.group");
-        Optional<ResourceLocation> group = groupString == null ? Optional.empty() : Optional.of(ResourceLocation.parse(groupString));
+        Optional<ResourceLocation> group = groupString == null ?
+                Optional.of(ResourceLocation.fromNamespaceAndPath("lost_engine", itemSection.getName())) :
+                Optional.of(ResourceLocation.parse(groupString));
 
         components.put(DataComponents.USE_COOLDOWN, new UseCooldown(useCooldown, group));
     }
