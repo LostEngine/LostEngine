@@ -3,7 +3,7 @@ package dev.lost.engine.bootstrap.components;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.UseCooldown;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +21,7 @@ public class UseCooldownProperty implements ComponentProperty {
         float useCooldown = (float) itemSection.getDouble("use_cooldown.use_cooldown", 0.0F);
 
         String groupString = itemSection.getString("use_cooldown.group");
-        Optional<ResourceLocation> group = groupString == null ? Optional.empty() : Optional.of(ResourceLocation.parse(groupString));
+        Optional<Identifier> group = groupString == null ? Optional.empty() : Optional.of(Identifier.parse(groupString));
 
         components.put(DataComponents.USE_COOLDOWN, new UseCooldown(useCooldown, group));
     }

@@ -12,7 +12,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.BlockItemStateProperties;
@@ -230,7 +230,7 @@ public class ItemInjector {
     }
 
     private static @NotNull ResourceKey<Item> vanillaItemId(String id) {
-        return ResourceKey.create(Registries.ITEM, ResourceLocation.parse(id));
+        return ResourceKey.create(Registries.ITEM, Identifier.parse(id));
     }
 
     public static @NotNull Item registerItem(String id, Item.Properties properties) {

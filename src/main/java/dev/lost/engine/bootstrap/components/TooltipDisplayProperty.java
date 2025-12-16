@@ -5,7 +5,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.TooltipDisplay;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
@@ -29,7 +29,7 @@ public class TooltipDisplayProperty implements ComponentProperty {
                 continue;
 
             try {
-                Holder.Reference<DataComponentType<?>> ref = BuiltInRegistries.DATA_COMPONENT_TYPE.get(ResourceLocation.parse(s)).orElse(null);
+                Holder.Reference<DataComponentType<?>> ref = BuiltInRegistries.DATA_COMPONENT_TYPE.get(Identifier.parse(s)).orElse(null);
                 if (ref == null) {
                     context.getLogger().warn("Unknown data component: {} for item", s);
                     continue;

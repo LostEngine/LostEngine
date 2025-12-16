@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ToolMaterial;
@@ -100,7 +100,7 @@ public class ResourceInjector {
             float attackDamageBonus = (float) materialSection.getDouble("attack_damage_bonus", 0.0);
             int enchantmentValue = materialSection.getInt("enchantment_value", 15);
             String repairItem = materialSection.getString("repair_item", null);
-            TagKey<Item> repairItems = TagKey.create(Registries.ITEM, ResourceLocation.parse(key.toLowerCase() + "_tool_materials"));
+            TagKey<Item> repairItems = TagKey.create(Registries.ITEM, Identifier.parse(key.toLowerCase() + "_tool_materials"));
             dataPackGenerator.addToolMaterial(repairItems.location().getPath(), repairItem);
             ToolMaterial baseMaterial = getOrThrow(toolMaterials, base, "Invalid base material: " + base);
 
