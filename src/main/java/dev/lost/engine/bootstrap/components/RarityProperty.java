@@ -33,7 +33,7 @@ public class RarityProperty implements ComponentProperty {
                             .map(Enum::name)
                             .collect(Collectors.joining(", "));
 
-                    context.getLogger().warn("Invalid rarity '{}' — valid values: {}", rarityString, allowed);
+                    context.getLogger().warn("Invalid rarity '{}', valid values: {}", rarityString, allowed);
                 }
         );
     }
