@@ -31,7 +31,6 @@ public class ResourceInjector {
             new EnchantmentGlintOverrideProperty(),
             new FireResistantProperty(),
             new FoodProperty(),
-            new HideTooltipProperty(), // Must be before TooltipDisplayProperty
             new MaxDamageProperty(),
             new MaxStackSizeProperty(),
             new RarityProperty(),
