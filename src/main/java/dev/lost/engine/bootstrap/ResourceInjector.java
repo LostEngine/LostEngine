@@ -8,8 +8,6 @@ import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -21,17 +19,26 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Stream;
 
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>();
-    static ObjectList<ComponentProperty> propertyClassInstances = new ObjectArrayList<>();
+    static List<ComponentProperty> propertyClassInstances = List.of(
+            new EnchantmentGlintOverrideProperty(),
+            new FireResistantProperty(),
+            new FoodProperty(),
+            new HideTooltipProperty(), // Must be before TooltipDisplayProperty
+            new MaxDamageProperty(),
+            new MaxStackSizeProperty(),
+            new RarityProperty(),
+            new TooltipDisplayProperty(),
+            new UnbreakableProperty(),
+            new UseCooldownProperty()
+    );
 
     static {
         toolMaterials.putAll(Map.of(
@@ -42,32 +49,6 @@ public class ResourceInjector {
                 "GOLD", ToolMaterial.GOLD,
                 "NETHERITE", ToolMaterial.NETHERITE
         ));
-
-        Stream<Class<? extends ComponentProperty>> propertyClasses = Stream.of(
-                EnchantmentGlintOverrideProperty.class,
-                FireResistantProperty.class,
-                FoodProperty.class,
-                HideTooltipProperty.class, // Must be before TooltipDisplayProperty
-                MaxDamageProperty.class,
-                MaxStackSizeProperty.class,
-                RarityProperty.class,
-                TooltipDisplayProperty.class,
-                UnbreakableProperty.class,
-                UseCooldownProperty.class
-        );
-
-        List<ComponentProperty> instances = propertyClasses
-                .map(clazz -> {
-                    try {
-                        return (ComponentProperty) clazz.getDeclaredConstructor().newInstance();
-                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                             NoSuchMethodException e) {
-                        throw new RuntimeException("Failed to instantiate component property: " + clazz.getSimpleName(), e);
-                    }
-                })
-                .toList();
-
-        propertyClassInstances.addAll(instances);
     }
 
     public static void injectResources(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator) throws Exception {
