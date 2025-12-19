@@ -8,6 +8,7 @@ import dev.lost.engine.utils.EnumUtils;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import lombok.Getter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
@@ -24,6 +25,7 @@ import net.minecraft.world.item.component.DamageResistant;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.util.List;
@@ -34,6 +36,7 @@ import java.util.Optional;
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
+    @Getter
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>();
 
     static {
@@ -155,7 +158,7 @@ public class ResourceInjector {
         }
     }
 
-    private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
+    private static void applyComponents(@NotNull BootstrapContext context, @NonNull ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
         if (itemSection.contains("food")) {
             int nutrition = itemSection.getInt("food.nutrition", 6);
             float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
@@ -258,7 +261,7 @@ public class ResourceInjector {
         }
     }
 
-    public static <K> K getOrThrow(Map<?, K> map, Object key, String message) {
+    public static <K> @NonNull K getOrThrow(@NonNull Map<?, K> map, Object key, String message) {
         K obj = map.get(key);
         if (obj == null)
             throw new IllegalArgumentException(message);

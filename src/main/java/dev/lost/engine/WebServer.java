@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import dev.lost.engine.bootstrap.ResourceInjector;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -107,6 +108,9 @@ public class WebServer {
             BuiltInRegistries.ITEM.forEach(item -> items.add(BuiltInRegistries.ITEM.getKey(item).toString()));
             json.add("items", items);
             json.add("files", buildFileTree(new File(LostEngine.getInstance().getDataFolder(), "resources")));
+            JsonArray toolMaterials = new JsonArray();
+            ResourceInjector.getToolMaterials().forEach((id, toolMaterial) -> toolMaterials.add(id));
+            json.add("tool_materials", toolMaterials);
             sendResponse(exchange, 200, json.toString(), "application/json");
             return;
         }
