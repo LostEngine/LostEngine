@@ -176,18 +176,21 @@ public class ResourceInjector {
         for (String key : blocksSection.getKeys(false)) {
             ConfigurationSection blockSection = blocksSection.getConfigurationSection(key);
             if (blockSection == null) continue;
-            String requiredMaterial = blockSection.getString("required_material", "NONE").toUpperCase();
-            switch (requiredMaterial) {
-                case "WOOD" -> dataPackGenerator.needsWoodenTool("lost_engine:" + key);
-                case "STONE" -> dataPackGenerator.needsStoneTool("lost_engine:" + key);
-                case "IRON" -> dataPackGenerator.needsIronTool("lost_engine:" + key);
-                case "DIAMOND" -> dataPackGenerator.needsDiamondTool("lost_engine:" + key);
-                case "NETHERITE" -> dataPackGenerator.needsNetheriteTool("lost_engine:" + key);
-                case "NONE" -> {
-                    // Nothing to do
+            String type = blockSection.getString("type", "regular").toLowerCase();
+            if (!type.equals("tnt")) {
+                String requiredMaterial = blockSection.getString("required_material", "NONE").toUpperCase();
+                switch (requiredMaterial) {
+                    case "WOOD" -> dataPackGenerator.needsWoodenTool("lost_engine:" + key);
+                    case "STONE" -> dataPackGenerator.needsStoneTool("lost_engine:" + key);
+                    case "IRON" -> dataPackGenerator.needsIronTool("lost_engine:" + key);
+                    case "DIAMOND" -> dataPackGenerator.needsDiamondTool("lost_engine:" + key);
+                    case "NETHERITE" -> dataPackGenerator.needsNetheriteTool("lost_engine:" + key);
+                    case "NONE" -> {
+                        // Nothing to do
+                    }
+                    default ->
+                            context.getLogger().error("Unknown required material: {} for block: {} (WOOD, STONE, IRON, DIAMOND, or NETHERITE)", requiredMaterial, key);
                 }
-                default ->
-                        context.getLogger().error("Unknown required material: {} for block: {} (WOOD, STONE, IRON, DIAMOND, or NETHERITE)", requiredMaterial, key);
             }
             ConfigurationSection dropsSection = blockSection.getConfigurationSection("drops");
             if (dropsSection != null) {
@@ -206,7 +209,6 @@ public class ResourceInjector {
                     }
                 }
             }
-            String type = blockSection.getString("type", "regular").toLowerCase();
             try {
                 switch (type) {
                     case "regular" -> BlockInjector.injectRegularBlock(
