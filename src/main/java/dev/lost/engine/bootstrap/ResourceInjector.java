@@ -1,26 +1,21 @@
 package dev.lost.engine.bootstrap;
 
+import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
+import dev.lost.engine.bootstrap.components.*;
 import dev.lost.engine.customblocks.BlockInjector;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
-import dev.lost.engine.utils.EnumUtils;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.Unit;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
-import net.minecraft.world.item.component.Consumables;
-import net.minecraft.world.item.component.DamageResistant;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -31,12 +26,25 @@ import java.util.*;
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
+    @CanBreakOnUpdates(lastCheckedVersion = "1.21.10") // If there is a new Material
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>();
+    static List<ComponentProperty> propertyClassInstances = List.of(
+            new EnchantmentGlintOverrideProperty(),
+            new FireResistantProperty(),
+            new FoodProperty(),
+            new MaxDamageProperty(),
+            new MaxStackSizeProperty(),
+            new RarityProperty(),
+            new TooltipDisplayProperty(),
+            new UnbreakableProperty(),
+            new UseCooldownProperty()
+    );
 
     static {
         toolMaterials.putAll(Map.of(
                 "WOOD", ToolMaterial.WOOD,
                 "STONE", ToolMaterial.STONE,
+                "COPPER", ToolMaterial.COPPER,
                 "IRON", ToolMaterial.IRON,
                 "DIAMOND", ToolMaterial.DIAMOND,
                 "GOLD", ToolMaterial.GOLD,
@@ -67,7 +75,7 @@ public class ResourceInjector {
             if (materialSection == null)
                 continue;
 
-            String base = materialSection.getString("base", "netherite").toUpperCase(Locale.ROOT);
+            String base = materialSection.getString("base", "netherite").toUpperCase();
             int durability = materialSection.getInt("durability", 59);
             float speed = (float) materialSection.getDouble("speed", 2.0F);
             float attackDamageBonus = (float) materialSection.getDouble("attack_damage_bonus", 0.0);
@@ -77,7 +85,7 @@ public class ResourceInjector {
             dataPackGenerator.addToolMaterial(repairItems.location().getPath(), repairItem);
             ToolMaterial baseMaterial = getOrThrow(toolMaterials, base, "Invalid base material: " + base);
 
-            toolMaterials.put(key.toUpperCase(Locale.ROOT), ItemInjector.createToolMaterial(baseMaterial, durability, speed, attackDamageBonus, enchantmentValue, repairItems));
+            toolMaterials.put(key.toUpperCase(), ItemInjector.createToolMaterial(baseMaterial, durability, speed, attackDamageBonus, enchantmentValue, repairItems));
         }
     }
 
@@ -103,7 +111,7 @@ public class ResourceInjector {
                     case "sword" -> {
                         float attackDamage = (float) itemSection.getDouble("attack_damage", 3.0F);
                         float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.4F);
-                        String materialName = itemSection.getString("material", "netherite").toUpperCase(Locale.ROOT);
+                        String materialName = itemSection.getString("material", "netherite").toUpperCase();
                         ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName);
 
                         ItemInjector.injectSword(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
@@ -112,7 +120,7 @@ public class ResourceInjector {
                     case "shovel" -> {
                         float attackDamage = (float) itemSection.getDouble("attack_damage", 1.5F);
                         float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
-                        String materialName = itemSection.getString("material", "netherite").toUpperCase(Locale.ROOT);
+                        String materialName = itemSection.getString("material", "netherite").toUpperCase();
                         ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName);
 
                         ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
@@ -121,7 +129,7 @@ public class ResourceInjector {
                     case "pickaxe" -> {
                         float attackDamage = (float) itemSection.getDouble("attack_damage", 1.0F);
                         float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.8F);
-                        String materialName = itemSection.getString("material", "netherite").toUpperCase(Locale.ROOT);
+                        String materialName = itemSection.getString("material", "netherite").toUpperCase();
                         ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName);
 
                         ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
@@ -130,7 +138,7 @@ public class ResourceInjector {
                     case "axe" -> {
                         float attackDamage = (float) itemSection.getDouble("attack_damage", 5.0F);
                         float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
-                        String materialName = itemSection.getString("material", "netherite").toUpperCase(Locale.ROOT);
+                        String materialName = itemSection.getString("material", "netherite").toUpperCase();
                         ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName);
 
                         ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
@@ -138,7 +146,7 @@ public class ResourceInjector {
 
                     case "hoe" -> {
                         float attackSpeed = (float) itemSection.getDouble("attack_speed", 0.0F);
-                        String materialName = itemSection.getString("material", "netherite").toUpperCase(Locale.ROOT);
+                        String materialName = itemSection.getString("material", "netherite").toUpperCase();
                         ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName);
 
                         ItemInjector.injectHoe(key, attackSpeed, material, dataPackGenerator, components);
@@ -153,45 +161,8 @@ public class ResourceInjector {
     }
 
     private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
-        if (itemSection.contains("food")) {
-            int nutrition = itemSection.getInt("food.nutrition", 6);
-            float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
-            boolean canAlwaysEat = itemSection.getBoolean("food.can_always_eat", false);
-            FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier, canAlwaysEat);
-            components.put(DataComponents.FOOD, foodProperties);
-            components.put(DataComponents.CONSUMABLE, Consumables.DEFAULT_FOOD);
-        }
-
-        if (itemSection.getBoolean("fire_resistant", false)) {
-            components.put(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE));
-        }
-
-        if (itemSection.contains("max_durability")) {
-            int maxDurability = itemSection.getInt("max_durability");
-            components.put(DataComponents.MAX_DAMAGE, maxDurability);
-        }
-
-        if (itemSection.contains("max_stack_size")) {
-            int maxStackSize = itemSection.getInt("max_stack_size");
-            components.put(DataComponents.MAX_STACK_SIZE, maxStackSize);
-        }
-
-        if (itemSection.getBoolean("unbreakable", false)) {
-            components.put(DataComponents.UNBREAKABLE, Unit.INSTANCE);
-        }
-
-        if (itemSection.contains("rarity")) {
-            String rarityString = itemSection.getString("rarity");
-            Optional<Rarity> rarity = EnumUtils.match(rarityString, Rarity.class);
-            if (rarity.isPresent()) {
-                components.put(DataComponents.RARITY, rarity.get());
-            } else {
-                context.getLogger().warn("Message TODO");
-            }
-        }
-
-        if (itemSection.getBoolean("glowing", false)) {
-            components.put(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+        for (ComponentProperty property : propertyClassInstances) {
+            property.applyComponent(context, itemSection, components);
         }
     }
 
