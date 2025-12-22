@@ -11,7 +11,8 @@ import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ToolMaterial;
@@ -20,8 +21,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
@@ -81,7 +81,7 @@ public class ResourceInjector {
             float attackDamageBonus = (float) materialSection.getDouble("attack_damage_bonus", 0.0);
             int enchantmentValue = materialSection.getInt("enchantment_value", 15);
             String repairItem = materialSection.getString("repair_item", null);
-            TagKey<Item> repairItems = TagKey.create(Registries.ITEM, ResourceLocation.parse(key.toLowerCase() + "_tool_materials"));
+            TagKey<Item> repairItems = TagKey.create(Registries.ITEM, Identifier.parse(key.toLowerCase() + "_tool_materials"));
             dataPackGenerator.addToolMaterial(repairItems.location().getPath(), repairItem);
             ToolMaterial baseMaterial = getOrThrow(toolMaterials, base, "Invalid base material: " + base);
 

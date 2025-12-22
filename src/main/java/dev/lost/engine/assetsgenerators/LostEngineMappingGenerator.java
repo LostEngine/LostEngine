@@ -38,13 +38,13 @@ public class LostEngineMappingGenerator {
     public void addItem(@NotNull Item item, @Nullable String icon) {
         JsonObject itemJson = new JsonObject();
         itemJson.addProperty("javaId", ItemUtils.packetIdFromItem(item));
-        itemJson.addProperty("identifier", item.builtInRegistryHolder().key().location().toString());
+        itemJson.addProperty("identifier", item.builtInRegistryHolder().key().identifier().toString());
         itemJson.addProperty("icon", icon);
         itemJson.addProperty("stackSize", item.getDefaultMaxStackSize());
         itemJson.addProperty("maxDamage", item.components().getOrDefault(DataComponents.MAX_DAMAGE, 0));
         Enchantable enchantable = item.components().get(DataComponents.ENCHANTABLE);
         if (enchantable != null) itemJson.addProperty("enchantable", enchantable.value());
-        itemJson.addProperty("block", item instanceof BlockItem blockItem ? blockItem.getBlock().builtInRegistryHolder().key().location().toString() : null);
+        itemJson.addProperty("block", item instanceof BlockItem blockItem ? blockItem.getBlock().builtInRegistryHolder().key().identifier().toString() : null);
         FoodProperties foodProperties = item.components().get(DataComponents.FOOD);
         if (foodProperties != null) {
             itemJson.addProperty("isEatable", true);
@@ -64,7 +64,7 @@ public class LostEngineMappingGenerator {
                 JsonObject ruleJson = new JsonObject();
                 JsonArray blocksArray = new JsonArray();
                 for (Holder<Block> holder : rule.blocks()) {
-                    blocksArray.add(holder.value().builtInRegistryHolder().key().location().toString());
+                    blocksArray.add(holder.value().builtInRegistryHolder().key().identifier().toString());
                 }
                 ruleJson.add("blocks", blocksArray);
                 ruleJson.addProperty("speed", rule.speed().get());

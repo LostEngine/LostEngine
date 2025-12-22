@@ -39,7 +39,7 @@ import net.minecraft.network.protocol.configuration.ClientboundFinishConfigurati
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -533,7 +533,7 @@ public class PacketListener {
         if (!item.isEmpty()) {
             String lostEngineId = ItemUtils.getCustomStringData(item, "lost_engine_id");
             if (lostEngineId != null) {
-                ResourceLocation id = ResourceLocation.parse(lostEngineId);
+                Identifier id = Identifier.parse(lostEngineId);
                 return BuiltInRegistries.ITEM.get(id).map(builtInItem -> {
                     ItemStack newItem = new ItemStack(builtInItem, item.getCount());
                     newItem.applyComponents(item.getComponents());
