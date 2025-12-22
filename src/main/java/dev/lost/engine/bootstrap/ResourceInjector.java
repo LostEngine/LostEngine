@@ -9,6 +9,7 @@ import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import lombok.Getter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.ToolMaterial;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.Map;
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
+    @Getter
     @CanBreakOnUpdates(lastCheckedVersion = "1.21.10") // If there is a new Material
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>();
     static List<ComponentProperty> propertyClassInstances = List.of(
@@ -173,18 +176,21 @@ public class ResourceInjector {
         for (String key : blocksSection.getKeys(false)) {
             ConfigurationSection blockSection = blocksSection.getConfigurationSection(key);
             if (blockSection == null) continue;
-            String requiredMaterial = blockSection.getString("required_material", "NONE").toUpperCase();
-            switch (requiredMaterial) {
-                case "WOOD" -> dataPackGenerator.needsWoodenTool("lost_engine:" + key);
-                case "STONE" -> dataPackGenerator.needsStoneTool("lost_engine:" + key);
-                case "IRON" -> dataPackGenerator.needsIronTool("lost_engine:" + key);
-                case "DIAMOND" -> dataPackGenerator.needsDiamondTool("lost_engine:" + key);
-                case "NETHERITE" -> dataPackGenerator.needsNetheriteTool("lost_engine:" + key);
-                case "NONE" -> {
-                    // Nothing to do
+            String type = blockSection.getString("type", "regular").toLowerCase();
+            if (!type.equals("tnt")) {
+                String requiredMaterial = blockSection.getString("required_material", "NONE").toUpperCase();
+                switch (requiredMaterial) {
+                    case "WOOD" -> dataPackGenerator.needsWoodenTool("lost_engine:" + key);
+                    case "STONE" -> dataPackGenerator.needsStoneTool("lost_engine:" + key);
+                    case "IRON" -> dataPackGenerator.needsIronTool("lost_engine:" + key);
+                    case "DIAMOND" -> dataPackGenerator.needsDiamondTool("lost_engine:" + key);
+                    case "NETHERITE" -> dataPackGenerator.needsNetheriteTool("lost_engine:" + key);
+                    case "NONE" -> {
+                        // Nothing to do
+                    }
+                    default ->
+                            context.getLogger().error("Unknown required material: {} for block: {} (WOOD, STONE, IRON, DIAMOND, or NETHERITE)", requiredMaterial, key);
                 }
-                default ->
-                        context.getLogger().error("Unknown required material: {} for block: {} (WOOD, STONE, IRON, DIAMOND, or NETHERITE)", requiredMaterial, key);
             }
             ConfigurationSection dropsSection = blockSection.getConfigurationSection("drops");
             if (dropsSection != null) {
@@ -203,7 +209,6 @@ public class ResourceInjector {
                     }
                 }
             }
-            String type = blockSection.getString("type", "regular").toLowerCase();
             try {
                 switch (type) {
                     case "regular" -> BlockInjector.injectRegularBlock(
@@ -226,7 +231,7 @@ public class ResourceInjector {
         }
     }
 
-    public static <K> K getOrThrow(Map<?, K> map, Object key, String message) {
+    public static <K> @NonNull K getOrThrow(@NonNull Map<?, K> map, Object key, String message) {
         K obj = map.get(key);
         if (obj == null)
             throw new IllegalArgumentException(message);

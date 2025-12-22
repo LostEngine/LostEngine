@@ -14,10 +14,13 @@ import {
     Folder,
     FolderPlus,
     Moon,
+    Pencil,
+    Plus,
     RotateCw,
     Search,
     Settings2,
     Sun,
+    Trash2,
     Upload,
     X,
 } from "lucide-react";
@@ -48,7 +51,7 @@ import {
 } from "@/components/ui/breadcrumb.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Skeleton} from "@/components/ui/skeleton.tsx";
-import {Field} from "@/components/ui/field.tsx";
+import * as yaml from 'yaml';
 import {deleteFile, isFileInData, uploadFile} from "@/lib/utils.ts";
 import {
     AlertDialog,
@@ -82,6 +85,10 @@ import {
     FileUploadItemPreview,
     FileUploadList,
 } from "@/components/ui/file-upload.tsx";
+import {ResizablePanel, ResizablePanelGroup} from "@/components/ui/resizable.tsx";
+import type {Config} from "@/config.ts";
+import {CardBody, CardContainer, CardItem} from "@/components/ui/3d-card.tsx";
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion.tsx";
 
 function getPreferredTheme(): "dark" | "light" {
     const stored = localStorage.getItem("theme");
@@ -101,8 +108,8 @@ export function App() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [data, setData] = useState<ApiData>({
         items: [""],
-        //files: ["loading..."],
-        files: [["default", ["assets", ["textures", ["block", "block.png", "ore.png", "tnt.png"], ["item", "axe.png", "baguette.png", "hoe.png", "ingot.png", "pickaxe.png", "shovel.png", "sword.png",],],], "items.yml",],],
+        files: ["loading..."],
+        //files: [["default", ["assets", ["textures", ["block", "block.png", "ore.png", "tnt.png"], ["item", "axe.png", "baguette.png", "hoe.png", "ingot.png", "pickaxe.png", "shovel.png", "sword.png",],],], "items.yml",],],
     });
     const [readonly, setReadonly] = useState(false);
     const [token] = useState<string | null>(() => {
@@ -350,7 +357,7 @@ export function App() {
                     </SidebarContent>
                 </Sidebar>
                 <SidebarInset className="pt-18">
-                    <header className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4">
+                    <header className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4 fixed top-18 z-50 bg-white dark:bg-neutral-950">
                         <div className="flex items-center gap-4">
                             <SidebarTrigger/>
                             <Separator
@@ -396,7 +403,7 @@ export function App() {
                             })()}
                         </div>
                     </header>
-                    <div className="p-[15px] pb-10 h-full w-full">
+                    <div className="p-[15px] pb-10 h-full w-full pt-18">
                         <FileViewer
                             filePath={openedFile}
                             token={token}
@@ -876,9 +883,44 @@ function FileViewer({
         fetchFile();
     }, [filePath, token, content, onContentChange]);
 
-    if (loading) return <Skeleton className="h-full w-full"/>;
+    if (loading || content === null) return <Skeleton className="h-full w-full"/>;
     if (error) return <div className="text-red-500">{error}</div>;
-    if (content === null) return <Skeleton className="h-full w-full"/>;
+
+    const getLanguage = (filePath: string) => {
+        const ext = filePath.split(".").pop()?.toLowerCase();
+        const languageMap: Record<string, string> = {
+            css: "css",
+            go: "go",
+            html: "html",
+            htm: "html",
+            ini: "ini",
+            java: "java",
+            js: "javascript",
+            mjs: "javascript",
+            cjs: "javascript",
+            jsx: "javascript",
+            kt: "kotlin",
+            kts: "kotlin",
+            markdown: "markdown",
+            md: "markdown",
+            php: "php",
+            ps1: "powershell",
+            psm1: "powershell",
+            psd1: "powershell",
+            py: "python",
+            pyw: "python",
+            rs: "rust",
+            sh: "shell",
+            bash: "shell",
+            sql: "sql",
+            ts: "typescript",
+            tsx: "typescript",
+            xml: "xml",
+            yaml: "yaml",
+            yml: "yaml",
+        };
+        return languageMap[ext || ""] || "plaintext";
+    };
 
     const lower = filePath?.toLowerCase() || "";
     if (
@@ -889,43 +931,38 @@ function FileViewer({
     ) {
         return <ZoomableImage src={content} alt={filePath || ""}/>;
     } else if (lower.endsWith(".yml") || lower.endsWith(".yaml")) {
-        return <Field className="h-full w-full"/>;
+        return <ResizablePanelGroup
+            className="h-full w-full"
+        >
+            <ResizablePanel defaultSize={70}>
+                <ConfigEditor
+                    text={content}
+                    token={token || ""}
+                    folder={filePath?.includes("/") ? filePath.split("/")[0] : ""}
+                    onValueChange={onContentChange}
+                />
+            </ResizablePanel>
+            <ResizablePanel defaultSize={30}>
+                <Editor
+                    height="100%"
+                    defaultLanguage={"yaml"}
+                    value={content}
+                    onChange={(value) => {
+                        onContentChange(value || "");
+                    }}
+                    theme={theme === "dark" ? "vs-dark" : "light"}
+                    options={{
+                        minimap: {enabled: false},
+                        fontSize: 14,
+                        wordWrap: "on",
+                        formatOnPaste: true,
+                        formatOnType: true,
+                        automaticLayout: true,
+                    }}
+                />
+            </ResizablePanel>
+        </ResizablePanelGroup>
     } else {
-        const getLanguage = (filePath: string) => {
-            const ext = filePath.split(".").pop()?.toLowerCase();
-            const languageMap: Record<string, string> = {
-                css: "css",
-                go: "go",
-                html: "html",
-                htm: "html",
-                ini: "ini",
-                java: "java",
-                js: "javascript",
-                mjs: "javascript",
-                cjs: "javascript",
-                jsx: "javascript",
-                kt: "kotlin",
-                kts: "kotlin",
-                markdown: "markdown",
-                md: "markdown",
-                php: "php",
-                ps1: "powershell",
-                psm1: "powershell",
-                psd1: "powershell",
-                py: "python",
-                pyw: "python",
-                rs: "rust",
-                sh: "shell",
-                bash: "shell",
-                sql: "sql",
-                ts: "typescript",
-                tsx: "typescript",
-                xml: "xml",
-                yaml: "yaml",
-                yml: "yaml",
-            };
-            return languageMap[ext || ""] || "plaintext";
-        };
 
         return (
             <Editor
@@ -1003,6 +1040,198 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
                 draggable={false}
             />
         </div>
+    );
+}
+
+function ConfigEditor({text, onValueChange, folder, token}: {
+    text: string;
+    onValueChange: (value: string) => void;
+    folder: string;
+    token: string;
+}) {
+
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [confirmDialogAction, setConfirmDialogAction] = useState<() => void>(() => {});
+    const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
+
+    let doc;
+    let config: Config | undefined;
+
+    try {
+        doc = yaml.parse(text);
+        config = doc as Config;
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return (<div className="text-red-500">{message}</div>);
+    }
+
+    const onEditConfig = () => {
+        const updatedText = yaml.stringify(doc);
+        onValueChange(updatedText);
+    }
+
+    return (
+        <>
+            <Accordion
+                type="single"
+                collapsible
+                className="w-full"
+            >
+                <AccordionItem value="item-1">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                            Items
+                            <Button variant="ghost" size="icon-sm" onClick={event => event.stopPropagation()}>
+                                <Plus/>
+                            </Button>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-4 text-balance">
+                        <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
+                            {(() => {
+                                if (!config.items) return null;
+                                return Array.from(Object.entries(config.items)).map(value => {
+                                    return (<>
+                                        <CardContainer>
+                                            <CardBody
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-neutral-950 dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[15rem] h-auto rounded-xl p-6 border">
+                                                <CardItem
+                                                    translateZ="50"
+                                                    className="text-xl font-bold text-neutral-600 dark:text-white"
+                                                >
+                                                    {value[0]}
+                                                </CardItem>
+                                                <CardItem translateZ="50" className="w-full mt-4">
+                                                    <img
+                                                        src={
+                                                            value[1].texture ?
+                                                                `/api/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + (value[1].texture.endsWith(".png") ? value[1].texture : (value[1].texture + ".png")))}&token=${encodeURIComponent(token)}` :
+                                                                `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAXNSR0IArs4c6QAAAI5JREFUKJG10DsKwlAQRuHvYiAYCCkE9+CC7hJdjQsIWIkIgp2IAQu5FknIw5Q6zcxwDsPw85eKKaZ+DnMEGzzsw0ToUdXt904J38hECTHtvBb+yPFykXGznSg5HSwdZQxKj67eWEErtMqAoOx6RqNYgI0ahxCIaa1QjQ7X4DDk0CqNp/MITZKMidMM/ao+PCEzK4GxfXsAAAAASUVORK5CYII=`
+                                                        }
+                                                        height="1000"
+                                                        width="1000"
+                                                        className="w-full object-cover group-hover/card:shadow-xl"
+                                                        style={{
+                                                            imageRendering: "pixelated",
+                                                        }}
+                                                        alt="thumbnail"
+                                                    />
+                                                </CardItem>
+                                                <div className="flex justify-between items-center mt-20">
+                                                    <CardItem translateZ={20}>
+                                                        <Button variant="outline" size="sm">
+                                                            <Pencil/> Edit
+                                                        </Button>
+                                                    </CardItem>
+                                                    <CardItem translateZ={20}>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setConfirmDialogAction(() => () => {
+                                                                    delete config?.items?.[value[0]];
+                                                                    onEditConfig();
+                                                                });
+                                                                setConfirmDialogMessage(`Delete item "${value[0]}"?`);
+                                                                setConfirmDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2/>
+                                                            Delete
+                                                        </Button>
+                                                    </CardItem>
+                                                </div>
+                                            </CardBody>
+                                        </CardContainer>
+                                    </>);
+                                })
+                            })()}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                            Tool Materials
+                            <Button variant="ghost" size="icon-sm" onClick={event => event.stopPropagation()}>
+                                <Plus/>
+                            </Button>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-4 text-balance">
+                        <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
+                            {(() => {
+                                if (!config.tool_materials) return null;
+                                return Array.from(Object.entries(config.tool_materials)).map(value => {
+                                    return (<>
+                                        <CardContainer>
+                                            <CardBody
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-neutral-950 dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[15rem] h-auto rounded-xl p-6 border">
+                                                <CardItem
+                                                    translateZ="50"
+                                                    className="text-xl font-bold text-neutral-600 dark:text-white"
+                                                >
+                                                    {value[0]}
+                                                </CardItem>
+                                                <CardItem translateZ="50" className="w-full mt-4">
+                                                    <img
+                                                        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAXNSR0IArs4c6QAAAI5JREFUKJG10DsKwlAQRuHvYiAYCCkE9+CC7hJdjQsIWIkIgp2IAQu5FknIw5Q6zcxwDsPw85eKKaZ+DnMEGzzsw0ToUdXt904J38hECTHtvBb+yPFykXGznSg5HSwdZQxKj67eWEErtMqAoOx6RqNYgI0ahxCIaa1QjQ7X4DDk0CqNp/MITZKMidMM/ao+PCEzK4GxfXsAAAAASUVORK5CYII="
+                                                        height="1000"
+                                                        width="1000"
+                                                        className="w-full object-cover group-hover/card:shadow-xl"
+                                                        style={{
+                                                            imageRendering: "pixelated",
+                                                        }}
+                                                        alt="thumbnail"
+                                                    />
+                                                </CardItem>
+                                                <div className="flex justify-between items-center mt-20">
+                                                    <CardItem translateZ={20}>
+                                                        <Button variant="outline" size="sm">
+                                                            <Pencil/> Edit
+                                                        </Button>
+                                                    </CardItem>
+                                                    <CardItem translateZ={20}>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setConfirmDialogAction(() => () => {
+                                                                    delete config?.tool_materials?.[value[0]];
+                                                                    onEditConfig();
+                                                                });
+                                                                setConfirmDialogMessage(`Delete tool material "${value[0]}"?`);
+                                                                setConfirmDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2/>
+                                                            Delete
+                                                        </Button>
+                                                    </CardItem>
+                                                </div>
+                                            </CardBody>
+                                        </CardContainer>
+                                    </>);
+                                })
+                            })()}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+            <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {confirmDialogMessage}
+                        </AlertDialogTitle>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDialogAction}>Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }
 
