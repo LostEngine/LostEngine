@@ -53,10 +53,11 @@ items:
       en_US: "Baguette"
     type: generic
     texture: item/baguette
-    food:
-      nutrition: 10
-      saturation_modifier: 1
-      can_always_eat: false
+    components:
+      food:
+        nutrition: 10
+        saturation_modifier: 1
+        can_always_eat: false
 blocks:
   ore:
     name:

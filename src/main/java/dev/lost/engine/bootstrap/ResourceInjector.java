@@ -3,6 +3,8 @@ package dev.lost.engine.bootstrap;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
 import dev.lost.engine.bootstrap.components.*;
+import dev.lost.engine.bootstrap.components.annotations.Parameter;
+import dev.lost.engine.bootstrap.components.annotations.Property;
 import dev.lost.engine.customblocks.BlockInjector;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
@@ -20,6 +22,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -162,8 +165,48 @@ public class ResourceInjector {
     }
 
     private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
-        for (ComponentProperty property : propertyClassInstances) {
-            property.applyComponent(context, itemSection, components);
+        ConfigurationSection componentsSection = itemSection.getConfigurationSection("components");
+        if (componentsSection == null)
+            return;
+
+        for (ComponentProperty componentProperty : propertyClassInstances) {
+            Property property = componentProperty.getClass().getAnnotation(Property.class);
+            if (property == null) {
+                context.getLogger().warn("Missing @Property annotation on ComponentProperty class: {}", componentProperty.getClass().getName());
+                continue;
+            }
+
+            ConfigurationSection componentPropertySection = componentsSection.getConfigurationSection(property.key());
+            if (componentPropertySection == null)
+                continue;
+
+            fillParameters(context, componentProperty, componentPropertySection);
+            componentProperty.applyComponent(context, componentPropertySection, components);
+        }
+    }
+
+    private static void fillParameters(BootstrapContext context, ComponentProperty componentProperty, ConfigurationSection section) {
+        for (Field field : componentProperty.getClass().getDeclaredFields()) {
+            Parameter parameter = field.getAnnotation(Parameter.class);
+            if (parameter == null)
+                continue;
+
+            if (!section.contains(parameter.key())) {
+                if (parameter.required()) {
+                    context.getLogger().warn("Missing required parameters for field {} on ComponentProperty: {}", field.getName(), parameter.key());
+                    break;
+                }
+                continue;
+            }
+
+            Object value = section.get(parameter.key(), parameter.type());
+
+            try {
+                field.setAccessible(true);
+                field.set(componentProperty, value);
+            } catch (Exception e) {
+                context.getLogger().error("Failed to inject value for field: {}", field.getName(), e);
+            }
         }
     }
 
