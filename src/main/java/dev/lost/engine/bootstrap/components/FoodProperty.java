@@ -17,7 +17,7 @@ import java.util.Map;
 @SuppressWarnings({"UnstableApiUsage", "FieldMayBeFinal", "FieldCanBeLocal"})
 @Property(key = "food")
 public class FoodProperty implements ComponentProperty {
-    @Parameter(key = "nutrition", type = Integer.class)
+    @Parameter(key = "nutrition", type = Integer.class, required = true)
     private int nutrition = 6;
 
     @Parameter(key = "saturation_modifier", type = Float.class)
