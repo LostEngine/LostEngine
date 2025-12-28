@@ -31,13 +31,6 @@ public class FoodProperty implements ComponentProperty {
 
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (!itemSection.contains("food"))
-            return;
-
-        int nutrition = itemSection.getInt("food.nutrition", 6);
-        float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
-        boolean canAlwaysEat = itemSection.getBoolean("food.can_always_eat", false);
-        float consumeSeconds = (float) itemSection.getDouble("food.consumeSeconds", 1.6F);
         FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier, canAlwaysEat);
 
         components.put(DataComponents.FOOD, foodProperties);
