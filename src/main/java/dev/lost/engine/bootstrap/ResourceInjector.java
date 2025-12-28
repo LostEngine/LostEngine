@@ -9,6 +9,7 @@ import dev.lost.engine.customblocks.BlockInjector;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
+import dev.lost.engine.utils.ReflectionUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.component.DataComponentType;
@@ -165,7 +166,7 @@ public class ResourceInjector {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
+    private static void applyComponents(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
         ConfigurationSection componentsSection = itemSection.getConfigurationSection("components");
         if (componentsSection == null)
             return;
@@ -182,19 +183,26 @@ public class ResourceInjector {
                 continue;
 
             if (componentProperty instanceof SimpleComponentProperty<?> simpleComponentProperty) {
-                T value = (T) componentsSection.get(key);
-                ((SimpleComponentProperty<T>) simpleComponentProperty).applyComponent(context, value, key, components);
+                Object value = componentsSection.get(key);
+                Class<?> expectedType = ReflectionUtils.getTypeArgument(simpleComponentProperty.getClass());
+
+                if (value != null && expectedType != null && expectedType.isInstance(value)) {
+                    ((SimpleComponentProperty<Object>) simpleComponentProperty).applyComponent(context, value, key, components);
+                } else if (value != null && expectedType != null) {
+                    context.getLogger().warn("Invalid type for component property '{}'. Expected {}, got {} for item {}", key, expectedType.getSimpleName(), value.getClass().getSimpleName(), itemSection.getName());
+                }
                 continue;
             }
 
             ConfigurationSection componentPropertySection = componentsSection.getConfigurationSection(key);
 
+            if (componentPropertySection == null) continue;
             fillParameters(context, componentProperty, componentPropertySection);
             componentProperty.applyComponent(context, componentPropertySection, itemSection.getName(), components);
         }
     }
 
-    private static void fillParameters(BootstrapContext context, ComponentProperty componentProperty, ConfigurationSection section) {
+    private static void fillParameters(@NotNull BootstrapContext context, @NotNull ComponentProperty componentProperty, @NotNull ConfigurationSection section) {
         for (Field field : componentProperty.getClass().getDeclaredFields()) {
             Parameter parameter = field.getAnnotation(Parameter.class);
             if (parameter == null)
