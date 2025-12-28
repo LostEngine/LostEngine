@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.Optional;
 
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "unused", "FieldMayBeFinal", "FieldCanBeLocal"})
 @Property(key = "use_cooldown")
 public class UseCooldownProperty implements ComponentProperty {
     @Parameter(key = "cooldown_seconds", type = Float.class)

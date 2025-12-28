@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SequencedSet;
 
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "unused", "MismatchedQueryAndUpdateOfCollection"})
 @Property(key = "tooltip_display")
 public class TooltipDisplayProperty implements ComponentProperty {
     @Parameter(key = "hide_tooltip", type = Boolean.class)

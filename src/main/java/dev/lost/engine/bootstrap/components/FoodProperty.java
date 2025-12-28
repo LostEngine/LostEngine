@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "FieldMayBeFinal", "FieldCanBeLocal"})
 @Property(key = "food")
 public class FoodProperty implements ComponentProperty {
     @Parameter(key = "nutrition", type = Integer.class)
