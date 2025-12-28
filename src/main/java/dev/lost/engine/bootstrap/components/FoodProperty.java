@@ -30,7 +30,7 @@ public class FoodProperty implements ComponentProperty {
     private float consumeSeconds = 1.6F;
 
     @Override
-    public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components) {
+    public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
         FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier, canAlwaysEat);
 
         components.put(DataComponents.FOOD, foodProperties);

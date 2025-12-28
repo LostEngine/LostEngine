@@ -164,7 +164,8 @@ public class ResourceInjector {
         }
     }
 
-    private static void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
+    @SuppressWarnings("unchecked")
+    private static <T> void applyComponents(@NotNull BootstrapContext context, ConfigurationSection itemSection, Map<DataComponentType<?>, Object> components) {
         ConfigurationSection componentsSection = itemSection.getConfigurationSection("components");
         if (componentsSection == null)
             return;
@@ -176,12 +177,20 @@ public class ResourceInjector {
                 continue;
             }
 
-            ConfigurationSection componentPropertySection = componentsSection.getConfigurationSection(property.key());
-            if (componentPropertySection == null)
+            String key = property.key();
+            if (!componentsSection.contains(key))
                 continue;
 
+            if (componentProperty instanceof SimpleComponentProperty<?> simpleComponentProperty) {
+                T value = (T) componentsSection.get(key);
+                ((SimpleComponentProperty<T>) simpleComponentProperty).applyComponent(context, value, key, components);
+                continue;
+            }
+
+            ConfigurationSection componentPropertySection = componentsSection.getConfigurationSection(key);
+
             fillParameters(context, componentProperty, componentPropertySection);
-            componentProperty.applyComponent(context, componentPropertySection, components);
+            componentProperty.applyComponent(context, componentPropertySection, itemSection.getName(), components);
         }
     }
 

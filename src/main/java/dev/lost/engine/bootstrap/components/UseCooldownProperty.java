@@ -23,7 +23,7 @@ public class UseCooldownProperty implements ComponentProperty {
     private String groupString;
 
     @Override
-    public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components) {
+    public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
         Optional<ResourceLocation> group = groupString == null ?
                 Optional.of(ResourceLocation.fromNamespaceAndPath("lost_engine", itemSection.getName())) :
                 Optional.of(ResourceLocation.parse(groupString));
