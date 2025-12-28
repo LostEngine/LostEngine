@@ -14,7 +14,8 @@ import java.util.Map;
 public class MaxStackSizeProperty implements SimpleComponentProperty<Integer> {
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @Nullable Integer maxStackSize, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (maxStackSize == null || maxStackSize < 1 || maxStackSize > 99) {
+        if (maxStackSize == null) return;
+        if (maxStackSize < 1 || maxStackSize > 99) {
             context.getLogger().warn("max_stack_size must be within 1 and 99 for item: {}", itemID);
             return;
         }

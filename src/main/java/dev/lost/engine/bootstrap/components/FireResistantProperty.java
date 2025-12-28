@@ -7,7 +7,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.item.component.DamageResistant;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
@@ -15,10 +14,8 @@ import java.util.Map;
 @Property(key = "fire_resistant")
 public class FireResistantProperty implements SimpleComponentProperty<Boolean> {
     @Override
-    public void applyComponent(@NotNull BootstrapContext context, @Nullable Boolean fireResistant, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (Boolean.FALSE.equals(fireResistant))
-            return;
-
+    public void applyComponent(@NotNull BootstrapContext context, @NotNull Boolean fireResistant, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
+        if (!fireResistant) return;
         components.put(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE));
     }
 }

@@ -7,9 +7,9 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.Rarity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,11 +18,8 @@ import java.util.stream.Collectors;
 @Property(key = "rarity")
 public class RarityProperty implements SimpleComponentProperty<String> {
     @Override
-    public void applyComponent(@NotNull BootstrapContext context, @Nullable String rarityString, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
-        Optional<Rarity> rarity = Optional.ofNullable(rarityString)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .flatMap(s -> EnumUtils.match(s, Rarity.class));
+    public void applyComponent(@NotNull BootstrapContext context, @NotNull String rarityString, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
+        Optional<Rarity> rarity = EnumUtils.match(rarityString.trim().toUpperCase(Locale.ROOT), Rarity.class);
 
         rarity.ifPresentOrElse(
                 r -> components.put(DataComponents.RARITY, r),

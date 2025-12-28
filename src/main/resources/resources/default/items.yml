@@ -54,7 +54,6 @@ items:
     type: generic
     texture: item/baguette
     components:
-      max_stack_size: 69
       food:
         nutrition: 10
         saturation_modifier: 1

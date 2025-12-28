@@ -4,7 +4,6 @@ import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.minecraft.core.component.DataComponentType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
@@ -15,5 +14,5 @@ public interface SimpleComponentProperty<T> extends ComponentProperty {
 
     }
 
-    void applyComponent(@NotNull BootstrapContext context, @Nullable T parameter, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components);
+    void applyComponent(@NotNull BootstrapContext context, @NotNull T parameter, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components);
 }
