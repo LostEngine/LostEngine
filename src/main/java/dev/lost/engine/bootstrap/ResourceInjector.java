@@ -21,6 +21,7 @@ import net.minecraft.world.item.ToolMaterial;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -186,6 +187,10 @@ public class ResourceInjector {
                 Object value = componentsSection.get(key);
                 Class<?> expectedType = ReflectionUtils.getTypeArgument(simpleComponentProperty.getClass());
 
+                if (expectedType != null) {
+                    value = convertNumberType(value, expectedType);
+                }
+
                 if (expectedType != null && expectedType.isInstance(value)) {
                     ((SimpleComponentProperty<Object>) simpleComponentProperty).applyComponent(context, value, key, components);
                 } else if (value != null && expectedType != null) {
@@ -197,37 +202,72 @@ public class ResourceInjector {
             ConfigurationSection componentPropertySection = componentsSection.getConfigurationSection(key);
 
             if (componentPropertySection == null) continue;
-            fillParameters(context, componentProperty, componentPropertySection);
-            componentProperty.applyComponent(context, componentPropertySection, itemSection.getName(), components);
+            try {
+                fillParameters(context, componentProperty, componentPropertySection, itemSection.getName());
+                componentProperty.applyComponent(context, componentPropertySection, itemSection.getName(), components);
+            } catch (Exception ignored) {
+            }
         }
     }
 
-    private static void fillParameters(@NotNull BootstrapContext context, @NotNull ComponentProperty componentProperty, @NotNull ConfigurationSection section) {
+    private static void fillParameters(@NotNull BootstrapContext context, @NotNull ComponentProperty componentProperty, @NotNull ConfigurationSection section, @NotNull String name) throws RuntimeException {
         for (Field field : componentProperty.getClass().getDeclaredFields()) {
             Parameter parameter = field.getAnnotation(Parameter.class);
             if (parameter == null)
                 continue;
 
-            if (!section.contains(parameter.key())) {
-                if (parameter.required()) {
-                    context.getLogger().warn("Missing required parameters for field {} on ComponentProperty: {}", field.getName(), parameter.key());
-                    break;
-                }
-                continue;
-            }
-
-            Object value = section.get(parameter.key(), parameter.type());
+            Object value = section.get(parameter.key());
+            value = convertNumberType(value, parameter.type());
 
             try {
+                // First set the field to accessible
                 field.setAccessible(true);
-                field.set(componentProperty, value);
+                if (parameter.type().isInstance(value)) {
+                    // if the type is the right one, we can set it
+                    field.set(componentProperty, value);
+                } else {
+                    // if not, reset the field's value
+                    field.set(componentProperty, null);
+                    if (value != null) {
+                        // if the value is the wrong type, tell the user and if it is required, throw an exception
+                        context.getLogger().warn("Invalid type for parameter '{}'. Expected {}, got {} for item {}", parameter.key(), parameter.type().getSimpleName(), value.getClass().getSimpleName(), name);
+                        if (parameter.required()) {
+                            context.getLogger().warn("This parameter is required, can't create component");
+                            throw new RuntimeException("Required parameter is missing");
+                        }
+                    } else {
+                        // if the value is null and required, throw an exception
+                        if (parameter.required()) {
+                            context.getLogger().warn("Missing required parameters for field {} on ComponentProperty: {}", field.getName(), parameter.key());
+                            throw new RuntimeException("Required parameter is missing");
+                        }
+                    }
+
+                }
             } catch (Exception e) {
                 context.getLogger().error("Failed to inject value for field: {}", field.getName(), e);
+                // We can stop the server if this happens it would generate too many exceptions
+                LostEngineBootstrap.stopServer(context);
             }
         }
     }
 
-    private static void injectBlocks(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator, @NotNull YamlConfiguration config) {
+    private static @Nullable Object convertNumberType(@Nullable Object value, @Nullable Class<?> targetType) {
+        if (!(value instanceof Number number) || targetType == null) {
+            return value;
+        }
+
+        if (targetType == Float.class || targetType == float.class) return number.floatValue();
+        if (targetType == Double.class || targetType == double.class) return number.doubleValue();
+        if (targetType == Integer.class || targetType == int.class) return number.intValue();
+        if (targetType == Long.class || targetType == long.class) return number.longValue();
+        if (targetType == Short.class || targetType == short.class) return number.shortValue();
+        if (targetType == Byte.class || targetType == byte.class) return number.byteValue();
+
+        return value;
+    }
+
+    private static void injectBlocks(@NotNull BootstrapContext context, @NotNull DataPackGenerator dataPackGenerator, @NotNull YamlConfiguration config) {
         ConfigurationSection blocksSection = config.getConfigurationSection("blocks");
         if (blocksSection == null) return;
 

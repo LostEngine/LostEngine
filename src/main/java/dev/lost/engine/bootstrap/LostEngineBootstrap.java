@@ -67,7 +67,7 @@ public class LostEngineBootstrap implements PluginBootstrap {
 
     }
 
-    private static void stopServer(@NotNull BootstrapContext context) {
+    static void stopServer(@NotNull BootstrapContext context) {
         context.getLogger().info("Stopping the server...");
         System.exit(1);
     }
