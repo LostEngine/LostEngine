@@ -186,7 +186,7 @@ public class ResourceInjector {
                 Object value = componentsSection.get(key);
                 Class<?> expectedType = ReflectionUtils.getTypeArgument(simpleComponentProperty.getClass());
 
-                if (value != null && expectedType != null && expectedType.isInstance(value)) {
+                if (expectedType != null && expectedType.isInstance(value)) {
                     ((SimpleComponentProperty<Object>) simpleComponentProperty).applyComponent(context, value, key, components);
                 } else if (value != null && expectedType != null) {
                     context.getLogger().warn("Invalid type for component property '{}'. Expected {}, got {} for item {}", key, expectedType.getSimpleName(), value.getClass().getSimpleName(), itemSection.getName());
