@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.UseCooldown;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -19,6 +20,7 @@ public class UseCooldownProperty implements ComponentProperty {
     @Parameter(key = "cooldown_seconds", type = Float.class, required = true)
     private Float cooldownSeconds = 1F;
 
+    @Nullable
     @Parameter(key = "group", type = String.class)
     private String groupString;
 

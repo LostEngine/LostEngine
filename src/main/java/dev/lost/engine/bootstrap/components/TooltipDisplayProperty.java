@@ -12,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.TooltipDisplay;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,34 +22,38 @@ import java.util.SequencedSet;
 @SuppressWarnings({"UnstableApiUsage", "unused", "MismatchedQueryAndUpdateOfCollection"})
 @Property(key = "tooltip_display")
 public class TooltipDisplayProperty implements ComponentProperty {
+    @Nullable
     @Parameter(key = "hide_tooltip", type = Boolean.class)
     private Boolean hideTooltip;
 
+    @Nullable
     @Parameter(key = "hidden_components", type = List.class)
     private List<String> tooltipList;
 
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (hideTooltip) {
+        if (Boolean.TRUE.equals(hideTooltip)) {
             components.put(DataComponents.TOOLTIP_DISPLAY, new TooltipDisplay(true, ImmutableSortedSet.of()));
             return;
         }
 
         SequencedSet<DataComponentType<?>> tooltipTypes = new LinkedHashSet<>();
-        for (String s : tooltipList) {
-            if (s == null || s.isBlank())
-                continue;
-
-            try {
-                Holder.Reference<DataComponentType<?>> ref = BuiltInRegistries.DATA_COMPONENT_TYPE.get(Identifier.parse(s)).orElse(null);
-                if (ref == null) {
-                    context.getLogger().warn("Unknown component to hide: {} for item {}", s, itemSection.getName());
+        if (tooltipList != null) {
+            for (String s : tooltipList) {
+                if (s == null || s.isBlank())
                     continue;
-                }
 
-                tooltipTypes.add(ref.value());
-            } catch (Exception e) {
-                context.getLogger().warn("Invalid component to hide: {} for item {}", s, itemSection.getName());
+                try {
+                    Holder.Reference<DataComponentType<?>> ref = BuiltInRegistries.DATA_COMPONENT_TYPE.get(Identifier.parse(s)).orElse(null);
+                    if (ref == null) {
+                        context.getLogger().warn("Unknown component to hide: {} for item {}", s, itemSection.getName());
+                        continue;
+                    }
+
+                    tooltipTypes.add(ref.value());
+                } catch (Exception e) {
+                    context.getLogger().warn("Invalid component to hide: {} for item {}", s, itemSection.getName());
+                }
             }
         }
 
