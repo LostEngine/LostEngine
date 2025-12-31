@@ -18,16 +18,16 @@ import java.util.Map;
 @Property(key = "food")
 public class FoodProperty implements ComponentProperty {
     @Parameter(key = "nutrition", type = Integer.class, required = true)
-    private int nutrition = 6;
+    private Integer nutrition = 6;
 
     @Parameter(key = "saturation_modifier", type = Float.class)
-    private float saturationModifier = 0.6F;
+    private Float saturationModifier = 0.6F;
 
     @Parameter(key = "can_always_eat", type = Boolean.class)
-    private boolean canAlwaysEat = false;
+    private Boolean canAlwaysEat = false;
 
     @Parameter(key = "consume_seconds", type = Float.class)
-    private float consumeSeconds = 1.6F;
+    private Float consumeSeconds = 1.6F;
 
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {

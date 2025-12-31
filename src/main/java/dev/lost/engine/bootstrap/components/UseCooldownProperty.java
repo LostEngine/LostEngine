@@ -17,7 +17,7 @@ import java.util.Optional;
 @Property(key = "use_cooldown")
 public class UseCooldownProperty implements ComponentProperty {
     @Parameter(key = "cooldown_seconds", type = Float.class, required = true)
-    private float cooldownSeconds = 1F;
+    private Float cooldownSeconds = 1F;
 
     @Parameter(key = "group", type = String.class)
     private String groupString;

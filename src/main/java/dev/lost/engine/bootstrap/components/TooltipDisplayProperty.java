@@ -22,7 +22,7 @@ import java.util.SequencedSet;
 @Property(key = "tooltip_display")
 public class TooltipDisplayProperty implements ComponentProperty {
     @Parameter(key = "hide_tooltip", type = Boolean.class)
-    private boolean hideTooltip;
+    private Boolean hideTooltip;
 
     @Parameter(key = "hidden_components", type = List.class)
     private List<String> tooltipList;
