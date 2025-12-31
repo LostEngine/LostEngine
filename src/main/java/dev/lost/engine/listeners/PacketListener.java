@@ -19,7 +19,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.papermc.paper.network.ChannelInitializeListenerHolder;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.kyori.adventure.key.Key;
 import net.minecraft.core.Holder;
@@ -46,7 +46,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BlockItemStateProperties;
@@ -62,10 +61,7 @@ import net.minecraft.world.level.chunk.PalettedContainerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class PacketListener {
 
@@ -77,22 +73,18 @@ public class PacketListener {
     @SuppressWarnings("deprecation")
     private static final Holder.Reference<Block> RED_MUSHROOM_BLOCK_HOLDER = Blocks.RED_MUSHROOM_BLOCK.builtInRegistryHolder();
 
-    private static final BlockItemStateProperties MUSHROOM_BLOCK_ITEM_STATE_PROPERTIES = new BlockItemStateProperties(new Object2ObjectOpenHashMap<>());
-
-    static {
-        MUSHROOM_BLOCK_ITEM_STATE_PROPERTIES.properties().putAll(Map.of(
-                "down", "true",
-                "east", "true",
-                "north", "true",
-                "south", "true",
-                "up", "true",
-                "west", "true"
-        ));
-    }
+    private static final BlockItemStateProperties MUSHROOM_BLOCK_ITEM_STATE_PROPERTIES = new BlockItemStateProperties(Map.of(
+            "down", "true",
+            "east", "true",
+            "north", "true",
+            "south", "true",
+            "up", "true",
+            "west", "true"
+    ));
 
     public static void inject() {
         ChannelInitializeListenerHolder.addListener(
-                Key.key("lost_engine_packet_listener"),
+                Key.key("lost_engine", "packet_listener"),
                 channel -> channel.pipeline().addBefore("packet_handler", "lost_engine_packet_listener", new ChannelDupeHandler())
         );
     }
@@ -101,6 +93,7 @@ public class PacketListener {
         private ServerPlayer player;
         private boolean isWaitingForResourcePack = false;
         private Boolean isBedrockClient = null;
+        volatile byte slot = 0;
 
         private boolean isBedrockClient(ChannelHandlerContext ctx) {
             if (isBedrockClient != null) return isBedrockClient;
@@ -108,7 +101,7 @@ public class PacketListener {
             if (player != null) {
                 isBedrockClient = FloodgateUtils.isBedrockPlayer(player.getUUID());
                 if (isBedrockClient) {
-                    LostEngine.logger().info("Bedrock client detected: " + player.getName().getString());
+                    LostEngine.logger().info("Bedrock client detected: {}", player.getName().getString());
                 }
                 return isBedrockClient;
             }
@@ -146,22 +139,15 @@ public class PacketListener {
                 }
             }
             case ServerboundContainerClickPacket packet -> {
-                ServerPlayer player = handler.getPlayer(ctx);
-                if (player != null && packet.slotNum() > 0 && packet.slotNum() < player.inventoryMenu.slots.size()) {
-                    Slot slot = player.inventoryMenu.slots.get(packet.slotNum());
-                    if (slot.getItem().getItem() instanceof CustomItem) {
-                        // If it is a custom item we remake the hash verification as it was made by the client
-                        return new ServerboundContainerClickPacket(
-                                packet.containerId(),
-                                packet.stateId(),
-                                packet.slotNum(),
-                                packet.buttonNum(),
-                                packet.clickType(),
-                                packet.changedSlots(),
-                                (stack, hashGenerator) -> stack.is(slot.getItem().getItem())
-                        );
-                    }
-                }
+                return new ServerboundContainerClickPacket(
+                        packet.containerId(),
+                        packet.stateId(),
+                        packet.slotNum(),
+                        packet.buttonNum(),
+                        packet.clickType(),
+                        packet.changedSlots(),
+                        (stack, hashGenerator) -> packet.carriedItem().matches(editItem(stack, false).orElse(stack), hashGenerator)
+                );
             }
             case ServerboundPlayerActionPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
@@ -208,6 +194,15 @@ public class PacketListener {
                 if (handler.isWaitingForResourcePack && action == ServerboundResourcePackPacket.Action.SUCCESSFULLY_LOADED) {
                     ctx.channel().writeAndFlush(ClientboundFinishConfigurationPacket.INSTANCE);
                 }
+            }
+            case ServerboundSetCarriedItemPacket packet -> {
+                if (handler.isBedrockClient) break;
+                ServerPlayer player = handler.getPlayer(ctx);
+                if (player == null || player.isImmobile()) break;
+                byte slot = (byte) packet.getSlot();
+                if (slot < 0 || slot >= player.getInventory().getContainerSize()) break;
+                processNewSlot(handler.slot, slot, player);
+                handler.slot = slot;
             }
             default -> {
             }
@@ -426,6 +421,13 @@ public class PacketListener {
                         Optional.of(Component.literal(LostEngine.getInstance().getConfig().getString("pack_hosting.resource_pack_prompt", "Prompt")))
                 );
             }
+            case ClientboundSetHeldSlotPacket(int slot) -> {
+                if (handler.isBedrockClient) break;
+                ServerPlayer player = handler.getPlayer(ctx);
+                if (player == null) break;
+                processNewSlot(handler.slot, (byte) slot, player);
+                handler.slot = (byte) slot;
+            }
             default -> {
             }
         }
@@ -510,7 +512,6 @@ public class PacketListener {
             ));
             tool = new Tool(rules, tool.defaultMiningSpeed(), tool.damagePerBlock(), tool.canDestroyBlocksInCreative());
             item.set(DataComponents.TOOL, tool);
-            optionalItemStack = Optional.of(item);
         } else {
             item.set(
                     DataComponents.TOOL,
@@ -524,8 +525,8 @@ public class PacketListener {
                             1,
                             true
                     ));
-            optionalItemStack = Optional.of(item);
         }
+        optionalItemStack = Optional.of(item);
         return optionalItemStack;
     }
 
@@ -562,6 +563,19 @@ public class PacketListener {
             }
         }
         return Optional.empty();
+    }
+
+    private static void processNewSlot(byte oldSlot, byte newSlot, ServerPlayer player) {
+        if (oldSlot != newSlot) {
+            // Previous Item
+            PacketListener.editItem(player.getInventory().getItem(oldSlot), false).ifPresent(itemStack ->
+                    player.connection.send(new ClientboundSetPlayerInventoryPacket(oldSlot, itemStack))
+            );
+            // New Item
+            PacketListener.editItem(player.getInventory().getItem(newSlot), true).ifPresent(itemStack ->
+                    player.connection.send(new ClientboundSetPlayerInventoryPacket(newSlot, itemStack))
+            );
+        }
     }
 
     public static String componentToJson(Component component) {

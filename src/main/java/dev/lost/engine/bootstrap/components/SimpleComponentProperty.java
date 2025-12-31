@@ -1,0 +1,18 @@
+package dev.lost.engine.bootstrap.components;
+
+import io.papermc.paper.plugin.bootstrap.BootstrapContext;
+import net.minecraft.core.component.DataComponentType;
+import org.bukkit.configuration.ConfigurationSection;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Map;
+
+@SuppressWarnings("UnstableApiUsage")
+public interface SimpleComponentProperty<T> extends ComponentProperty {
+    @Override
+    default void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
+
+    }
+
+    void applyComponent(@NotNull BootstrapContext context, @NotNull T parameter, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components);
+}

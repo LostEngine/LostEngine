@@ -9,5 +9,5 @@ import java.util.Map;
 
 @SuppressWarnings("UnstableApiUsage")
 public interface ComponentProperty {
-    void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components);
+    void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components);
 }

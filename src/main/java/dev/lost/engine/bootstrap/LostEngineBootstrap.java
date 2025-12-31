@@ -60,14 +60,14 @@ public class LostEngineBootstrap implements PluginBootstrap {
             }
             dataPackGenerator.build(new File(levelName + File.separator + "datapacks" + File.separator + "lost_engine_generated"));
             context.getLogger().info("Finished building the data pack!");
-        } catch (Throwable throwable) {
-            context.getLogger().error("Failed to inject custom resources are you using Minecraft/Paper 1.21.11?", throwable);
+        } catch (Exception e) {
+            context.getLogger().error("Failed to inject custom resources are you using Minecraft/Paper 1.21.10?", e);
             stopServer(context);
         }
 
     }
 
-    private static void stopServer(@NotNull BootstrapContext context) {
+    static void stopServer(@NotNull BootstrapContext context) {
         context.getLogger().info("Stopping the server...");
         System.exit(1);
     }

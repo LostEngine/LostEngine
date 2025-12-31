@@ -57,7 +57,7 @@ public class WebServer {
                 } else {
                     handleStaticFiles(exchange, path);
                 }
-            } catch (Throwable e) {
+            } catch (IOException e) {
                 LostEngine.logger().error("Error handling http request", e);
                 sendResponse(exchange, 500, "Internal Server Error", "text/plain");
             }

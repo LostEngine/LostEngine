@@ -2,6 +2,7 @@ package dev.lost.engine.utils;
 
 import com.mojang.datafixers.util.Pair;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.engine.bootstrap.components.SimpleComponentProperty;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
@@ -12,8 +13,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
@@ -102,5 +107,18 @@ public class ReflectionUtils {
     public static void setItemMaterial(ItemStack itemStack, Material material) throws Exception {
         ((Map<net.minecraft.world.item.Item, Material>) ITEM_MATERIAL_FIELD.get(CraftMagicNumbers.INSTANCE)).put(itemStack.getItem(), material);
         ((Map<Material, net.minecraft.world.item.Item>) MATERIAL_ITEM_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, itemStack.getItem());
+    }
+
+    public static @Nullable Class<?> getTypeArgument(@NonNull Class<?> clazz) {
+        for (Type type : clazz.getGenericInterfaces()) {
+            if (type instanceof ParameterizedType parameterizedType &&
+                    parameterizedType.getRawType().equals(SimpleComponentProperty.class)) {
+                Type actualType = parameterizedType.getActualTypeArguments()[0];
+                if (actualType instanceof Class<?> actualClass) {
+                    return actualClass;
+                }
+            }
+        }
+        return null;
     }
 }
