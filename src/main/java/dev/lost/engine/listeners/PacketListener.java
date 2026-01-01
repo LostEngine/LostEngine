@@ -1,5 +1,6 @@
 package dev.lost.engine.listeners;
 
+import ca.spottedleaf.moonrise.common.util.TickThread;
 import com.google.gson.*;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
@@ -8,6 +9,7 @@ import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.FloodgateUtils;
+import dev.lost.engine.utils.FoliaUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
 import io.netty.buffer.Unpooled;
@@ -39,6 +41,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -151,43 +154,13 @@ public class PacketListener {
             }
             case ServerboundPlayerActionPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
-                if (player == null) break;
-                if (player.gameMode.getGameModeForPlayer() != GameType.SURVIVAL) break;
-                if (packet.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
-                    //noinspection resource -- false positive for ServerPlayer#level()
-                    BlockState blockState = player.level().getBlockState(packet.getPos());
-                    if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
-                        if (blockState.getDestroyProgress(player, player.level(), packet.getPos()) >= 1.0F) {
-                            player.connection.send(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
-                            break;
-                        }
-                        float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
-                        if (clientBlockDestroySpeed == 0) break;
-                        float blockDestroySpeed = getDestroySpeed(blockState, player.getInventory().getSelectedItem());
-                        if (blockDestroySpeed != clientBlockDestroySpeed) {
-                            AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
-                            });
-                            AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
-                            if (playerAttribute != null) blockBreakSpeed.apply(playerAttribute.pack());
-                            // The ratio is between what the client actually knows and what the server thinks
-                            float ratio = blockDestroySpeed / clientBlockDestroySpeed;
-                            blockBreakSpeed.setBaseValue(ratio * blockBreakSpeed.getBaseValue());
-                            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
-                        }
-                    }
-                } else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
-                        packet.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
-                    //noinspection resource -- false positive for ServerPlayer#level()
-                    BlockState blockState = player.level().getBlockState(packet.getPos());
-                    if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
-                        AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
-                        });
-                        AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
-                        if (playerAttribute != null) {
-                            blockBreakSpeed.apply(playerAttribute.pack());
-                        }
-                        player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
-                    }
+                if (player == null || player.gameMode.getGameModeForPlayer() != GameType.SURVIVAL) break;
+                if (FoliaUtils.isFolia() && !TickThread.isTickThread()) {
+                    player.getBukkitEntity().getScheduler().run(LostEngine.getInstance(), scheduledTask ->
+                            processServerboundPlayerActionPacket(packet, player), null);
+                    // Make sure we are executing this on the right thread if the server is Folia
+                } else {
+                    processServerboundPlayerActionPacket(packet, player);
                 }
             }
             case ServerboundResourcePackPacket(UUID ignored, ServerboundResourcePackPacket.Action action) -> {
@@ -483,6 +456,45 @@ public class PacketListener {
                 section.write(newBuf, null, 0);
             }
             ReflectionUtils.setBuffer(packet, newBuf.array());
+        }
+    }
+
+    private static void processServerboundPlayerActionPacket(@NotNull ServerboundPlayerActionPacket packet, ServerPlayer player) {
+        if (packet.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
+            ServerLevel level = player.level();
+            BlockState blockState = level.getBlockState(packet.getPos());
+            if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
+                if (blockState.getDestroyProgress(player, level, packet.getPos()) >= 1.0F) {
+                    player.connection.send(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
+                    return;
+                }
+                float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
+                if (clientBlockDestroySpeed == 0) return;
+                float blockDestroySpeed = getDestroySpeed(blockState, player.getInventory().getSelectedItem());
+                if (blockDestroySpeed != clientBlockDestroySpeed) {
+                    AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
+                    });
+                    AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
+                    if (playerAttribute != null) blockBreakSpeed.apply(playerAttribute.pack());
+                    // The ratio is between what the client actually knows and what the server thinks
+                    float ratio = blockDestroySpeed / clientBlockDestroySpeed;
+                    blockBreakSpeed.setBaseValue(ratio * blockBreakSpeed.getBaseValue());
+                    player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                }
+            }
+        } else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
+                packet.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
+            ServerLevel level = player.level();
+            BlockState blockState = level.getBlockState(packet.getPos());
+            if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
+                AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
+                });
+                AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
+                if (playerAttribute != null) {
+                    blockBreakSpeed.apply(playerAttribute.pack());
+                }
+                player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+            }
         }
     }
 

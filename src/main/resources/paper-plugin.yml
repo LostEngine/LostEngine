@@ -5,6 +5,7 @@ api-version: '1.21.11'
 authors: [Thomas (misieur)]
 website: https://misieur.me/
 bootstrapper: dev.lost.engine.bootstrap.LostEngineBootstrap
+folia-supported: true
 dependencies:
   server:
     floodgate:
