@@ -17,9 +17,9 @@
     - [ ] Config editor
         - [X] View items/materials
         - [ ] Create/manage items/materials
-- [ ] Fournitures
-    - [ ] Fourniture Entity
-    - [ ] Interactable Fournitures
+- [ ] Furniture
+    - [ ] Furniture Entity
+    - [ ] Interactable Furniture
 - [ ] Bedrock compatibility
     - [ ] Items
         - [X] Regular items
@@ -31,4 +31,4 @@
   - [X] `/give`
   - [X] `/setblock`
   - [ ] `/fill`
-  - [ ] `/summon` (for fournitures)
+  - [ ] `/summon` (for furniture)
