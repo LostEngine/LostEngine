@@ -13,7 +13,6 @@ import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ReflectionUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import lombok.Getter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -337,6 +336,8 @@ public class ResourceInjector {
                 case "NONE" -> {
                     // Nothing to do
                 }
+                default ->
+                        context.getLogger().error("Unknown required material: {} for block: {} (WOOD, STONE, IRON, DIAMOND, or NETHERITE)", requiredMaterial, key);
             }
             ConfigurationSection dropsSection = blockSection.getConfigurationSection("drops");
             if (dropsSection != null) {
@@ -355,6 +356,7 @@ public class ResourceInjector {
                     }
                 }
             }
+            String type = blockSection.getString("type", "regular").toLowerCase();
             try {
                 switch (type) {
                     case "regular" -> BlockInjector.injectRegularBlock(
@@ -377,7 +379,7 @@ public class ResourceInjector {
         }
     }
 
-    public static <K> @NonNull K getOrThrow(@NonNull Map<?, K> map, Object key, String message) {
+    public static <K> K getOrThrow(Map<?, K> map, Object key, String message) {
         K obj = map.get(key);
         if (obj == null)
             throw new IllegalArgumentException(message);
