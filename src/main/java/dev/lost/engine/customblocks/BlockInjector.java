@@ -11,7 +11,7 @@ import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -35,7 +35,7 @@ public class BlockInjector {
             float explosionResistance,
             @NotNull Minable minable
     ) throws Exception {
-        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("lost_engine", id));
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("lost_engine", id));
 
         BlockBehaviour.Properties properties = BlockBehaviour.Properties.of()
                 .mapColor(MapColor.COLOR_LIGHT_BLUE) // Little easter egg
@@ -61,10 +61,10 @@ public class BlockInjector {
         Item item = ItemInjector.injectBlockItem(id, custom);
 
         switch (minable) {
-            case AXE -> dataPackGenerator.addAxeMinable(key.location().toString());
-            case HOE -> dataPackGenerator.addHoeMinable(key.location().toString());
-            case PICKAXE -> dataPackGenerator.addPickaxeMinable(key.location().toString());
-            case SHOVEL -> dataPackGenerator.addShovelMinable(key.location().toString());
+            case AXE -> dataPackGenerator.addAxeMinable(key.identifier().toString());
+            case HOE -> dataPackGenerator.addHoeMinable(key.identifier().toString());
+            case PICKAXE -> dataPackGenerator.addPickaxeMinable(key.identifier().toString());
+            case SHOVEL -> dataPackGenerator.addShovelMinable(key.identifier().toString());
         }
     }
 
@@ -73,7 +73,7 @@ public class BlockInjector {
             BlockState clientBlockState,
             float explosionPower
     ) throws Exception {
-        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("lost_engine", id));
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("lost_engine", id));
 
         BlockBehaviour.Properties properties = BlockBehaviour.Properties.of()
                 .mapColor(MapColor.COLOR_LIGHT_BLUE) // Little easter egg

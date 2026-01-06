@@ -1,5 +1,7 @@
 package dev.lost.engine.bootstrap.components;
 
+import dev.lost.engine.bootstrap.components.annotations.Parameter;
+import dev.lost.engine.bootstrap.components.annotations.Property;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -9,31 +11,34 @@ import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.Consumable;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("UnstableApiUsage")
+@SuppressWarnings({"UnstableApiUsage", "FieldMayBeFinal", "FieldCanBeLocal"})
+@Property(key = "food")
 public class FoodProperty implements ComponentProperty {
-    @Override
-    public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull Map<DataComponentType<?>, Object> components) {
-        if (!itemSection.contains("food"))
-            return;
+    @Parameter(key = "nutrition", type = Integer.class, required = true)
+    private Integer nutrition = 6;
 
-        int nutrition = itemSection.getInt("food.nutrition", 6);
-        float saturationModifier = (float) itemSection.getDouble("food.saturation_modifier", 0.6F);
-        boolean canAlwaysEat = itemSection.getBoolean("food.can_always_eat", false);
-        float consumeSeconds = (float) itemSection.getDouble("food.consumeSeconds", 1.6F);
-        FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier, canAlwaysEat);
+    @Nullable
+    @Parameter(key = "saturation_modifier", type = Float.class)
+    private Float saturationModifier = 0.6F;
+
+    @Nullable
+    @Parameter(key = "can_always_eat", type = Boolean.class)
+    private Boolean canAlwaysEat = false;
+
+    @Nullable
+    @Parameter(key = "consume_seconds", type = Float.class)
+    private Float consumeSeconds = 1.6F;
+
+    @Override
+    public void applyComponent(@NotNull BootstrapContext context, @NotNull ConfigurationSection itemSection, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
+        FoodProperties foodProperties = new FoodProperties(nutrition, saturationModifier != null ? saturationModifier : 0.6F, canAlwaysEat != null ? canAlwaysEat : false);
 
         components.put(DataComponents.FOOD, foodProperties);
-        components.put(
-                DataComponents.CONSUMABLE,
-                Consumable.builder()
-                        .consumeSeconds(consumeSeconds)
-                        .animation(ItemUseAnimation.EAT)
-                        .sound(SoundEvents.GENERIC_EAT)
-                        .hasConsumeParticles(true)
-                        .build()
-        );
+        components.put(DataComponents.CONSUMABLE, new Consumable(consumeSeconds != null ? consumeSeconds : 1.6F, ItemUseAnimation.EAT, SoundEvents.GENERIC_EAT, true, List.of()));
     }
 }

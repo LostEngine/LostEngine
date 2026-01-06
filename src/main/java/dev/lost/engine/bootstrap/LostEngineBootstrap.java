@@ -17,15 +17,15 @@ import java.util.Properties;
 
 import static dev.lost.engine.bootstrap.ResourceInjector.injectResources;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10") // Have to update this class every new Minecraft version
+@CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // Have to update this class every new Minecraft version
 @SuppressWarnings("UnstableApiUsage")
 public class LostEngineBootstrap implements PluginBootstrap {
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {
         try {
             String versionId = SharedConstants.getCurrentVersion().id();
-            if (!versionId.equals("1.21.10")) {
-                context.getLogger().error("LostEngine only supports Minecraft/Paper 1.21.10, detected version: {}", versionId);
+            if (!versionId.equals("1.21.11")) {
+                context.getLogger().error("LostEngine only supports Minecraft/Paper 1.21.11, detected version: {}", versionId);
                 stopServer(context);
             }
             //noinspection unused -- Force class loading to fix a random bug
@@ -60,14 +60,14 @@ public class LostEngineBootstrap implements PluginBootstrap {
             }
             dataPackGenerator.build(new File(levelName + File.separator + "datapacks" + File.separator + "lost_engine_generated"));
             context.getLogger().info("Finished building the data pack!");
-        } catch (Throwable throwable) {
-            context.getLogger().error("Failed to inject custom resources are you using Minecraft/Paper 1.21.10?", throwable);
+        } catch (Exception e) {
+            context.getLogger().error("Failed to inject custom resources are you using Minecraft/Paper 1.21.11?", e);
             stopServer(context);
         }
 
     }
 
-    private static void stopServer(@NotNull BootstrapContext context) {
+    static void stopServer(@NotNull BootstrapContext context) {
         context.getLogger().info("Stopping the server...");
         System.exit(1);
     }

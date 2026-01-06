@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ModelImpl implements Model {
@@ -24,7 +25,7 @@ public class ModelImpl implements Model {
     public ModelImpl(@NotNull JsonObject json, String path) {
         this.path = path;
         this.parent = json.get("parent") instanceof JsonPrimitive jp ? jp.getAsString() : null;
-        this.guiLight = json.get("gui_light") instanceof JsonPrimitive jp ? GuiLight.valueOf(jp.getAsString().toUpperCase()) : null;
+        this.guiLight = json.get("gui_light") instanceof JsonPrimitive jp ? GuiLight.valueOf(jp.getAsString().toUpperCase(Locale.ROOT)) : null;
         this.ambientocclusion = json.get("ambientocclusion") instanceof JsonPrimitive jp ? jp.getAsBoolean() : null;
         this.textures = new Object2ObjectOpenHashMap<>();
         if (json.get("textures") instanceof JsonObject texturesJson) {
@@ -47,7 +48,7 @@ public class ModelImpl implements Model {
                         Element.Rotation rotation = new ElementImpl.RotationImpl()
                                 .origin(rotationJson.get("origin") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
                                 .rescale(rotationJson.get("rescale") instanceof JsonPrimitive rp ? rp.getAsBoolean() : null)
-                                .axis(rotationJson.get("axis") instanceof JsonPrimitive ap ? Element.Rotation.Axis.valueOf(ap.getAsString().toUpperCase()) : null)
+                                .axis(rotationJson.get("axis") instanceof JsonPrimitive ap ? Element.Rotation.Axis.valueOf(ap.getAsString().toUpperCase(Locale.ROOT)) : null)
                                 .angle(rotationJson.get("angle") instanceof JsonPrimitive ap ? ap.getAsInt() : 0);
                         element.rotation(rotation);
                     }
@@ -57,10 +58,10 @@ public class ModelImpl implements Model {
                                 Element.Face face = new ElementImpl.FaceImpl()
                                         .texture(faceJson.get("texture").getAsString())
                                         .uv(faceJson.get("uv") instanceof JsonArray jsonArray ? jsonArray.asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
-                                        .cullface(faceJson.get("cullface") instanceof JsonPrimitive cpf ? Element.Face.FaceType.valueOf(cpf.getAsString().toUpperCase()) : null)
+                                        .cullface(faceJson.get("cullface") instanceof JsonPrimitive cpf ? Element.Face.FaceType.valueOf(cpf.getAsString().toUpperCase(Locale.ROOT)) : null)
                                         .rotation(faceJson.get("rotation") instanceof JsonPrimitive rp ? rp.getAsInt() : null)
                                         .tintindex(faceJson.get("tintindex") instanceof JsonPrimitive tip ? tip.getAsInt() : null);
-                                element.face(Element.Face.FaceType.valueOf(faceEntry.getKey().toUpperCase()), face);
+                                element.face(Element.Face.FaceType.valueOf(faceEntry.getKey().toUpperCase(Locale.ROOT)), face);
                             }
                         }
                     }
@@ -75,7 +76,7 @@ public class ModelImpl implements Model {
                             .rotation(transformJson.get("rotation") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
                             .translation(transformJson.get("translation") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
                             .scale(transformJson.get("scale") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null);
-                    display.put(Display.DisplayType.valueOf(displayEntry.getKey().toUpperCase()), transform);
+                    display.put(Display.DisplayType.valueOf(displayEntry.getKey().toUpperCase(Locale.ROOT)), transform);
                 }
             }
             this.display = display;

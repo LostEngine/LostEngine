@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 public interface CustomItem {
@@ -11,5 +12,9 @@ public interface CustomItem {
 
     default @Nullable String toolType() {
         return null;
+    }
+
+    default ItemStack getDefaultMaterial() {
+        return Items.FILLED_MAP.getDefaultInstance();
     }
 }

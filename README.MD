@@ -1,0 +1,34 @@
+## TODO:
+- [ ] Custom Items
+    - [X] Regular Items
+    - [X] Tools
+    - [X] Armors
+    - [X] Elytra
+    - [ ] Trident
+- [ ] Custom Blocks
+    - [X] Dynamic block hardness
+    - [X] Drops/Required tool
+    - [ ] Custom sounds
+    - [ ] Transparent blocks
+    - [ ] Lights/Redstone
+- [ ] Web editor
+    - [X] Upload/Download/Create files
+    - [X] View/Edit files
+    - [ ] Config editor
+        - [X] View items/materials
+        - [ ] Create/manage items/materials
+- [ ] Furniture
+    - [ ] Furniture Entity
+    - [ ] Interactable Furniture
+- [ ] Bedrock compatibility
+    - [ ] Items
+        - [X] Regular items
+        - [X] Tools
+        - [ ] Armor/Elytra/Trident
+    - [ ] Translations (generated but not working correctly with geyser)
+    - [ ] Custom blocks
+- [ ] Commands
+  - [X] `/give`
+  - [X] `/setblock`
+  - [ ] `/fill`
+  - [ ] `/summon` (for furniture)

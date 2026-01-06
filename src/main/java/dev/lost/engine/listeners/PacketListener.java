@@ -1,9 +1,6 @@
 package dev.lost.engine.listeners;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import dev.lost.engine.LostEngine;
@@ -19,8 +16,8 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.papermc.paper.network.ChannelInitializeListenerHolder;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.kyori.adventure.key.Key;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -39,18 +36,20 @@ import net.minecraft.network.protocol.configuration.ClientboundFinishConfigurati
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.item.crafting.RecipePropertySet;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -62,10 +61,7 @@ import net.minecraft.world.level.chunk.PalettedContainerFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class PacketListener {
 
@@ -77,22 +73,18 @@ public class PacketListener {
     @SuppressWarnings("deprecation")
     private static final Holder.Reference<Block> RED_MUSHROOM_BLOCK_HOLDER = Blocks.RED_MUSHROOM_BLOCK.builtInRegistryHolder();
 
-    private static final BlockItemStateProperties MUSHROOM_BLOCK_ITEM_STATE_PROPERTIES = new BlockItemStateProperties(new Object2ObjectOpenHashMap<>());
-
-    static {
-        MUSHROOM_BLOCK_ITEM_STATE_PROPERTIES.properties().putAll(Map.of(
-                "down", "true",
-                "east", "true",
-                "north", "true",
-                "south", "true",
-                "up", "true",
-                "west", "true"
-        ));
-    }
+    private static final BlockItemStateProperties MUSHROOM_BLOCK_ITEM_STATE_PROPERTIES = new BlockItemStateProperties(Map.of(
+            "down", "true",
+            "east", "true",
+            "north", "true",
+            "south", "true",
+            "up", "true",
+            "west", "true"
+    ));
 
     public static void inject() {
         ChannelInitializeListenerHolder.addListener(
-                Key.key("lost_engine_packet_listener"),
+                Key.key("lost_engine", "packet_listener"),
                 channel -> channel.pipeline().addBefore("packet_handler", "lost_engine_packet_listener", new ChannelDupeHandler())
         );
     }
@@ -101,6 +93,7 @@ public class PacketListener {
         private ServerPlayer player;
         private boolean isWaitingForResourcePack = false;
         private Boolean isBedrockClient = null;
+        volatile byte slot = 0;
 
         private boolean isBedrockClient(ChannelHandlerContext ctx) {
             if (isBedrockClient != null) return isBedrockClient;
@@ -108,7 +101,7 @@ public class PacketListener {
             if (player != null) {
                 isBedrockClient = FloodgateUtils.isBedrockPlayer(player.getUUID());
                 if (isBedrockClient) {
-                    LostEngine.logger().info("Bedrock client detected: " + player.getName().getString());
+                    LostEngine.logger().info("Bedrock client detected: {}", player.getName().getString());
                 }
                 return isBedrockClient;
             }
@@ -146,22 +139,15 @@ public class PacketListener {
                 }
             }
             case ServerboundContainerClickPacket packet -> {
-                ServerPlayer player = handler.getPlayer(ctx);
-                if (player != null && packet.slotNum() > 0 && packet.slotNum() < player.inventoryMenu.slots.size()) {
-                    Slot slot = player.inventoryMenu.slots.get(packet.slotNum());
-                    if (slot.getItem().getItem() instanceof CustomItem) {
-                        // If it is a custom item we remake the hash verification as it was made by the client
-                        return new ServerboundContainerClickPacket(
-                                packet.containerId(),
-                                packet.stateId(),
-                                packet.slotNum(),
-                                packet.buttonNum(),
-                                packet.clickType(),
-                                packet.changedSlots(),
-                                (stack, hashGenerator) -> stack.is(slot.getItem().getItem())
-                        );
-                    }
-                }
+                return new ServerboundContainerClickPacket(
+                        packet.containerId(),
+                        packet.stateId(),
+                        packet.slotNum(),
+                        packet.buttonNum(),
+                        packet.clickType(),
+                        packet.changedSlots(),
+                        (stack, hashGenerator) -> packet.carriedItem().matches(editItem(stack, false).orElse(stack), hashGenerator)
+                );
             }
             case ServerboundPlayerActionPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
@@ -204,10 +190,19 @@ public class PacketListener {
                     }
                 }
             }
-            case ServerboundResourcePackPacket(UUID id, ServerboundResourcePackPacket.Action action) -> {
+            case ServerboundResourcePackPacket(UUID ignored, ServerboundResourcePackPacket.Action action) -> {
                 if (handler.isWaitingForResourcePack && action == ServerboundResourcePackPacket.Action.SUCCESSFULLY_LOADED) {
                     ctx.channel().writeAndFlush(ClientboundFinishConfigurationPacket.INSTANCE);
                 }
+            }
+            case ServerboundSetCarriedItemPacket packet -> {
+                if (handler.isBedrockClient) break;
+                ServerPlayer player = handler.getPlayer(ctx);
+                if (player == null || player.isImmobile()) break;
+                byte slot = (byte) packet.getSlot();
+                if (slot < 0 || slot >= player.getInventory().getContainerSize()) break;
+                processNewSlot(handler.slot, slot, player);
+                handler.slot = slot;
             }
             default -> {
             }
@@ -411,7 +406,7 @@ public class PacketListener {
                     }
                 }
             }
-            case ClientboundFinishConfigurationPacket packet -> {
+            case ClientboundFinishConfigurationPacket ignored -> {
                 if (handler.isWaitingForResourcePack) {
                     handler.isWaitingForResourcePack = false;
                     break; // Avoid sending it twice
@@ -425,6 +420,26 @@ public class PacketListener {
                         true,
                         Optional.of(Component.literal(LostEngine.getInstance().getConfig().getString("pack_hosting.resource_pack_prompt", "Prompt")))
                 );
+            }
+            case ClientboundSetHeldSlotPacket(int slot) -> {
+                if (handler.isBedrockClient) break;
+                ServerPlayer player = handler.getPlayer(ctx);
+                if (player == null) break;
+                processNewSlot(handler.slot, (byte) slot, player);
+                handler.slot = (byte) slot;
+            }
+            case ClientboundUpdateRecipesPacket packet-> {
+                try {
+                    for (Map.Entry<ResourceKey<RecipePropertySet>, RecipePropertySet> entry : packet.itemSets().entrySet()) {
+                        Set<Holder<Item>> oldItems = ReflectionUtils.getItems(entry.getValue());
+                        Set<Holder<Item>> newItems = new ObjectOpenHashSet<>(oldItems);
+                        newItems.removeIf(item -> item.value().asItem() instanceof CustomItem);
+                        if (oldItems.size() != newItems.size())
+                            ReflectionUtils.setItems(entry.getValue(), newItems);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to update items via reflection in ClientboundUpdateRecipesPacket", e);
+                }
             }
             default -> {
             }
@@ -480,7 +495,7 @@ public class PacketListener {
             }
         }
         if (item.getItem() instanceof CustomItem customItem) {
-            ItemStack newItem = dynamicMaterial ? customItem.getDynamicMaterial().copy() : Items.FILLED_MAP.getDefaultInstance();
+            ItemStack newItem = dynamicMaterial ? customItem.getDynamicMaterial() : customItem.getDefaultMaterial();
             newItem.setCount(item.getCount());
             newItem.applyComponents(item.getComponents());
             ItemUtils.addCustomStringData(newItem, "lost_engine_id", customItem.getId());
@@ -510,7 +525,6 @@ public class PacketListener {
             ));
             tool = new Tool(rules, tool.defaultMiningSpeed(), tool.damagePerBlock(), tool.canDestroyBlocksInCreative());
             item.set(DataComponents.TOOL, tool);
-            optionalItemStack = Optional.of(item);
         } else {
             item.set(
                     DataComponents.TOOL,
@@ -524,8 +538,8 @@ public class PacketListener {
                             1,
                             true
                     ));
-            optionalItemStack = Optional.of(item);
         }
+        optionalItemStack = Optional.of(item);
         return optionalItemStack;
     }
 
@@ -533,7 +547,7 @@ public class PacketListener {
         if (!item.isEmpty()) {
             String lostEngineId = ItemUtils.getCustomStringData(item, "lost_engine_id");
             if (lostEngineId != null) {
-                ResourceLocation id = ResourceLocation.parse(lostEngineId);
+                Identifier id = Identifier.parse(lostEngineId);
                 return BuiltInRegistries.ITEM.get(id).map(builtInItem -> {
                     ItemStack newItem = new ItemStack(builtInItem, item.getCount());
                     newItem.applyComponents(item.getComponents());
@@ -562,6 +576,19 @@ public class PacketListener {
             }
         }
         return Optional.empty();
+    }
+
+    private static void processNewSlot(byte oldSlot, byte newSlot, ServerPlayer player) {
+        if (oldSlot != newSlot) {
+            // Previous Item
+            PacketListener.editItem(player.getInventory().getItem(oldSlot), false).ifPresent(itemStack ->
+                    player.connection.send(new ClientboundSetPlayerInventoryPacket(oldSlot, itemStack))
+            );
+            // New Item
+            PacketListener.editItem(player.getInventory().getItem(newSlot), true).ifPresent(itemStack ->
+                    player.connection.send(new ClientboundSetPlayerInventoryPacket(newSlot, itemStack))
+            );
+        }
     }
 
     public static String componentToJson(Component component) {

@@ -6,7 +6,6 @@ import dev.lost.engine.commands.GiveCommand;
 import dev.lost.engine.commands.ReloadCommand;
 import dev.lost.engine.commands.SetBlockCommand;
 import dev.lost.engine.items.customitems.CustomItem;
-import dev.lost.engine.listeners.DynamicMaterialListener;
 import dev.lost.engine.listeners.PacketListener;
 import dev.lost.engine.utils.FloodgateUtils;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -94,7 +93,6 @@ public final class LostEngine extends JavaPlugin {
 
         // Listeners
         PacketListener.inject();
-        DynamicMaterialListener.setup(this);
 
         if (getConfig().getBoolean("geyser_compatibility", false)) {
             if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {

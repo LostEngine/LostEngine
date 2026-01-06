@@ -22,6 +22,10 @@ public class DataPackGenerator {
     private final JsonObject shovels = new JsonObject();
     private final JsonObject axes = new JsonObject();
     private final JsonObject hoes = new JsonObject();
+    private final JsonObject helmets = new JsonObject();
+    private final JsonObject chestplates = new JsonObject();
+    private final JsonObject leggings = new JsonObject();
+    private final JsonObject boots = new JsonObject();
     private final JsonObject axeMinable = new JsonObject();
     private final JsonObject hoeMinable = new JsonObject();
     private final JsonObject pickaxeMinable = new JsonObject();
@@ -32,7 +36,7 @@ public class DataPackGenerator {
     private final JsonObject incorrectForCopperTools = new JsonObject();
     private final JsonObject incorrectForIronTools = new JsonObject();
     private final JsonObject incorrectForDiamondTools = new JsonObject();
-    private final Object2ObjectOpenHashMap<String, JsonObject> toolMaterials = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<String, JsonObject> repairItems = new Object2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<String, JsonObject> lootTables = new Object2ObjectOpenHashMap<>();
     private static final JsonObject MCMETA;
 
@@ -56,6 +60,10 @@ public class DataPackGenerator {
         shovels.add("values", new JsonArray());
         axes.add("values", new JsonArray());
         hoes.add("values", new JsonArray());
+        helmets.add("values", new JsonArray());
+        chestplates.add("values", new JsonArray());
+        leggings.add("values", new JsonArray());
+        boots.add("values", new JsonArray());
         axeMinable.add("values", new JsonArray());
         hoeMinable.add("values", new JsonArray());
         pickaxeMinable.add("values", new JsonArray());
@@ -88,6 +96,22 @@ public class DataPackGenerator {
         hoes.getAsJsonArray("values").add(id);
     }
 
+    public void addHelmet(String id) {
+        helmets.getAsJsonArray("values").add(id);
+    }
+
+    public void addChestplate(String id) {
+        chestplates.getAsJsonArray("values").add(id);
+    }
+
+    public void addLeggings(String id) {
+        leggings.getAsJsonArray("values").add(id);
+    }
+
+    public void addBoots(String id) {
+        boots.getAsJsonArray("values").add(id);
+    }
+
     public void addAxeMinable(String id) {
         axeMinable.getAsJsonArray("values").add(id);
     }
@@ -104,14 +128,14 @@ public class DataPackGenerator {
         shovelMinable.getAsJsonArray("values").add(id);
     }
 
-    public void addToolMaterial(String materialName, String @NotNull ... itemIds) {
+    public void addRepairItems(String materialName, String @NotNull ... itemIds) {
         JsonObject materialTag = new JsonObject();
         JsonArray values = new JsonArray();
         for (String itemId : itemIds) {
             values.add(itemId);
         }
         materialTag.add("values", values);
-        toolMaterials.put(materialName, materialTag);
+        repairItems.put(materialName, materialTag);
     }
 
     public void simpleLootTable(String id, String itemId) {
@@ -209,39 +233,27 @@ public class DataPackGenerator {
 
     public void build(@NotNull File dataPackFolder) throws IOException {
         FileUtils.deleteFolder(dataPackFolder.toPath());
-        File packMcmeta = new File(dataPackFolder + "/pack.mcmeta");
-        saveJsonToFile(MCMETA, packMcmeta);
-        File swordTag = new File(dataPackFolder + "/data/minecraft/tags/item/swords.json");
-        saveJsonToFile(swords, swordTag);
-        File pickaxeTag = new File(dataPackFolder + "/data/minecraft/tags/item/pickaxes.json");
-        saveJsonToFile(pickaxes, pickaxeTag);
-        File shovelTag = new File(dataPackFolder + "/data/minecraft/tags/item/shovels.json");
-        saveJsonToFile(shovels, shovelTag);
-        File axeTag = new File(dataPackFolder + "/data/minecraft/tags/item/axes.json");
-        saveJsonToFile(axes, axeTag);
-        File hoeTag = new File(dataPackFolder + "/data/minecraft/tags/item/hoes.json");
-        saveJsonToFile(hoes, hoeTag);
-        File axeMinableTag = new File(dataPackFolder + "/data/minecraft/tags/block/mineable/axe.json");
-        saveJsonToFile(axeMinable, axeMinableTag);
-        File hoeMinableTag = new File(dataPackFolder + "/data/minecraft/tags/block/mineable/hoe.json");
-        saveJsonToFile(hoeMinable, hoeMinableTag);
-        File pickaxeMinableTag = new File(dataPackFolder + "/data/minecraft/tags/block/mineable/pickaxe.json");
-        saveJsonToFile(pickaxeMinable, pickaxeMinableTag);
-        File shovelMinableTag = new File(dataPackFolder + "/data/minecraft/tags/block/mineable/shovel.json");
-        saveJsonToFile(shovelMinable, shovelMinableTag);
-        File incorrectForWoodenToolsTag = new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_wooden_tool.json");
-        saveJsonToFile(incorrectForWoodenTools, incorrectForWoodenToolsTag);
-        File incorrectForGoldToolsTag = new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_gold_tool.json");
-        saveJsonToFile(incorrectForGoldTools, incorrectForGoldToolsTag);
-        File incorrectForStoneToolsTag = new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_stone_tool.json");
-        saveJsonToFile(incorrectForStoneTools, incorrectForStoneToolsTag);
-        File incorrectForCopperToolsTag = new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_copper_tool.json");
-        saveJsonToFile(incorrectForCopperTools, incorrectForCopperToolsTag);
-        File incorrectForIronToolsTag = new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_iron_tool.json");
-        saveJsonToFile(incorrectForIronTools, incorrectForIronToolsTag);
-        File incorrectForDiamondToolsTag = new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_diamond_tool.json");
-        saveJsonToFile(incorrectForDiamondTools, incorrectForDiamondToolsTag);
-        var it = toolMaterials.object2ObjectEntrySet().fastIterator();
+        saveJsonToFile(MCMETA,                   new File(dataPackFolder + "/pack.mcmeta"));
+        saveJsonToFile(swords,                   new File(dataPackFolder + "/data/minecraft/tags/item/swords.json"));
+        saveJsonToFile(pickaxes,                 new File(dataPackFolder + "/data/minecraft/tags/item/pickaxes.json"));
+        saveJsonToFile(shovels,                  new File(dataPackFolder + "/data/minecraft/tags/item/shovels.json"));
+        saveJsonToFile(axes,                     new File(dataPackFolder + "/data/minecraft/tags/item/axes.json"));
+        saveJsonToFile(hoes,                     new File(dataPackFolder + "/data/minecraft/tags/item/hoes.json"));
+        saveJsonToFile(helmets,                  new File(dataPackFolder + "/data/minecraft/tags/item/head_armor.json"));
+        saveJsonToFile(chestplates,              new File(dataPackFolder + "/data/minecraft/tags/item/chest_armor.json"));
+        saveJsonToFile(leggings,                 new File(dataPackFolder + "/data/minecraft/tags/item/leg_armor.json"));
+        saveJsonToFile(boots,                    new File(dataPackFolder + "/data/minecraft/tags/item/foot_armor.json"));
+        saveJsonToFile(axeMinable,               new File(dataPackFolder + "/data/minecraft/tags/block/mineable/axe.json"));
+        saveJsonToFile(hoeMinable,               new File(dataPackFolder + "/data/minecraft/tags/block/mineable/hoe.json"));
+        saveJsonToFile(pickaxeMinable,           new File(dataPackFolder + "/data/minecraft/tags/block/mineable/pickaxe.json"));
+        saveJsonToFile(shovelMinable,            new File(dataPackFolder + "/data/minecraft/tags/block/mineable/shovel.json"));
+        saveJsonToFile(incorrectForWoodenTools,  new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_wooden_tool.json"));
+        saveJsonToFile(incorrectForGoldTools,    new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_gold_tool.json"));
+        saveJsonToFile(incorrectForStoneTools,   new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_stone_tool.json"));
+        saveJsonToFile(incorrectForCopperTools,  new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_copper_tool.json"));
+        saveJsonToFile(incorrectForIronTools,    new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_iron_tool.json"));
+        saveJsonToFile(incorrectForDiamondTools, new File(dataPackFolder + "/data/minecraft/tags/block/incorrect_for_diamond_tool.json"));
+        var it = repairItems.object2ObjectEntrySet().fastIterator();
         while (it.hasNext()) {
             var entry = it.next();
             File tagFile = new File(dataPackFolder + "/data/minecraft/tags/item/" + entry.getKey().toLowerCase() + ".json");

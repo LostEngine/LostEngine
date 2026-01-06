@@ -517,7 +517,6 @@ function FileUploadRoot(props: FileUploadRootProps) {
             }
 
             const acceptedFiles: File[] = [];
-            const rejectedFiles: { file: File; message: string }[] = [];
 
             for (const file of filesToProcess) {
                 let rejected = false;
@@ -563,8 +562,6 @@ function FileUploadRoot(props: FileUploadRootProps) {
 
                 if (!rejected) {
                     acceptedFiles.push(file);
-                } else {
-                    rejectedFiles.push({file, message: rejectionMessage});
                 }
             }
 
@@ -1472,19 +1469,5 @@ export {
     FileUploadItemProgress,
     FileUploadItemDelete,
     FileUploadClear,
-    //
-    FileUploadRoot as Root,
-    FileUploadDropzone as Dropzone,
-    FileUploadTrigger as Trigger,
     FileUploadList as List,
-    FileUploadItem as Item,
-    FileUploadItemPreview as ItemPreview,
-    FileUploadItemMetadata as ItemMetadata,
-    FileUploadItemProgress as ItemProgress,
-    FileUploadItemDelete as ItemDelete,
-    FileUploadClear as Clear,
-    //
-    useStore as useFileUpload,
-    //
-    type FileUploadRootProps as FileUploadProps,
 };

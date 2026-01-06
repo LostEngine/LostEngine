@@ -1,11 +1,28 @@
-tool_materials:
+materials:
   LOST:
-    base: NETHERITE
-    durability: 3046
-    speed: 32.0
-    attack_damage_bonus: 6.0
     enchantment_value: 15
     repair_item: lost_engine:ingot
+    tool:
+      base: NETHERITE
+      durability: 3046
+      speed: 32.0
+      attack_damage_bonus: 6.0
+    armor:
+      # How the durability is calculated:
+      # helmet:     11 * durability
+      # chestplate: 16 * durability
+      # leggings:   15 * durability
+      # boots:      13 * durability
+      durability: 40
+      defense:
+        boots: 4
+        leggings: 7
+        chestplate: 9
+        helmet: 4
+      equip_sound: item.armor.equip_netherite
+      toughness: 4.0
+      knockback_resistance: 0.1
+      texture: lost
 items:
   ingot:
     name:
@@ -53,10 +70,54 @@ items:
       en_US: "Baguette"
     type: generic
     texture: item/baguette
-    food:
-      nutrition: 10
-      saturation_modifier: 1
-      can_always_eat: false
+    components:
+      food:
+        nutrition: 10
+        saturation_modifier: 1
+        can_always_eat: false
+  helmet:
+    name:
+      en_US: "Lost Helmet"
+      fr_FR: "Casque Perdu"
+    type: armor
+    armor_type: helmet
+    material: LOST
+    texture: item/helmet
+  chestplate:
+    name:
+      en_US: "Lost Chestplate"
+      fr_FR: "Plastron Perdu"
+    type: armor
+    armor_type: chestplate
+    material: LOST
+    texture: item/chestplate
+  leggings:
+    name:
+      en_US: "Lost Leggings"
+      fr_FR: "Jambières Perdu"
+    type: armor
+    armor_type: leggings
+    material: LOST
+    texture: item/leggings
+  boots:
+    name:
+      en_US: "Lost Boots"
+      fr_FR: "Bottes Perdu"
+    type: armor
+    armor_type: boots
+    material: LOST
+    texture: item/boots
+  elytra:
+    name:
+      en_US: "Lost Elytra"
+      fr_FR: "Élytres Perdues"
+    type: elytra
+    elytra:
+      durability: 864
+      texture: elytra
+      use_player_skin: false
+      repair_item: lost_engine:ingot
+    texture: item/elytra
 blocks:
   ore:
     name:
