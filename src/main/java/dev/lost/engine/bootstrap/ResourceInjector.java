@@ -101,10 +101,10 @@ public class ResourceInjector {
 
             ConfigurationSection toolSection = materialSection.getConfigurationSection("tool");
             if (toolSection != null) {
-                String base = materialSection.getString("base", "NETHERITE").toUpperCase(Locale.ROOT);
-                int durability = materialSection.getInt("durability", 59);
-                float speed = (float) materialSection.getDouble("speed", 2.0F);
-                float attackDamageBonus = (float) materialSection.getDouble("attack_damage_bonus", 0.0);
+                String base = toolSection.getString("base", "NETHERITE").toUpperCase(Locale.ROOT);
+                int durability = toolSection.getInt("durability", 59);
+                float speed = (float) toolSection.getDouble("speed", 2.0F);
+                float attackDamageBonus = (float) toolSection.getDouble("attack_damage_bonus", 0.0);
 
                 ToolMaterial baseMaterial = getOrThrow(toolMaterials, base, "Invalid base material: " + base);
 
