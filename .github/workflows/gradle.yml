@@ -14,9 +14,12 @@ jobs:
       contents: read
 
     steps:
-    - uses: graalvm/setup-graalvm@v1
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Setup Java
+      uses: graalvm/setup-graalvm@v1
       with:
-        java-version: '25'
+        java-version: '21'
         distribution: 'graalvm'
 
     # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
@@ -34,9 +37,12 @@ jobs:
       contents: write
 
     steps:
-    - uses: graalvm/setup-graalvm@v1
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Setup Java
+      uses: graalvm/setup-graalvm@v1
       with:
-        java-version: '25'
+        java-version: '21'
         distribution: 'graalvm'
 
     # Generates and submits a dependency graph, enabling Dependabot Alerts for all project dependencies.
