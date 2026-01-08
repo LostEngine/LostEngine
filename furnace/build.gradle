@@ -19,6 +19,11 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+configurations {
+    testImplementation.extendsFrom compileOnly
+    testRuntimeOnly.extendsFrom compileOnly
+}
+
 sourceSets {
     main {
         resources {
