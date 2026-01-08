@@ -111,6 +111,9 @@ public class WebServer {
             JsonArray toolMaterials = new JsonArray();
             ResourceInjector.getToolMaterials().forEach((id, toolMaterial) -> toolMaterials.add(id));
             json.add("tool_materials", toolMaterials);
+            JsonArray armorMaterials = new JsonArray();
+            ResourceInjector.getArmorMaterials().forEach((id, toolMaterial) -> armorMaterials.add(id));
+            json.add("armor_materials", toolMaterials);
             sendResponse(exchange, 200, json.toString(), "application/json");
             return;
         }
