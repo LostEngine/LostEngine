@@ -44,6 +44,8 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -214,7 +216,7 @@ public class PacketListener {
         switch (msg) {
             case ClientboundSetPlayerInventoryPacket(int slot, ItemStack contents) -> {
                 ServerPlayer player = handler.getPlayer(ctx);
-                Optional<ItemStack> newItem = editItem(contents, player != null && slot == player.getInventory().getSelectedSlot());
+                Optional<ItemStack> newItem = editItem(contents, slot == Inventory.SLOT_OFFHAND || player != null && slot == player.getInventory().getSelectedSlot());
                 if (newItem.isPresent()) {
                     return new ClientboundSetPlayerInventoryPacket(slot, newItem.get());
                 }
@@ -251,13 +253,10 @@ public class PacketListener {
                 List<ItemStack> items = new ObjectArrayList<>(packet.items());
                 boolean requiresEdit = false;
                 for (int i = 0; i < items.size(); i++) {
+
                     ItemStack item = items.get(i);
-                    Optional<ItemStack> newItem = editItem(
-                            item,
-                            player != null && packet.containerId() == 0 && i - 36 == player.getInventory().getSelectedSlot()
-                            /// This will check if it is the player inventory and if it is the selected slot (main hand)
-                            /// @see dev.lost.engine.listeners.DynamicMaterialListener
-                    );
+                    Optional<ItemStack> newItem = editItem(item, isIsDynamicMaterial(packet.containerId(), player, i));
+
                     if (newItem.isPresent()) {
                         requiresEdit = true;
                         items.set(i, newItem.get());
@@ -271,12 +270,7 @@ public class PacketListener {
             case ClientboundContainerSetSlotPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
                 ItemStack item = packet.getItem();
-                Optional<ItemStack> newItem = editItem(
-                        item,
-                        player != null && packet.getContainerId() == 0 && packet.getSlot() - 36 == player.getInventory().getSelectedSlot()
-                        /// This will check if it is the player inventory and if it is the selected slot (main hand)
-                        /// @see dev.lost.engine.listeners.DynamicMaterialListener
-                );
+                Optional<ItemStack> newItem = editItem(item, isIsDynamicMaterial(packet.getContainerId(), player, packet.getSlot()));
                 newItem.ifPresent(itemStack -> {
                     try {
                         ReflectionUtils.setItemStack(packet, itemStack);
@@ -428,7 +422,7 @@ public class PacketListener {
                 processNewSlot(handler.slot, (byte) slot, player);
                 handler.slot = (byte) slot;
             }
-            case ClientboundUpdateRecipesPacket packet-> {
+            case ClientboundUpdateRecipesPacket packet -> {
                 try {
                     for (Map.Entry<ResourceKey<RecipePropertySet>, RecipePropertySet> entry : packet.itemSets().entrySet()) {
                         Set<Holder<Item>> oldItems = ReflectionUtils.getItems(entry.getValue());
@@ -445,6 +439,41 @@ public class PacketListener {
             }
         }
         return msg;
+    }
+
+    private static boolean isIsDynamicMaterial(int containerId, @Nullable ServerPlayer player, int slot) {
+        boolean isDynamicMaterial = false;
+        int hotbarSlot = -1;
+        if (player != null) {
+            if (containerId == 0) {
+                if (slot == 45) isDynamicMaterial = true;
+                else hotbarSlot = slot - 36;
+            } else if (player.containerMenu.menuType == MenuType.GENERIC_9x1) hotbarSlot = (slot - 36);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x2) hotbarSlot = (slot - 45);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_3x3 ||
+                    player.containerMenu.menuType == MenuType.SHULKER_BOX) hotbarSlot = (slot - 54);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x4) hotbarSlot = (slot - 63);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x5) hotbarSlot = (slot - 72);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x6) hotbarSlot = (slot - 81);
+            else if (player.containerMenu.menuType == MenuType.BEACON) hotbarSlot = (slot - 28);
+            else if (player.containerMenu.menuType == MenuType.BLAST_FURNACE ||
+                    player.containerMenu.menuType == MenuType.FURNACE ||
+                    player.containerMenu.menuType == MenuType.SMOKER ||
+                    player.containerMenu.menuType == MenuType.ANVIL ||
+                    player.containerMenu.menuType == MenuType.GRINDSTONE ||
+                    player.containerMenu.menuType == MenuType.MERCHANT ||
+                    player.containerMenu.menuType == MenuType.CARTOGRAPHY_TABLE) hotbarSlot = (slot - 30);
+            else if (player.containerMenu.menuType == MenuType.BREWING_STAND ||
+                    player.containerMenu.menuType == MenuType.HOPPER) hotbarSlot = (slot - 32);
+            else if (player.containerMenu.menuType == MenuType.CRAFTING) hotbarSlot = (slot - 37);
+            else if (player.containerMenu.menuType == MenuType.ENCHANTMENT ||
+                    player.containerMenu.menuType == MenuType.STONECUTTER) hotbarSlot = (slot - 29);
+            else if (player.containerMenu.menuType == MenuType.LOOM ||
+                    player.containerMenu.menuType == MenuType.SMITHING) hotbarSlot = (slot - 31);
+
+            if (!isDynamicMaterial) isDynamicMaterial = hotbarSlot == player.getInventory().getSelectedSlot();
+        }
+        return isDynamicMaterial;
     }
 
     private static void processChunkPacket(@NotNull ClientboundLevelChunkPacketData packet, int sectionCount) throws Exception {
