@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Pair;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.bootstrap.components.SimpleComponentProperty;
 import net.minecraft.core.Holder;
+import net.minecraft.core.SectionPos;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
@@ -30,10 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // Make sure the field names are still correct on new Minecraft versions
+@CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
+// Make sure the field names are still correct on new Minecraft versions
 public class ReflectionUtils {
 
     private static final Field STATES_FIELD;
+    private static final Field SECTION_POS_FIELD;
+    private static final Field POSITIONS_FIELD;
     private static final Field BUFFER_FIELD;
     private static final Field ITEMSTACK_FIELD;
     private static final Field EQUIPMENT_SLOTS_FIELD;
@@ -50,6 +54,18 @@ public class ReflectionUtils {
             STATES_FIELD.setAccessible(true);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize STATES_FIELD", e);
+        }
+        try {
+            SECTION_POS_FIELD = ClientboundSectionBlocksUpdatePacket.class.getDeclaredField("sectionPos");
+            SECTION_POS_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize SECTION_POS_FIELD", e);
+        }
+        try {
+            POSITIONS_FIELD = ClientboundSectionBlocksUpdatePacket.class.getDeclaredField("positions");
+            POSITIONS_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize POSITIONS_FIELD", e);
         }
         try {
             BUFFER_FIELD = ClientboundLevelChunkPacketData.class.getDeclaredField("buffer");
@@ -101,6 +117,14 @@ public class ReflectionUtils {
 
     public static void setBlockStates(ClientboundSectionBlocksUpdatePacket packet, BlockState[] states) throws Exception {
         STATES_FIELD.set(packet, states);
+    }
+
+    public static SectionPos getSectionPos(ClientboundSectionBlocksUpdatePacket packet) throws Exception {
+        return (SectionPos) SECTION_POS_FIELD.get(packet);
+    }
+
+    public static short[] getPositions(ClientboundSectionBlocksUpdatePacket packet) throws Exception {
+        return (short[]) POSITIONS_FIELD.get(packet);
     }
 
     public static void setBuffer(ClientboundLevelChunkPacketData packet, byte[] buffer) throws Exception {
