@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
-import org.jspecify.annotations.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Field;
@@ -151,7 +151,7 @@ public class ReflectionUtils {
         ((Map<Material, net.minecraft.world.item.Item>) MATERIAL_ITEM_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, itemStack.getItem());
     }
 
-    public static @Nullable Class<?> getTypeArgument(@NonNull Class<?> clazz) {
+    public static @Nullable Class<?> getTypeArgument(@NotNull Class<?> clazz) {
         for (Type type : clazz.getGenericInterfaces()) {
             if (type instanceof ParameterizedType parameterizedType &&
                     parameterizedType.getRawType().equals(SimpleComponentProperty.class)) {

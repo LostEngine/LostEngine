@@ -34,7 +34,6 @@ import org.bukkit.Material;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -49,7 +48,7 @@ public class ItemInjector {
     }
 
     @Contract("_, _, _, _, _, _, _, _ -> new")
-    public static @NonNull ArmorMaterial createArmorMaterial(int durability, Map<net.minecraft.world.item.equipment.ArmorType, Integer> defense, int enchantmentValue, String equipSound, float toughness, float knockbackResistance, TagKey<Item> repairItems, String assetId) {
+    public static @NotNull ArmorMaterial createArmorMaterial(int durability, Map<net.minecraft.world.item.equipment.ArmorType, Integer> defense, int enchantmentValue, String equipSound, float toughness, float knockbackResistance, TagKey<Item> repairItems, String assetId) {
         return new ArmorMaterial(
                 durability,
                 defense,

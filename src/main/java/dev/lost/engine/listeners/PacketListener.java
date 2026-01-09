@@ -8,6 +8,7 @@ import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.items.customitems.CustomItem;
+import dev.lost.engine.items.customitems.CustomTridentItem;
 import dev.lost.engine.utils.FloodgateUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
@@ -45,6 +46,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -360,8 +362,16 @@ public class PacketListener {
                 }
             }
             case ClientboundSetEntityDataPacket(int id, List<SynchedEntityData.DataValue<?>> packedItems) -> {
-                List<SynchedEntityData.DataValue<?>> newItems = new ObjectArrayList<>(packedItems);
+                ObjectArrayList<SynchedEntityData.DataValue<?>> newItems = new ObjectArrayList<>(packedItems);
                 boolean requiresEdit = false;
+                ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(id);
+                if (itemStack != null) {
+                    newItems.removeIf(dataValue -> dataValue.id() >= 8);
+                    newItems.add(new SynchedEntityData.DataValue<>(10, EntityDataSerializers.INT, 1));
+                    newItems.add(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.ITEM_STACK, itemStack));
+                    newItems.add(new SynchedEntityData.DataValue<>(24, EntityDataSerializers.BYTE, (byte) 8));
+                    requiresEdit = true;
+                }
                 for (int i = 0; i < newItems.size(); i++) {
                     SynchedEntityData.DataValue<?> dataValue = newItems.get(i);
                     if (dataValue.value() instanceof ItemStack item) {
@@ -480,6 +490,12 @@ public class PacketListener {
                     }
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to update items via reflection in ClientboundUpdateRecipesPacket", e);
+                }
+            }
+            case ClientboundAddEntityPacket packet -> {
+                if (packet.getType() == EntityType.TRIDENT && CustomTridentItem.CUSTOM_TRIDENTS.containsKey(packet.getId())) {
+                    //int id, UUID uuid, double x, double y, double z, float xRot, float yRot, EntityType<?> type, int data, Vec3 deltaMovement, double yHeadRot
+                    return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), packet.getYRot(), EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
                 }
             }
             default -> {
