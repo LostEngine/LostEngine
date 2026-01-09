@@ -100,6 +100,22 @@ public class ResourcePackBuilder {
                                 }
                             });
                         }
+                        ConfigurationSection elytraSection = itemSection.getConfigurationSection("elytra");
+                        if (elytraSection != null) {
+                            String texture = elytraSection.getString("texture", null);
+                            resourcePack.jsonFile("assets/minecraft/equipment/%s.json".formatted(key.toLowerCase(Locale.ROOT)), JsonParser.parseString("""
+                                    {
+                                      "layers": {
+                                        "wings": [
+                                          {
+                                            "texture": "lost_engine:%s",
+                                            "use_player_texture": %b
+                                          }
+                                        ]
+                                      }
+                                    }
+                                    """.formatted(texture, elytraSection.getBoolean("use_player_skin", false))));
+                        }
                     }
                 }
             }

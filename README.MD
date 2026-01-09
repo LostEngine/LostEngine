@@ -3,7 +3,7 @@
     - [X] Regular Items
     - [X] Tools
     - [X] Armors
-    - [ ] Elytra
+    - [X] Elytra
     - [ ] Trident
 - [ ] Custom Blocks
     - [X] Dynamic block hardness

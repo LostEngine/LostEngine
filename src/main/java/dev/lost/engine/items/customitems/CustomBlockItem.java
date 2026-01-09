@@ -10,12 +10,16 @@ public class CustomBlockItem extends BlockItem implements CustomItem {
     @Getter
     private final String id;
 
-    @Getter
     private final ItemStack dynamicMaterial;
 
     public CustomBlockItem(Block block, Properties properties, ItemStack dynamicMaterial, String id) {
         super(block, properties);
         this.dynamicMaterial = dynamicMaterial;
         this.id = id;
+    }
+
+    @Override
+    public ItemStack getDynamicMaterial() {
+        return dynamicMaterial.copy();
     }
 }

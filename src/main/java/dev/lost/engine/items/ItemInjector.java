@@ -15,7 +15,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.Unit;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.equipment.*;
@@ -250,6 +253,39 @@ public class ItemInjector {
                 yield item;
             }
         };
+    }
+
+    @SuppressWarnings("unchecked")
+    public static @NotNull Item injectElytra(
+            String name,
+            @Nullable String repairItem,
+            int durability,
+            Map<DataComponentType<?>, Object> components
+    ) throws Exception {
+        String fullName = "lost_engine:" + name;
+        Item.Properties properties = new Item.Properties();
+        if (components != null) {
+            for (Map.Entry<DataComponentType<?>, ?> component : components.entrySet()) {
+                properties.component((DataComponentType<Object>) component.getKey(), component.getValue());
+            }
+        }
+        if (repairItem != null) properties.repairable(BuiltInRegistries.ITEM.getValue(Identifier.parse(repairItem)));
+
+        Item item = registerItem(
+                fullName,
+                properties.component(DataComponents.GLIDER, Unit.INSTANCE)
+                        .component(
+                                DataComponents.EQUIPPABLE,
+                                Equippable.builder(EquipmentSlot.CHEST)
+                                        .setEquipSound(SoundEvents.ARMOR_EQUIP_ELYTRA)
+                                        .setAsset(ReflectionUtils.createEquipmentAssetId(name))
+                                        .setDamageOnHurt(false)
+                                        .build()
+                        )
+                        .durability(durability)
+        );
+        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.ELYTRA);
+        return item;
     }
 
     public enum ArmorType {

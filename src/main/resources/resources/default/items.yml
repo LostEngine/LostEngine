@@ -107,6 +107,17 @@ items:
     armor_type: boots
     material: LOST
     texture: item/boots
+  elytra:
+    name:
+      en_US: "Lost Elytra"
+      fr_FR: "Élytres Perdues"
+    type: elytra
+    elytra:
+      durability: 864
+      texture: elytra
+      use_player_skin: false
+      repair_item: lost_engine:ingot
+    texture: item/elytra
 blocks:
   ore:
     name:

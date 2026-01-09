@@ -1,15 +1,14 @@
 package dev.lost.engine.listeners;
 
-import ca.spottedleaf.moonrise.common.util.TickThread;
 import com.google.gson.*;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import dev.lost.engine.LostEngine;
+import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.FloodgateUtils;
-import dev.lost.engine.utils.FoliaUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
 import io.netty.buffer.Unpooled;
@@ -18,11 +17,14 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.papermc.paper.network.ChannelInitializeListenerHolder;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.kyori.adventure.key.Key;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -41,18 +43,20 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.crafting.RecipePropertySet;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -61,6 +65,7 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.Palette;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.PalettedContainerFactory;
+import net.minecraft.world.level.dimension.DimensionType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,6 +102,25 @@ public class PacketListener {
         private boolean isWaitingForResourcePack = false;
         private Boolean isBedrockClient = null;
         volatile byte slot = 0;
+        volatile int sectionsCount = 0;
+        volatile int minY = 0;
+        volatile int maxY = 0;
+        private final Long2IntOpenHashMap customBlockStateCache = new Long2IntOpenHashMap();
+
+        /**
+         * @return {@code Blocks.AIR.defaultBlockState()} if not in cache
+         */
+        private @NotNull BlockState getBlockState(long pos) {
+            return Block.stateById(customBlockStateCache.get(pos));
+        }
+
+        private void removeCachedBlockStates(long pos) {
+            customBlockStateCache.remove(pos);
+        }
+
+        private void setCustomBlockState(long pos, BlockState blockState) {
+            customBlockStateCache.put(pos, Block.getId(blockState));
+        }
 
         private boolean isBedrockClient(ChannelHandlerContext ctx) {
             if (isBedrockClient != null) return isBedrockClient;
@@ -154,13 +178,42 @@ public class PacketListener {
             }
             case ServerboundPlayerActionPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
-                if (player == null || player.gameMode.getGameModeForPlayer() != GameType.SURVIVAL) break;
-                if (FoliaUtils.isFolia() && !TickThread.isTickThread()) {
-                    player.getBukkitEntity().getScheduler().run(LostEngine.getInstance(), scheduledTask ->
-                            processServerboundPlayerActionPacket(packet, player), null);
-                    // Make sure we are executing this on the right thread if the server is Folia
-                } else {
-                    processServerboundPlayerActionPacket(packet, player);
+                if (player == null) break;
+                if (player.gameMode.getGameModeForPlayer() != GameType.SURVIVAL) break;
+                if (packet.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
+                    BlockState blockState = handler.getBlockState(packet.getPos().asLong());
+                    if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
+                        //noinspection DataFlowIssue -- never get used
+                        if (blockState.getDestroyProgress(player, null, packet.getPos()) >= 1.0F) {
+                            player.connection.send(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
+                            break;
+                        }
+                        float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
+                        if (clientBlockDestroySpeed == 0) break;
+                        float blockDestroySpeed = getDestroySpeed(blockState, player.getInventory().getSelectedItem());
+                        if (blockDestroySpeed != clientBlockDestroySpeed) {
+                            AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
+                            });
+                            AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
+                            if (playerAttribute != null) blockBreakSpeed.apply(playerAttribute.pack());
+                            // The ratio is between what the client actually knows and what the server thinks
+                            float ratio = blockDestroySpeed / clientBlockDestroySpeed;
+                            blockBreakSpeed.setBaseValue(ratio * blockBreakSpeed.getBaseValue());
+                            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                        }
+                    }
+                } else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
+                        packet.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
+                    BlockState blockState = handler.getBlockState(packet.getPos().asLong());
+                    if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
+                        AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
+                        });
+                        AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
+                        if (playerAttribute != null) {
+                            blockBreakSpeed.apply(playerAttribute.pack());
+                        }
+                        player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                    }
                 }
             }
             case ServerboundResourcePackPacket(UUID ignored, ServerboundResourcePackPacket.Action action) -> {
@@ -185,9 +238,21 @@ public class PacketListener {
 
     private static Object clientbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) throws Exception {
         switch (msg) {
+            case ClientboundLoginPacket packet -> processCommonPlayerSpawnInfo(packet.commonPlayerSpawnInfo(), handler);
+            case ClientboundRespawnPacket packet ->
+                    processCommonPlayerSpawnInfo(packet.commonPlayerSpawnInfo(), handler);
+            case ClientboundForgetLevelChunkPacket(ChunkPos pos) -> {
+                for (int x = pos.getMinBlockX(); x <= pos.getMaxBlockX(); x++) {
+                    for (int y = handler.minY; y <= handler.maxY; y++) {
+                        for (int z = pos.getMinBlockZ(); z <= pos.getMaxBlockZ(); z++) {
+                            handler.removeCachedBlockStates(BlockPos.asLong(x, y, z));
+                        }
+                    }
+                }
+            }
             case ClientboundSetPlayerInventoryPacket(int slot, ItemStack contents) -> {
                 ServerPlayer player = handler.getPlayer(ctx);
-                Optional<ItemStack> newItem = editItem(contents, player != null && slot == player.getInventory().getSelectedSlot());
+                Optional<ItemStack> newItem = editItem(contents, slot == Inventory.SLOT_OFFHAND || player != null && slot == player.getInventory().getSelectedSlot());
                 if (newItem.isPresent()) {
                     return new ClientboundSetPlayerInventoryPacket(slot, newItem.get());
                 }
@@ -195,16 +260,27 @@ public class PacketListener {
             case ClientboundBlockUpdatePacket packet -> {
                 Optional<BlockState> newBlockState = getClientBlockState(packet.blockState);
                 if (newBlockState.isPresent()) {
+                    handler.setCustomBlockState(packet.getPos().asLong(), packet.blockState);
                     return new ClientboundBlockUpdatePacket(packet.getPos(), newBlockState.get());
+                } else {
+                    handler.removeCachedBlockStates(packet.getPos().asLong());
                 }
             }
             case ClientboundSectionBlocksUpdatePacket packet -> {
                 try {
                     BlockState[] blockStates = ReflectionUtils.getBlockStates(packet);
+                    SectionPos sectionPos = ReflectionUtils.getSectionPos(packet);
+                    short[] positions = ReflectionUtils.getPositions(packet);
+                    if (blockStates.length != positions.length) {
+                        throw new IllegalStateException("BlockStates length does not match Positions length in ClientboundSectionBlocksUpdatePacket");
+                    }
                     for (int i = 0; i < blockStates.length; i++) {
                         Optional<BlockState> newBlockState = getClientBlockState(blockStates[i]);
                         if (newBlockState.isPresent()) {
+                            handler.setCustomBlockState(sectionPos.relativeToBlockPos(positions[i]).asLong(), blockStates[i]);
                             blockStates[i] = newBlockState.get();
+                        } else {
+                            handler.removeCachedBlockStates(sectionPos.relativeToBlockPos(positions[i]).asLong());
                         }
                     }
                     ReflectionUtils.setBlockStates(packet, blockStates);
@@ -216,21 +292,18 @@ public class PacketListener {
                 ServerPlayer player = handler.getPlayer(ctx);
                 if (player == null) break;
                 ClientboundLevelChunkPacketData chunkData = packet.getChunkData();
-                // noinspection resource -- false positive for ServerPlayer#level()
-                processChunkPacket(chunkData, player.level().getSectionsCount());
+                if (handler.sectionsCount <= 0) break;
+                processChunkPacket(packet.getX(), packet.getZ(), chunkData, handler.sectionsCount, handler.minY, handler.customBlockStateCache);
             }
             case ClientboundContainerSetContentPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
                 List<ItemStack> items = new ObjectArrayList<>(packet.items());
                 boolean requiresEdit = false;
                 for (int i = 0; i < items.size(); i++) {
+
                     ItemStack item = items.get(i);
-                    Optional<ItemStack> newItem = editItem(
-                            item,
-                            player != null && packet.containerId() == 0 && i - 36 == player.getInventory().getSelectedSlot()
-                            /// This will check if it is the player inventory and if it is the selected slot (main hand)
-                            /// @see dev.lost.engine.listeners.DynamicMaterialListener
-                    );
+                    Optional<ItemStack> newItem = editItem(item, isIsDynamicMaterial(packet.containerId(), player, i));
+
                     if (newItem.isPresent()) {
                         requiresEdit = true;
                         items.set(i, newItem.get());
@@ -244,12 +317,7 @@ public class PacketListener {
             case ClientboundContainerSetSlotPacket packet -> {
                 ServerPlayer player = handler.getPlayer(ctx);
                 ItemStack item = packet.getItem();
-                Optional<ItemStack> newItem = editItem(
-                        item,
-                        player != null && packet.getContainerId() == 0 && packet.getSlot() - 36 == player.getInventory().getSelectedSlot()
-                        /// This will check if it is the player inventory and if it is the selected slot (main hand)
-                        /// @see dev.lost.engine.listeners.DynamicMaterialListener
-                );
+                Optional<ItemStack> newItem = editItem(item, isIsDynamicMaterial(packet.getContainerId(), player, packet.getSlot()));
                 newItem.ifPresent(itemStack -> {
                     try {
                         ReflectionUtils.setItemStack(packet, itemStack);
@@ -401,7 +469,7 @@ public class PacketListener {
                 processNewSlot(handler.slot, (byte) slot, player);
                 handler.slot = (byte) slot;
             }
-            case ClientboundUpdateRecipesPacket packet-> {
+            case ClientboundUpdateRecipesPacket packet -> {
                 try {
                     for (Map.Entry<ResourceKey<RecipePropertySet>, RecipePropertySet> entry : packet.itemSets().entrySet()) {
                         Set<Holder<Item>> oldItems = ReflectionUtils.getItems(entry.getValue());
@@ -420,7 +488,42 @@ public class PacketListener {
         return msg;
     }
 
-    private static void processChunkPacket(@NotNull ClientboundLevelChunkPacketData packet, int sectionCount) throws Exception {
+    private static boolean isIsDynamicMaterial(int containerId, @Nullable ServerPlayer player, int slot) {
+        boolean isDynamicMaterial = false;
+        int hotbarSlot = -1;
+        if (player != null) {
+            if (containerId == 0) {
+                if (slot == 45) isDynamicMaterial = true;
+                else hotbarSlot = slot - 36;
+            } else if (player.containerMenu.menuType == MenuType.GENERIC_9x1) hotbarSlot = (slot - 36);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x2) hotbarSlot = (slot - 45);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_3x3 ||
+                    player.containerMenu.menuType == MenuType.SHULKER_BOX) hotbarSlot = (slot - 54);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x4) hotbarSlot = (slot - 63);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x5) hotbarSlot = (slot - 72);
+            else if (player.containerMenu.menuType == MenuType.GENERIC_9x6) hotbarSlot = (slot - 81);
+            else if (player.containerMenu.menuType == MenuType.BEACON) hotbarSlot = (slot - 28);
+            else if (player.containerMenu.menuType == MenuType.BLAST_FURNACE ||
+                    player.containerMenu.menuType == MenuType.FURNACE ||
+                    player.containerMenu.menuType == MenuType.SMOKER ||
+                    player.containerMenu.menuType == MenuType.ANVIL ||
+                    player.containerMenu.menuType == MenuType.GRINDSTONE ||
+                    player.containerMenu.menuType == MenuType.MERCHANT ||
+                    player.containerMenu.menuType == MenuType.CARTOGRAPHY_TABLE) hotbarSlot = (slot - 30);
+            else if (player.containerMenu.menuType == MenuType.BREWING_STAND ||
+                    player.containerMenu.menuType == MenuType.HOPPER) hotbarSlot = (slot - 32);
+            else if (player.containerMenu.menuType == MenuType.CRAFTING) hotbarSlot = (slot - 37);
+            else if (player.containerMenu.menuType == MenuType.ENCHANTMENT ||
+                    player.containerMenu.menuType == MenuType.STONECUTTER) hotbarSlot = (slot - 29);
+            else if (player.containerMenu.menuType == MenuType.LOOM ||
+                    player.containerMenu.menuType == MenuType.SMITHING) hotbarSlot = (slot - 31);
+
+            if (!isDynamicMaterial) isDynamicMaterial = hotbarSlot == player.getInventory().getSelectedSlot();
+        }
+        return isDynamicMaterial;
+    }
+
+    private static void processChunkPacket(int chunkX, int chunkZ, @NotNull ClientboundLevelChunkPacketData packet, int sectionCount, int minY, Long2IntOpenHashMap customBlockStateCache) throws Exception {
         FriendlyByteBuf oldBuf = new FriendlyByteBuf(packet.getReadBuffer());
         LevelChunkSection[] sections = new LevelChunkSection[sectionCount];
         boolean requiresEdit = false;
@@ -430,7 +533,28 @@ public class PacketListener {
             LevelChunkSection section = new LevelChunkSection(PalettedContainerFactory.create(MinecraftServer.getServer().registryAccess()), null, null, 0);
             section.read(oldBuf);
 
+            int sectionY = (i + (minY >> 4)) << 4;
+
             PalettedContainer<BlockState> container = section.getStates();
+
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y < 16; y++) {
+                    for (int z = 0; z < 16; z++) {
+                        BlockState blockState = section.getBlockState(x, y, z);
+                        Optional<BlockState> clientBlockState = getClientBlockState(blockState);
+                        long blockPosLong = BlockPos.asLong((chunkX << 4) + x, sectionY + y, (chunkZ << 4) + z);
+                        if (clientBlockState.isPresent()) {
+                            // If we used section.setBlockState(x, y, z, clientBlockState.get());
+                            // it wouldn't remove custom blocks from the palette and make the client crash,
+                            // we don't have the choice to also modify the palette
+                            customBlockStateCache.put(blockPosLong, Block.getId(blockState));
+                        } else {
+                            customBlockStateCache.remove(blockPosLong);
+                        }
+                    }
+                }
+            }
+
 
             Palette<BlockState> palette = container.data.palette();
             Object[] values = palette.moonrise$getRawPalette(null);
@@ -452,49 +576,10 @@ public class PacketListener {
         if (requiresEdit) {
             FriendlyByteBuf newBuf = new FriendlyByteBuf(Unpooled.buffer());
             for (LevelChunkSection section : sections) {
-                //noinspection DataFlowIssue -- this is just a regular getter
+                //noinspection DataFlowIssue -- actually nullable
                 section.write(newBuf, null, 0);
             }
             ReflectionUtils.setBuffer(packet, newBuf.array());
-        }
-    }
-
-    private static void processServerboundPlayerActionPacket(@NotNull ServerboundPlayerActionPacket packet, ServerPlayer player) {
-        if (packet.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
-            ServerLevel level = player.level();
-            BlockState blockState = level.getBlockState(packet.getPos());
-            if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
-                if (blockState.getDestroyProgress(player, level, packet.getPos()) >= 1.0F) {
-                    player.connection.send(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
-                    return;
-                }
-                float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
-                if (clientBlockDestroySpeed == 0) return;
-                float blockDestroySpeed = getDestroySpeed(blockState, player.getInventory().getSelectedItem());
-                if (blockDestroySpeed != clientBlockDestroySpeed) {
-                    AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
-                    });
-                    AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
-                    if (playerAttribute != null) blockBreakSpeed.apply(playerAttribute.pack());
-                    // The ratio is between what the client actually knows and what the server thinks
-                    float ratio = blockDestroySpeed / clientBlockDestroySpeed;
-                    blockBreakSpeed.setBaseValue(ratio * blockBreakSpeed.getBaseValue());
-                    player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
-                }
-            }
-        } else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
-                packet.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
-            ServerLevel level = player.level();
-            BlockState blockState = level.getBlockState(packet.getPos());
-            if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
-                AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
-                });
-                AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
-                if (playerAttribute != null) {
-                    blockBreakSpeed.apply(playerAttribute.pack());
-                }
-                player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
-            }
         }
     }
 
@@ -507,7 +592,7 @@ public class PacketListener {
             }
         }
         if (item.getItem() instanceof CustomItem customItem) {
-            ItemStack newItem = dynamicMaterial ? customItem.getDynamicMaterial().copy() : Items.FILLED_MAP.getDefaultInstance();
+            ItemStack newItem = dynamicMaterial ? customItem.getDynamicMaterial() : customItem.getDefaultMaterial();
             newItem.setCount(item.getCount());
             newItem.applyComponents(item.getComponents());
             ItemUtils.addCustomStringData(newItem, "lost_engine_id", customItem.getId());
@@ -601,6 +686,18 @@ public class PacketListener {
                     player.connection.send(new ClientboundSetPlayerInventoryPacket(newSlot, itemStack))
             );
         }
+    }
+
+    private static void processCommonPlayerSpawnInfo(@NotNull CommonPlayerSpawnInfo commonPlayerSpawnInfo, @NotNull ChannelDupeHandler handler) {
+        @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") /// See {@link net.minecraft.world.level.Level#Level}
+                DimensionType dimType = commonPlayerSpawnInfo.dimensionType().value();
+        handler.minY = dimType.minY();
+        int height = dimType.height();
+        handler.maxY = handler.minY + height - 1;
+        int minSectionY = handler.minY >> 4;
+        int maxSectionY = handler.maxY >> 4;
+        handler.sectionsCount = maxSectionY - minSectionY + 1;
+        handler.customBlockStateCache.clear();
     }
 
     public static String componentToJson(Component component) {
