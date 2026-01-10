@@ -126,6 +126,7 @@ items:
     trident:
       durability: 300
       attack_damage: 9.0
+    icon: item/trident_icon
     texture: item/trident
 blocks:
   ore:

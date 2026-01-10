@@ -47,8 +47,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Inventory;
@@ -533,7 +536,28 @@ public class PacketListener {
                     player.connection.send(
                             new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
                     );
-                    return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), packet.getYRot(), EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
+                    float yRot = Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2);
+                    return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
+                }
+            }
+            case ClientboundTeleportEntityPacket(int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround) -> {
+                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(id)) {
+                    float yRot = Mth.wrapDegrees(change.yRot() - (change.yRot() - 90) * 2);
+                    return new ClientboundTeleportEntityPacket(id, new PositionMoveRotation(change.position(), change.deltaMovement(), yRot, change.xRot()), relatives, onGround);
+                }
+            }
+            case ClientboundEntityPositionSyncPacket(int id, PositionMoveRotation values, boolean onGround) -> {
+                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(id)) {
+                    float yRot = Mth.wrapDegrees(values.yRot() - (values.yRot() - 90) * 2);
+                    return new ClientboundEntityPositionSyncPacket(id, new PositionMoveRotation(values.position(), values.deltaMovement(), yRot, values.xRot()), onGround);
+                }
+            }
+            case ClientboundMoveEntityPacket packet -> {
+                if (!packet.hasRotation()) break;
+                int entityId = ReflectionUtils.getEntityId(packet);
+                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(entityId)) {
+                    byte yRot = Mth.packDegrees(Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2));
+                    ReflectionUtils.setYRot(packet, yRot);
                 }
             }
             default -> {

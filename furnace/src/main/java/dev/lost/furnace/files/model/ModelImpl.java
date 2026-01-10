@@ -39,14 +39,14 @@ public class ModelImpl implements Model {
         if (json.get("elements") instanceof JsonArray elementsJson) {
             for (JsonElement elementJsonElement : elementsJson) {
                 if (elementJsonElement instanceof JsonObject elementJson) {
-                    Element element = Element.element()
-                            .from(elementJson.get("from").getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray())
-                            .to(elementJson.get("to").getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray())
+                    Element element = new ModelImpl.ElementImpl()
+                            .from(elementJson.get("from").getAsJsonArray().asList().stream().mapToDouble(JsonElement::getAsDouble).toArray())
+                            .to(elementJson.get("to").getAsJsonArray().asList().stream().mapToDouble(JsonElement::getAsDouble).toArray())
                             .shade(elementJson.get("shade") instanceof JsonPrimitive sp ? sp.getAsBoolean() : null)
                             .lightEmission(elementJson.get("light_emission") instanceof JsonPrimitive lep ? lep.getAsInt() : null);
                     if (elementJson.get("rotation") instanceof JsonObject rotationJson) {
                         Element.Rotation rotation = new ElementImpl.RotationImpl()
-                                .origin(rotationJson.get("origin") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
+                                .origin(rotationJson.get("origin") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToDouble(JsonElement::getAsDouble).toArray() : null)
                                 .rescale(rotationJson.get("rescale") instanceof JsonPrimitive rp ? rp.getAsBoolean() : null)
                                 .axis(rotationJson.get("axis") instanceof JsonPrimitive ap ? Element.Rotation.Axis.valueOf(ap.getAsString().toUpperCase(Locale.ROOT)) : null)
                                 .angle(rotationJson.get("angle") instanceof JsonPrimitive ap ? ap.getAsInt() : 0);
@@ -57,9 +57,9 @@ public class ModelImpl implements Model {
                             if (faceEntry.getValue() instanceof JsonObject faceJson) {
                                 Element.Face face = new ElementImpl.FaceImpl()
                                         .texture(faceJson.get("texture").getAsString())
-                                        .uv(faceJson.get("uv") instanceof JsonArray jsonArray ? jsonArray.asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
+                                        .uv(faceJson.get("uv") instanceof JsonArray jsonArray ? jsonArray.asList().stream().mapToDouble(JsonElement::getAsDouble).toArray() : null)
                                         .cullface(faceJson.get("cullface") instanceof JsonPrimitive cpf ? Element.Face.FaceType.valueOf(cpf.getAsString().toUpperCase(Locale.ROOT)) : null)
-                                        .rotation(faceJson.get("rotation") instanceof JsonPrimitive rp ? rp.getAsInt() : null)
+                                        .rotation(faceJson.get("rotation") instanceof JsonPrimitive rp ? rp.getAsFloat() : null)
                                         .tintindex(faceJson.get("tintindex") instanceof JsonPrimitive tip ? tip.getAsInt() : null);
                                 element.face(Element.Face.FaceType.valueOf(faceEntry.getKey().toUpperCase(Locale.ROOT)), face);
                             }
@@ -73,9 +73,9 @@ public class ModelImpl implements Model {
             for (Map.Entry<String, JsonElement> displayEntry : displayJson.entrySet()) {
                 if (displayEntry.getValue() instanceof JsonObject transformJson) {
                     Display.Transform transform = new DisplayImpl.TransformImpl()
-                            .rotation(transformJson.get("rotation") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
-                            .translation(transformJson.get("translation") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null)
-                            .scale(transformJson.get("scale") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToInt(JsonElement::getAsInt).toArray() : null);
+                            .rotation(transformJson.get("rotation") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToDouble(JsonElement::getAsDouble).toArray() : null)
+                            .translation(transformJson.get("translation") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToDouble(JsonElement::getAsDouble).toArray() : null)
+                            .scale(transformJson.get("scale") instanceof JsonArray jsonArray ? jsonArray.getAsJsonArray().asList().stream().mapToDouble(JsonElement::getAsDouble).toArray() : null);
                     display.put(Display.DisplayType.valueOf(displayEntry.getKey().toUpperCase(Locale.ROOT)), transform);
                 }
             }
@@ -147,9 +147,9 @@ public class ModelImpl implements Model {
         return json;
     }
 
-    private static @NotNull JsonArray arrayToJson(int @NotNull [] array) {
+    private static @NotNull JsonArray arrayToJson(float @NotNull [] array) {
         JsonArray jsonArray = new JsonArray();
-        for (int i : array) {
+        for (float i : array) {
             jsonArray.add(i);
         }
         return jsonArray;
@@ -231,20 +231,20 @@ public class ModelImpl implements Model {
     }
 
     static class ElementImpl implements Element {
-        int[] from;
-        int[] to;
+        float[] from;
+        float[] to;
         Map<Face.FaceType, Face> faces;
         Rotation rotation;
         Boolean shade;
         Integer lightEmission;
 
         @Override
-        public int[] from() {
+        public float[] from() {
             return from;
         }
 
         @Override
-        public int[] to() {
+        public float[] to() {
             return to;
         }
 
@@ -269,49 +269,73 @@ public class ModelImpl implements Model {
         }
 
         @Override
-        public Element from(int[] from) {
+        public ElementImpl from(float[] from) {
             this.from = from;
             return this;
         }
 
-        @Override
-        public Element to(int[] to) {
-            this.to = to;
+        public ElementImpl from(double[] from) {
+            if (from == null) {
+                this.from = null;
+            } else {
+                this.from = new float[from.length];
+                for (int i = 0; i < from.length; i++) {
+                    this.from[i] = (float) from[i];
+                }
+            }
             return this;
         }
 
         @Override
-        public Element face(Face.FaceType faceType, Face face) {
+        public ElementImpl to(float[] to) {
+            this.to = to;
+            return this;
+        }
+
+        public ElementImpl to(double[] to) {
+            if (to == null) {
+                this.to = null;
+            } else {
+                this.to = new float[to.length];
+                for (int i = 0; i < to.length; i++) {
+                    this.to[i] = (float) to[i];
+                }
+            }
+            return this;
+        }
+
+        @Override
+        public ElementImpl face(Face.FaceType faceType, Face face) {
             faces.put(faceType, face);
             return this;
         }
 
         @Override
-        public Element rotation(Rotation rotation) {
+        public ElementImpl rotation(Rotation rotation) {
             this.rotation = rotation;
             return this;
         }
 
         @Override
-        public Element shade(Boolean shade) {
+        public ElementImpl shade(Boolean shade) {
             this.shade = shade;
             return this;
         }
 
         @Override
-        public Element lightEmission(Integer lightEmission) {
+        public ElementImpl lightEmission(Integer lightEmission) {
             this.lightEmission = lightEmission;
             return this;
         }
 
         static class RotationImpl implements Rotation {
-            int[] origin;
+            float[] origin;
             Boolean rescale;
             Axis axis;
-            int angle;
+            float angle;
 
             @Override
-            public int[] origin() {
+            public float[] origin() {
                 return origin;
             }
 
@@ -326,30 +350,42 @@ public class ModelImpl implements Model {
             }
 
             @Override
-            public int angle() {
+            public float angle() {
                 return angle;
             }
 
             @Override
-            public Rotation origin(int[] origin) {
+            public RotationImpl origin(float[] origin) {
                 this.origin = origin;
                 return this;
             }
 
+            public RotationImpl origin(double[] origin) {
+                if (origin == null) {
+                    this.origin = null;
+                } else {
+                    this.origin = new float[origin.length];
+                    for (int i = 0; i < origin.length; i++) {
+                        this.origin[i] = (float) origin[i];
+                    }
+                }
+                return this;
+            }
+
             @Override
-            public Rotation rescale(Boolean rescale) {
+            public RotationImpl rescale(Boolean rescale) {
                 this.rescale = rescale;
                 return this;
             }
 
             @Override
-            public Rotation axis(Axis axis) {
+            public RotationImpl axis(Axis axis) {
                 this.axis = axis;
                 return this;
             }
 
             @Override
-            public Rotation angle(int angle) {
+            public RotationImpl angle(float angle) {
                 this.angle = angle;
                 return this;
             }
@@ -357,9 +393,9 @@ public class ModelImpl implements Model {
 
         static class FaceImpl implements Face {
             String texture;
-            int[] uv;
+            float[] uv;
             FaceType cullface;
-            Integer rotation;
+            Float rotation;
             Integer tintindex;
 
             @Override
@@ -368,7 +404,7 @@ public class ModelImpl implements Model {
             }
 
             @Override
-            public int[] uv() {
+            public float[] uv() {
                 return uv;
             }
 
@@ -378,7 +414,7 @@ public class ModelImpl implements Model {
             }
 
             @Override
-            public Integer rotation() {
+            public Float rotation() {
                 return rotation;
             }
 
@@ -388,31 +424,43 @@ public class ModelImpl implements Model {
             }
 
             @Override
-            public Face texture(String texture) {
+            public FaceImpl texture(String texture) {
                 this.texture = texture;
                 return this;
             }
 
             @Override
-            public Face uv(int[] uv) {
+            public FaceImpl uv(float[] uv) {
                 this.uv = uv;
                 return this;
             }
 
+            public FaceImpl uv(double[] uv) {
+                if (uv == null) {
+                    this.uv = null;
+                } else {
+                    this.uv = new float[uv.length];
+                    for (int i = 0; i < uv.length; i++) {
+                        this.uv[i] = (float) uv[i];
+                    }
+                }
+                return this;
+            }
+
             @Override
-            public Face cullface(FaceType cullface) {
+            public FaceImpl cullface(FaceType cullface) {
                 this.cullface = cullface;
                 return this;
             }
 
             @Override
-            public Face rotation(Integer rotation) {
+            public FaceImpl rotation(Float rotation) {
                 this.rotation = rotation;
                 return this;
             }
 
             @Override
-            public Face tintindex(Integer tintindex) {
+            public FaceImpl tintindex(Integer tintindex) {
                 this.tintindex = tintindex;
                 return this;
             }
@@ -421,40 +469,76 @@ public class ModelImpl implements Model {
 
     static class DisplayImpl extends Object2ObjectOpenHashMap<Display.DisplayType, Display.Transform> implements Display {
         static class TransformImpl implements Display.Transform {
-            int[] rotation;
-            int[] translation;
-            int[] scale;
+            float[] rotation;
+            float[] translation;
+            float[] scale;
 
             @Override
-            public int[] rotation() {
+            public float[] rotation() {
                 return rotation;
             }
 
             @Override
-            public int[] translation() {
+            public float[] translation() {
                 return translation;
             }
 
             @Override
-            public int[] scale() {
+            public float[] scale() {
                 return scale;
             }
 
             @Override
-            public Transform rotation(int[] rotation) {
+            public TransformImpl rotation(float[] rotation) {
                 this.rotation = rotation;
                 return this;
             }
 
-            @Override
-            public Transform translation(int[] translation) {
-                this.translation = translation;
+            public TransformImpl rotation(double[] rotation) {
+                if (rotation == null) {
+                    this.rotation = null;
+                } else {
+                    this.rotation = new float[rotation.length];
+                    for (int i = 0; i < rotation.length; i++) {
+                        this.rotation[i] = (float) rotation[i];
+                    }
+                }
                 return this;
             }
 
             @Override
-            public Transform scale(int[] scale) {
+            public TransformImpl translation(float[] translation) {
+                this.translation = translation;
+                return this;
+            }
+
+            public TransformImpl translation(double[] translation) {
+                if (translation == null) {
+                    this.translation = null;
+                } else {
+                    this.translation = new float[translation.length];
+                    for (int i = 0; i < translation.length; i++) {
+                        this.translation[i] = (float) translation[i];
+                    }
+                }
+                return this;
+            }
+
+            @Override
+            public TransformImpl scale(float[] scale) {
                 this.scale = scale;
+                return this;
+            }
+
+            public TransformImpl scale(double[] scale) {
+                if (scale == null) {
+                    this.scale = null;
+                } else {
+                    this.scale = new float[scale.length];
+                    for (int i = 0; i < scale.length; i++) {
+                        this.scale[i] = (float) scale[i];
+                    }
+                }
                 return this;
             }
         }

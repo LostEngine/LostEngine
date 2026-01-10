@@ -5,10 +5,7 @@ import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.bootstrap.components.SimpleComponentProperty;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
-import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
-import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
-import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -48,6 +45,9 @@ public class ReflectionUtils {
     private static final Field MATERIAL_BLOCK_FIELD;
     private static final Field RECIPE_PROPERTY_SET_ITEMS;
     private static final Field UPDATE_INTERVAL_FIELD;
+    private static final Field ENTITY_ID_FIELD;
+    private static final Field Y_ROT_FIELD;
+
     private static final Method EQUIPMENT_CREATE_ID_METHOD;
 
     static {
@@ -110,6 +110,18 @@ public class ReflectionUtils {
             UPDATE_INTERVAL_FIELD.setAccessible(true);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize UPDATE_INTERVAL_FIELD", e);
+        }
+        try {
+            ENTITY_ID_FIELD = ClientboundMoveEntityPacket.class.getDeclaredField("entityId");
+            ENTITY_ID_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize ENTITY_ID_FIELD", e);
+        }
+        try {
+            Y_ROT_FIELD = ClientboundMoveEntityPacket.class.getDeclaredField("yRot");
+            Y_ROT_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize Y_ROT_FIELD", e);
         }
         try {
             EQUIPMENT_CREATE_ID_METHOD = EquipmentAssets.class.getDeclaredMethod("createId", String.class);
@@ -183,6 +195,14 @@ public class ReflectionUtils {
 
     public static void setUpdateInterval(ServerEntity entity, int updateInterval) throws Exception {
         UPDATE_INTERVAL_FIELD.set(entity, updateInterval);
+    }
+
+    public static int getEntityId(ClientboundMoveEntityPacket packet) throws Exception {
+        return ENTITY_ID_FIELD.getInt(packet);
+    }
+
+    public static void setYRot(ClientboundMoveEntityPacket packet, byte yRot) throws Exception {
+        Y_ROT_FIELD.setByte(packet, yRot);
     }
 
     @SuppressWarnings("unchecked")

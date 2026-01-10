@@ -54,40 +54,74 @@ public class ResourcePackBuilder {
                 for (String key : itemsSection.getKeys(false)) {
                     ConfigurationSection itemSection = itemsSection.getConfigurationSection(key);
                     if (itemSection != null) {
-                        String modelName = itemSection.getString("model");
-                        if (modelName != null) {
-                            if (bedrockResourcePack != null)
-                                plugin.getSLF4JLogger().warn("Custom item models are not supported in Bedrock resource packs yet: {}", modelName);
-                            String namespace = FileUtils.getFirstResourceSubfolder(resourceFolder, config.file());
-                            File modelFile = new File(resourceFolder, namespace + "/assets/models/" + modelName);
-                            modelFile = FileUtils.detectFileExtension(modelFile, List.of(".json", ".lomodel"));
-                            if (modelFile.exists() && modelFile.isFile()) {
-                                if (modelFile.getName().endsWith(".json")) {
-                                    createItemFile(resourcePack, "assets/lost_engine/items/" + key + ".json", "lost_engine:" + modelName.replace(".json", ""));
-                                } else if (modelFile.getName().endsWith(".lomodel")) {
-                                    plugin.getSLF4JLogger().error("LOModel format is not supported for item models yet: {}", modelFile.getAbsolutePath());
-                                } else {
-                                    plugin.getSLF4JLogger().error("Unknown model file for item model: {}", modelFile.getAbsolutePath());
-                                }
-                            } else {
-                                plugin.getSLF4JLogger().error("Model file for item model not found: {}", modelFile.getAbsolutePath());
-                            }
-                        } else {
+                        String type = itemSection.getString("type", "generic").toLowerCase();
+                        if (type.equals("trident")) {
                             String textureName = itemSection.getString("texture");
-                            if (textureName != null) {
-                                String type = itemSection.getString("type", "generic").toLowerCase();
+                            String iconTextureName = itemSection.getString("icon");
+                            if (textureName != null && iconTextureName != null) {
+                                createThrowingTridentModel(
+                                        resourcePack,
+                                        Key.key("lost_engine", "item/" + key + "_throwing"),
+                                        Key.key("lost_engine", textureName)
+                                );
+                                createInHandTridentModel(
+                                        resourcePack,
+                                        Key.key("lost_engine", "item/" + key + "_trident_in_hand"),
+                                        Key.key("lost_engine", textureName)
+                                );
                                 createItemModel(
                                         resourcePack,
                                         Key.key("lost_engine", "item/" + key),
-                                        switch (type) {
-                                            case "sword", "pickaxe", "axe", "shovel", "hoe" -> Key.key("item/handheld");
-                                            default -> Key.key("item/generated");
-                                        },
-                                        Key.key("lost_engine", textureName)
+                                        Key.key("item/generated"),
+                                        Key.key("lost_engine", iconTextureName)
                                 );
-                                createItemFile(resourcePack, "assets/lost_engine/items/" + key + ".json", "lost_engine:item/" + key);
+                                createTridentItemFile(
+                                        resourcePack,
+                                        "assets/lost_engine/items/" + key + ".json",
+                                        "lost_engine:item/" + key,
+                                        "lost_engine:item/" + key + "_throwing",
+                                        "lost_engine:item/" + key + "_trident_in_hand"
+                                );
                                 if (bedrockResourcePack != null) {
                                     createBedrockTextureData(bedrockResourcePack, "textures/" + textureName, key);
+                                }
+                            }
+                        } else {
+                            String modelName = itemSection.getString("model");
+                            if (modelName != null) {
+                                if (bedrockResourcePack != null)
+                                    plugin.getSLF4JLogger().warn("Custom item models are not supported in Bedrock resource packs yet: {}", modelName);
+                                String namespace = FileUtils.getFirstResourceSubfolder(resourceFolder, config.file());
+                                File modelFile = new File(resourceFolder, namespace + "/assets/models/" + modelName);
+                                modelFile = FileUtils.detectFileExtension(modelFile, List.of(".json", ".lomodel"));
+                                if (modelFile.exists() && modelFile.isFile()) {
+                                    if (modelFile.getName().endsWith(".json")) {
+                                        createItemFile(resourcePack, "assets/lost_engine/items/" + key + ".json", "lost_engine:" + modelName.replace(".json", ""));
+                                    } else if (modelFile.getName().endsWith(".lomodel")) {
+                                        plugin.getSLF4JLogger().error("LOModel format is not supported for item models yet: {}", modelFile.getAbsolutePath());
+                                    } else {
+                                        plugin.getSLF4JLogger().error("Unknown model file for item model: {}", modelFile.getAbsolutePath());
+                                    }
+                                } else {
+                                    plugin.getSLF4JLogger().error("Model file for item model not found: {}", modelFile.getAbsolutePath());
+                                }
+                            } else {
+                                String textureName = itemSection.getString("texture");
+                                if (textureName != null) {
+                                    createItemModel(
+                                            resourcePack,
+                                            Key.key("lost_engine", "item/" + key),
+                                            switch (type) {
+                                                case "sword", "pickaxe", "axe", "shovel", "hoe" ->
+                                                        Key.key("item/handheld");
+                                                default -> Key.key("item/generated");
+                                            },
+                                            Key.key("lost_engine", textureName)
+                                    );
+                                    createItemFile(resourcePack, "assets/lost_engine/items/" + key + ".json", "lost_engine:item/" + key);
+                                    if (bedrockResourcePack != null) {
+                                        createBedrockTextureData(bedrockResourcePack, "textures/" + textureName, key);
+                                    }
                                 }
                             }
                         }
@@ -247,8 +281,47 @@ public class ResourcePackBuilder {
         );
     }
 
+    private static void createInHandTridentModel(@NotNull JavaResourcePack resourcePack, @NotNull Key modelKey, @NotNull Key textureKey) {
+        Model.Display display = Model.Display.display();
+        // This is not a 100% the same transformation as the trident, but the model is built-in I have no idea how to get it
+        display.put(Model.Display.DisplayType.THIRDPERSON_RIGHTHAND, Model.Display.Transform.transform().rotation(new float[]{0, 60, 0}).translation(new float[]{0.25f, -2, 0.75f}).scale(new float[]{2, 2, 1}));
+        display.put(Model.Display.DisplayType.THIRDPERSON_LEFTHAND, Model.Display.Transform.transform().rotation(new float[]{0, 60, 0}).translation(new float[]{0, -2, 1.5f}).scale(new float[]{2, 2, 1}));
+        display.put(Model.Display.DisplayType.FIRSTPERSON_RIGHTHAND, Model.Display.Transform.transform().rotation(new float[]{0, -90, 25}).translation(new float[]{5.25f, -3.5f, 2}).scale(new float[]{2, 2, 1}));
+        display.put(Model.Display.DisplayType.FIRSTPERSON_LEFTHAND, Model.Display.Transform.transform().rotation(new float[]{0, -90, 25}).translation(new float[]{4.25f, -3.75f, 2}).scale(new float[]{2, 2, 1}));
+        resourcePack.model(
+                Model.model("assets/" + modelKey.namespace() + "/models/" + modelKey.value() + ".json")
+                        .parent("item/generated")
+                        .texture("layer0", textureKey.asString())
+                        .display(display)
+        );
+    }
+
+    private static void createThrowingTridentModel(@NotNull JavaResourcePack resourcePack, @NotNull Key modelKey, @NotNull Key textureKey) {
+        Model.Display display = Model.Display.display();
+        // This is not a 100% the same transformation as the trident, but the model is built-in I have no idea how to get it
+        display.put(Model.Display.DisplayType.THIRDPERSON_RIGHTHAND, Model.Display.Transform.transform().rotation(new float[]{180, -90, 0}).translation(new float[]{0.25f, -2, 0.75f}).scale(new float[]{2, 2, 1}));
+        display.put(Model.Display.DisplayType.THIRDPERSON_LEFTHAND, Model.Display.Transform.transform().rotation(new float[]{180, -90, 0}).translation(new float[]{0, -2, 1.5f}).scale(new float[]{2, 2, 1}));
+        display.put(Model.Display.DisplayType.FIRSTPERSON_RIGHTHAND, Model.Display.Transform.transform().rotation(new float[]{0, -90, 25}).translation(new float[]{5.25f, -3.5f, 2}).scale(new float[]{2, 2, 1}));
+        display.put(Model.Display.DisplayType.FIRSTPERSON_LEFTHAND, Model.Display.Transform.transform().rotation(new float[]{0, -90, 25}).translation(new float[]{4.25f, -3.75f, 2}).scale(new float[]{2, 2, 1}));
+        resourcePack.model(
+                Model.model("assets/" + modelKey.namespace() + "/models/" + modelKey.value() + ".json")
+                        .parent("item/generated")
+                        .texture("layer0", textureKey.asString())
+                        .display(display)
+        );
+    }
+
     private static void createItemFile(@NotNull ResourcePack resourcePack, String path, @NotNull String modelKey) {
         resourcePack.jsonFile(path, JsonParser.parseString("{\"oversized_in_gui\":true,\"model\":{\"type\":\"minecraft:model\",\"model\":\"%s\"}}".formatted(modelKey)));
+    }
+
+    private static void createTridentItemFile(@NotNull ResourcePack resourcePack, String path, @NotNull String iconModelKey, @NotNull String throwingModelKey, @NotNull String inHandModelKey) {
+        resourcePack.jsonFile(
+                path,
+                JsonParser.parseString("{\"model\":{\"type\":\"minecraft:select\",\"cases\":[{\"model\":{\"type\":\"minecraft:model\",\"model\":\"%s\"},\"when\":[\"gui\",\"ground\",\"on_shelf\"]}],\"fallback\":{\"type\":\"minecraft:condition\",\"on_true\":{\"type\":\"minecraft:model\",\"model\":\"%s\"},\"on_false\":{\"type\":\"minecraft:model\",\"model\":\"%s\"},\"property\":\"minecraft:using_item\"},\"property\":\"minecraft:display_context\"}}"
+                        .formatted(iconModelKey, throwingModelKey, inHandModelKey)
+                )
+        );
     }
 
     private static void createBedrockTextureData(@NotNull BedrockResourcePack bedrockResourcePack, @Pattern("^textures/([a-zA-Z0-9_\\-/]+$)") String texturePath, @NotNull String itemName) {
