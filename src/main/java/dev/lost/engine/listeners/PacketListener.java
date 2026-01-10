@@ -44,6 +44,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.EntityType;
@@ -70,6 +71,10 @@ import net.minecraft.world.level.chunk.PalettedContainerFactory;
 import net.minecraft.world.level.dimension.DimensionType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.*;
 
@@ -149,12 +154,18 @@ public class PacketListener {
 
         @Override
         public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
-            super.channelRead(ctx, isBedrockClient(ctx) ? msg : serverbound(msg, ctx, this));
+            Object packet = isBedrockClient(ctx) ? msg : serverbound(msg, ctx, this);
+            if (packet != null) {
+                super.channelRead(ctx, packet);
+            }
         }
 
         @Override
         public void write(@NotNull ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-            super.write(ctx, isBedrockClient(ctx) ? msg : clientbound(msg, ctx, this), promise);
+            Object packet = isBedrockClient(ctx) ? msg : clientbound(msg, ctx, this);
+            if (packet != null) {
+                super.write(ctx, packet, promise);
+            }
         }
     }
 
@@ -366,10 +377,15 @@ public class PacketListener {
                 boolean requiresEdit = false;
                 ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(id);
                 if (itemStack != null) {
-                    newItems.removeIf(dataValue -> dataValue.id() >= 8);
-                    newItems.add(new SynchedEntityData.DataValue<>(10, EntityDataSerializers.INT, 1));
-                    newItems.add(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.ITEM_STACK, itemStack));
-                    newItems.add(new SynchedEntityData.DataValue<>(24, EntityDataSerializers.BYTE, (byte) 8));
+                    newItems.removeIf(dataValue -> {
+                        if (dataValue.id() == 10 && dataValue.value() instanceof Integer) return false;
+                        if (dataValue.id() == 11 && dataValue.value() instanceof Vector3fc) return false;
+                        if (dataValue.id() == 12 && dataValue.value() instanceof Vector3fc) return false;
+                        if (dataValue.id() == 13 && dataValue.value() instanceof Quaternionfc) return false;
+                        if (dataValue.id() == 23 && dataValue.value() instanceof ItemStack) return false;
+                        if (dataValue.id() == 24 && dataValue.value() instanceof Byte) return false;
+                        return dataValue.id() >= 8;
+                    });
                     requiresEdit = true;
                 }
                 for (int i = 0; i < newItems.size(); i++) {
@@ -388,6 +404,7 @@ public class PacketListener {
                         }
                     }
                 }
+                if (newItems.isEmpty()) return null;
                 if (requiresEdit) {
                     return new ClientboundSetEntityDataPacket(id, newItems);
                 }
@@ -493,8 +510,29 @@ public class PacketListener {
                 }
             }
             case ClientboundAddEntityPacket packet -> {
-                if (packet.getType() == EntityType.TRIDENT && CustomTridentItem.CUSTOM_TRIDENTS.containsKey(packet.getId())) {
-                    //int id, UUID uuid, double x, double y, double z, float xRot, float yRot, EntityType<?> type, int data, Vec3 deltaMovement, double yHeadRot
+                if (packet.getType() != EntityType.TRIDENT) break;
+                ServerPlayer player = handler.getPlayer(ctx);
+                if (player == null) break;
+                ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(packet.getId());
+                if (itemStack != null) {
+                    MinecraftServer.getServer().execute(() -> {
+                        ChunkMap.TrackedEntity entityTracker = player.level().getChunkSource().chunkMap.entityMap.get(packet.getId());
+                        try {
+                            ReflectionUtils.setUpdateInterval(entityTracker.serverEntity, 1);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Unable to edit the thrown trident ServerEntity's update interval: ", e);
+                        }
+                    });
+                    ObjectArrayList<SynchedEntityData.DataValue<?>> packedItems = new ObjectArrayList<>();
+                    packedItems.add(new SynchedEntityData.DataValue<>(10, EntityDataSerializers.INT, 1));
+                    packedItems.add(new SynchedEntityData.DataValue<>(11, EntityDataSerializers.VECTOR3, new Vector3f(0, -0.03125f, 0.6875f)));
+                    packedItems.add(new SynchedEntityData.DataValue<>(12, EntityDataSerializers.VECTOR3, new Vector3f(2, 2, 1)));
+                    packedItems.add(new SynchedEntityData.DataValue<>(13, EntityDataSerializers.QUATERNION, new Quaternionf().rotateX((float) Math.toRadians(-90)).rotateY((float) Math.toRadians(90))));
+                    packedItems.add(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.ITEM_STACK, editItem(itemStack, false).orElse(itemStack)));
+                    packedItems.add(new SynchedEntityData.DataValue<>(24, EntityDataSerializers.BYTE, (byte) 8));
+                    player.connection.send(
+                            new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
+                    );
                     return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), packet.getYRot(), EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
                 }
             }

@@ -10,6 +10,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerEntity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -46,6 +47,7 @@ public class ReflectionUtils {
     private static final Field MATERIAL_ITEM_FIELD;
     private static final Field MATERIAL_BLOCK_FIELD;
     private static final Field RECIPE_PROPERTY_SET_ITEMS;
+    private static final Field UPDATE_INTERVAL_FIELD;
     private static final Method EQUIPMENT_CREATE_ID_METHOD;
 
     static {
@@ -102,6 +104,12 @@ public class ReflectionUtils {
             RECIPE_PROPERTY_SET_ITEMS.setAccessible(true);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize RECIPE_PROPERTY_SET_ITEMS", e);
+        }
+        try {
+            UPDATE_INTERVAL_FIELD = ServerEntity.class.getDeclaredField("updateInterval");
+            UPDATE_INTERVAL_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize UPDATE_INTERVAL_FIELD", e);
         }
         try {
             EQUIPMENT_CREATE_ID_METHOD = EquipmentAssets.class.getDeclaredMethod("createId", String.class);
@@ -171,6 +179,10 @@ public class ReflectionUtils {
 
     public static void setItems(RecipePropertySet recipePropertySet, Set<Holder<Item>> items) throws Exception {
         RECIPE_PROPERTY_SET_ITEMS.set(recipePropertySet, items);
+    }
+
+    public static void setUpdateInterval(ServerEntity entity, int updateInterval) throws Exception {
+        UPDATE_INTERVAL_FIELD.set(entity, updateInterval);
     }
 
     @SuppressWarnings("unchecked")
