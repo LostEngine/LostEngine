@@ -59,9 +59,9 @@ public interface Model {
             return new ModelImpl.ElementImpl();
         }
 
-        int[] from();
+        float[] from();
 
-        int[] to();
+        float[] to();
 
         Map<Face.FaceType, Face> faces();
 
@@ -71,9 +71,9 @@ public interface Model {
 
         Integer lightEmission();
 
-        Element from(int[] from);
+        Element from(float[] from);
 
-        Element to(int[] to);
+        Element to(float[] to);
 
         Element face(Face.FaceType faceType, Face face);
 
@@ -90,21 +90,21 @@ public interface Model {
                 return new ModelImpl.ElementImpl.RotationImpl();
             }
 
-            int[] origin();
+            float[] origin();
 
             Boolean rescale();
 
             Axis axis();
 
-            int angle();
+            float angle();
 
-            Rotation origin(int[] origin);
+            Rotation origin(float[] origin);
 
             Rotation rescale(Boolean rescale);
 
             Rotation axis(Axis axis);
 
-            Rotation angle(int angle);
+            Rotation angle(float angle);
 
             enum Axis {
                 X,
@@ -131,21 +131,21 @@ public interface Model {
 
             String texture();
 
-            int[] uv();
+            float[] uv();
 
             FaceType cullface();
 
-            Integer rotation();
+            Float rotation();
 
             Integer tintindex();
 
             Face texture(String texture);
 
-            Face uv(int[] uv);
+            Face uv(float[] uv);
 
             Face cullface(FaceType cullface);
 
-            Face rotation(Integer rotation);
+            Face rotation(Float rotation);
 
             Face tintindex(Integer tintindex);
         }
@@ -178,17 +178,17 @@ public interface Model {
                 return new ModelImpl.DisplayImpl.TransformImpl();
             }
 
-            int[] rotation();
+            float[] rotation();
 
-            int[] translation();
+            float[] translation();
 
-            int[] scale();
+            float[] scale();
 
-            Transform rotation(int[] rotation);
+            Transform rotation(float[] rotation);
 
-            Transform translation(int[] translation);
+            Transform translation(float[] translation);
 
-            Transform scale(int[] scale);
+            Transform scale(float[] scale);
         }
 
     }

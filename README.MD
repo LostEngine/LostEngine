@@ -1,10 +1,10 @@
 ## TODO:
-- [ ] Custom Items
+- [X] Custom Items
     - [X] Regular Items
     - [X] Tools
     - [X] Armors
     - [X] Elytra
-    - [ ] Trident
+    - [X] Trident
 - [ ] Custom Blocks
     - [X] Dynamic block hardness
     - [X] Drops/Required tool

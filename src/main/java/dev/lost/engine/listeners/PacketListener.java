@@ -8,6 +8,7 @@ import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.items.customitems.CustomItem;
+import dev.lost.engine.items.customitems.CustomTridentItem;
 import dev.lost.engine.utils.FloodgateUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
@@ -43,9 +44,14 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Inventory;
@@ -68,6 +74,10 @@ import net.minecraft.world.level.chunk.PalettedContainerFactory;
 import net.minecraft.world.level.dimension.DimensionType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.*;
 
@@ -147,12 +157,18 @@ public class PacketListener {
 
         @Override
         public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
-            super.channelRead(ctx, isBedrockClient(ctx) ? msg : serverbound(msg, ctx, this));
+            Object packet = isBedrockClient(ctx) ? msg : serverbound(msg, ctx, this);
+            if (packet != null) {
+                super.channelRead(ctx, packet);
+            }
         }
 
         @Override
         public void write(@NotNull ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-            super.write(ctx, isBedrockClient(ctx) ? msg : clientbound(msg, ctx, this), promise);
+            Object packet = isBedrockClient(ctx) ? msg : clientbound(msg, ctx, this);
+            if (packet != null) {
+                super.write(ctx, packet, promise);
+            }
         }
     }
 
@@ -360,8 +376,21 @@ public class PacketListener {
                 }
             }
             case ClientboundSetEntityDataPacket(int id, List<SynchedEntityData.DataValue<?>> packedItems) -> {
-                List<SynchedEntityData.DataValue<?>> newItems = new ObjectArrayList<>(packedItems);
+                ObjectArrayList<SynchedEntityData.DataValue<?>> newItems = new ObjectArrayList<>(packedItems);
                 boolean requiresEdit = false;
+                ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(id);
+                if (itemStack != null) {
+                    newItems.removeIf(dataValue -> {
+                        if (dataValue.id() == 10 && dataValue.value() instanceof Integer) return false;
+                        if (dataValue.id() == 11 && dataValue.value() instanceof Vector3fc) return false;
+                        if (dataValue.id() == 12 && dataValue.value() instanceof Vector3fc) return false;
+                        if (dataValue.id() == 13 && dataValue.value() instanceof Quaternionfc) return false;
+                        if (dataValue.id() == 23 && dataValue.value() instanceof ItemStack) return false;
+                        if (dataValue.id() == 24 && dataValue.value() instanceof Byte) return false;
+                        return dataValue.id() >= 8;
+                    });
+                    requiresEdit = true;
+                }
                 for (int i = 0; i < newItems.size(); i++) {
                     SynchedEntityData.DataValue<?> dataValue = newItems.get(i);
                     if (dataValue.value() instanceof ItemStack item) {
@@ -378,6 +407,7 @@ public class PacketListener {
                         }
                     }
                 }
+                if (newItems.isEmpty()) return null;
                 if (requiresEdit) {
                     return new ClientboundSetEntityDataPacket(id, newItems);
                 }
@@ -480,6 +510,54 @@ public class PacketListener {
                     }
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to update items via reflection in ClientboundUpdateRecipesPacket", e);
+                }
+            }
+            case ClientboundAddEntityPacket packet -> {
+                if (packet.getType() != EntityType.TRIDENT) break;
+                ServerPlayer player = handler.getPlayer(ctx);
+                if (player == null) break;
+                ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(packet.getId());
+                if (itemStack != null) {
+                    MinecraftServer.getServer().execute(() -> {
+                        ChunkMap.TrackedEntity entityTracker = player.level().getChunkSource().chunkMap.entityMap.get(packet.getId());
+                        try {
+                            ReflectionUtils.setUpdateInterval(entityTracker.serverEntity, 1);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Unable to edit the thrown trident ServerEntity's update interval: ", e);
+                        }
+                    });
+                    ObjectArrayList<SynchedEntityData.DataValue<?>> packedItems = new ObjectArrayList<>();
+                    packedItems.add(new SynchedEntityData.DataValue<>(10, EntityDataSerializers.INT, 1));
+                    packedItems.add(new SynchedEntityData.DataValue<>(11, EntityDataSerializers.VECTOR3, new Vector3f(0, -0.03125f, 0.6875f)));
+                    packedItems.add(new SynchedEntityData.DataValue<>(12, EntityDataSerializers.VECTOR3, new Vector3f(2, 2, 1)));
+                    packedItems.add(new SynchedEntityData.DataValue<>(13, EntityDataSerializers.QUATERNION, new Quaternionf().rotateX((float) Math.toRadians(-90)).rotateY((float) Math.toRadians(90))));
+                    packedItems.add(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.ITEM_STACK, editItem(itemStack, false).orElse(itemStack)));
+                    packedItems.add(new SynchedEntityData.DataValue<>(24, EntityDataSerializers.BYTE, (byte) 8));
+                    player.connection.send(
+                            new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
+                    );
+                    float yRot = Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2);
+                    return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
+                }
+            }
+            case ClientboundTeleportEntityPacket(int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround) -> {
+                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(id)) {
+                    float yRot = Mth.wrapDegrees(change.yRot() - (change.yRot() - 90) * 2);
+                    return new ClientboundTeleportEntityPacket(id, new PositionMoveRotation(change.position(), change.deltaMovement(), yRot, change.xRot()), relatives, onGround);
+                }
+            }
+            case ClientboundEntityPositionSyncPacket(int id, PositionMoveRotation values, boolean onGround) -> {
+                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(id)) {
+                    float yRot = Mth.wrapDegrees(values.yRot() - (values.yRot() - 90) * 2);
+                    return new ClientboundEntityPositionSyncPacket(id, new PositionMoveRotation(values.position(), values.deltaMovement(), yRot, values.xRot()), onGround);
+                }
+            }
+            case ClientboundMoveEntityPacket packet -> {
+                if (!packet.hasRotation()) break;
+                int entityId = ReflectionUtils.getEntityId(packet);
+                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(entityId)) {
+                    byte yRot = Mth.packDegrees(Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2));
+                    ReflectionUtils.setYRot(packet, yRot);
                 }
             }
             default -> {

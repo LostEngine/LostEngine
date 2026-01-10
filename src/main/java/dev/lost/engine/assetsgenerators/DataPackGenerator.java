@@ -26,6 +26,7 @@ public class DataPackGenerator {
     private final JsonObject chestplates = new JsonObject();
     private final JsonObject leggings = new JsonObject();
     private final JsonObject boots = new JsonObject();
+    private final JsonObject tridents = new JsonObject();
     private final JsonObject axeMinable = new JsonObject();
     private final JsonObject hoeMinable = new JsonObject();
     private final JsonObject pickaxeMinable = new JsonObject();
@@ -64,6 +65,7 @@ public class DataPackGenerator {
         chestplates.add("values", new JsonArray());
         leggings.add("values", new JsonArray());
         boots.add("values", new JsonArray());
+        tridents.add("values", new JsonArray());
         axeMinable.add("values", new JsonArray());
         hoeMinable.add("values", new JsonArray());
         pickaxeMinable.add("values", new JsonArray());
@@ -110,6 +112,10 @@ public class DataPackGenerator {
 
     public void addBoots(String id) {
         boots.getAsJsonArray("values").add(id);
+    }
+
+    public void addTrident(String id) {
+        tridents.getAsJsonArray("values").add(id);
     }
 
     public void addAxeMinable(String id) {
@@ -243,6 +249,7 @@ public class DataPackGenerator {
         saveJsonToFile(chestplates,              new File(dataPackFolder + "/data/minecraft/tags/item/chest_armor.json"));
         saveJsonToFile(leggings,                 new File(dataPackFolder + "/data/minecraft/tags/item/leg_armor.json"));
         saveJsonToFile(boots,                    new File(dataPackFolder + "/data/minecraft/tags/item/foot_armor.json"));
+        saveJsonToFile(tridents,                 new File(dataPackFolder + "/data/minecraft/tags/item/enchantable/trident.json"));
         saveJsonToFile(axeMinable,               new File(dataPackFolder + "/data/minecraft/tags/block/mineable/axe.json"));
         saveJsonToFile(hoeMinable,               new File(dataPackFolder + "/data/minecraft/tags/block/mineable/hoe.json"));
         saveJsonToFile(pickaxeMinable,           new File(dataPackFolder + "/data/minecraft/tags/block/mineable/pickaxe.json"));
