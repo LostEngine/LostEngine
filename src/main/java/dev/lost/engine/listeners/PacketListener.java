@@ -1,14 +1,17 @@
 package dev.lost.engine.listeners;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
+import dev.lost.engine.entities.CustomThrownTrident;
 import dev.lost.engine.items.customitems.CustomItem;
-import dev.lost.engine.items.customitems.CustomTridentItem;
 import dev.lost.engine.utils.FloodgateUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
@@ -172,7 +175,7 @@ public class PacketListener {
         }
     }
 
-    private static Object serverbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) {
+    private static @Nullable Object serverbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) {
         switch (msg) {
             case ServerboundSetCreativeModeSlotPacket packet -> {
                 ItemStack item = packet.itemStack();
@@ -252,7 +255,7 @@ public class PacketListener {
         return msg;
     }
 
-    private static Object clientbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) throws Exception {
+    private static @Nullable Object clientbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) throws Exception {
         switch (msg) {
             case ClientboundLoginPacket packet -> processCommonPlayerSpawnInfo(packet.commonPlayerSpawnInfo(), handler);
             case ClientboundRespawnPacket packet ->
@@ -378,7 +381,7 @@ public class PacketListener {
             case ClientboundSetEntityDataPacket(int id, List<SynchedEntityData.DataValue<?>> packedItems) -> {
                 ObjectArrayList<SynchedEntityData.DataValue<?>> newItems = new ObjectArrayList<>(packedItems);
                 boolean requiresEdit = false;
-                ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(id);
+                ItemStack itemStack = CustomThrownTrident.CUSTOM_TRIDENTS.get(id);
                 if (itemStack != null) {
                     newItems.removeIf(dataValue -> {
                         if (dataValue.id() == 10 && dataValue.value() instanceof Integer) return false;
@@ -516,7 +519,7 @@ public class PacketListener {
                 if (packet.getType() != EntityType.TRIDENT) break;
                 ServerPlayer player = handler.getPlayer(ctx);
                 if (player == null) break;
-                ItemStack itemStack = CustomTridentItem.CUSTOM_TRIDENTS.get(packet.getId());
+                ItemStack itemStack = CustomThrownTrident.CUSTOM_TRIDENTS.get(packet.getId());
                 if (itemStack != null) {
                     MinecraftServer.getServer().execute(() -> {
                         ChunkMap.TrackedEntity entityTracker = player.level().getChunkSource().chunkMap.entityMap.get(packet.getId());
@@ -541,13 +544,13 @@ public class PacketListener {
                 }
             }
             case ClientboundTeleportEntityPacket(int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround) -> {
-                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(id)) {
+                if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(id)) {
                     float yRot = Mth.wrapDegrees(change.yRot() - (change.yRot() - 90) * 2);
                     return new ClientboundTeleportEntityPacket(id, new PositionMoveRotation(change.position(), change.deltaMovement(), yRot, change.xRot()), relatives, onGround);
                 }
             }
             case ClientboundEntityPositionSyncPacket(int id, PositionMoveRotation values, boolean onGround) -> {
-                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(id)) {
+                if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(id)) {
                     float yRot = Mth.wrapDegrees(values.yRot() - (values.yRot() - 90) * 2);
                     return new ClientboundEntityPositionSyncPacket(id, new PositionMoveRotation(values.position(), values.deltaMovement(), yRot, values.xRot()), onGround);
                 }
@@ -555,9 +558,15 @@ public class PacketListener {
             case ClientboundMoveEntityPacket packet -> {
                 if (!packet.hasRotation()) break;
                 int entityId = ReflectionUtils.getEntityId(packet);
-                if (CustomTridentItem.CUSTOM_TRIDENTS.containsKey(entityId)) {
+                if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(entityId)) {
                     byte yRot = Mth.packDegrees(Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2));
                     ReflectionUtils.setYRot(packet, yRot);
+                }
+            }
+            case ClientboundSetEntityMotionPacket packet -> {
+                if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(packet.getId())) {
+                    // This packet is useless since we replace tridents with item displays, and they don't support it se we send position packets every tick
+                    return null;
                 }
             }
             default -> {

@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
 import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.engine.entities.CustomThrownTrident;
 import lombok.Getter;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -26,12 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 public class CustomTridentItem extends TridentItem implements CustomItem {
-
-    public static final ConcurrentMap<Integer, ItemStack> CUSTOM_TRIDENTS = new ConcurrentHashMap<>();
 
     @Getter
     private final String id;
@@ -49,6 +45,7 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
     /**
      * {@link TridentItem#releaseUsing(ItemStack, Level, LivingEntity, int)}
      */
+    @SuppressWarnings("UnstableApiUsage")
     @CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
     @Override
     public boolean releaseUsing(@NotNull ItemStack stack, @NotNull Level level, @NotNull LivingEntity entity, int timeLeft) {
@@ -71,11 +68,7 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
                         if (tridentSpinAttackStrength == 0.0F) {
                             ItemStack itemStack = stack.copyWithCount(1); // Paper
                             Projectile.Delayed<ThrownTrident> tridentDelayed = Projectile.spawnProjectileFromRotationDelayed( // Paper - PlayerLaunchProjectileEvent(
-                                    (serverLevel1, livingEntity, itemStack1) -> {
-                                        ThrownTrident thrownTrident = new ThrownTrident(serverLevel1, livingEntity, itemStack1);
-                                        CUSTOM_TRIDENTS.put(thrownTrident.getId(), itemStack); // LostEngine - CUSTOM_TRIDENTS
-                                        return thrownTrident;
-                                    }, serverLevel, itemStack, player, 0.0F, 2.5F, 1.0F
+                                    CustomThrownTrident::new, serverLevel, itemStack, player, 0.0F, 2.5F, 1.0F
                             );
                             // Paper start - PlayerLaunchProjectileEvent
                             com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent event = new com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent((org.bukkit.entity.Player) player.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(stack), (org.bukkit.entity.Projectile) tridentDelayed.projectile().getBukkitEntity());
@@ -122,7 +115,7 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
                         player.push(f, f1, f2);
                         player.startAutoSpinAttack(20, 8.0F, stack);
                         if (player.onGround()) {
-                            float f3 = 1.1999999F;
+                            //float f3 = 1.1999999F;
                             player.move(MoverType.SELF, new Vec3(0.0, 1.1999999F, 0.0));
                         }
 
@@ -143,8 +136,7 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
      */
     @Override
     public @NotNull Projectile asProjectile(@NotNull Level level, @NotNull Position pos, @NotNull ItemStack stack, @NotNull Direction direction) {
-        ThrownTrident thrownTrident = new ThrownTrident(level, pos.x(), pos.y(), pos.z(), stack.copyWithCount(1));
-        CUSTOM_TRIDENTS.put(thrownTrident.getId(), stack); // LostEngine - CUSTOM_TRIDENTS
+        CustomThrownTrident thrownTrident = new CustomThrownTrident(level, pos.x(), pos.y(), pos.z(), stack.copyWithCount(1));
         thrownTrident.pickup = AbstractArrow.Pickup.ALLOWED;
         return thrownTrident;
     }
