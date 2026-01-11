@@ -13,12 +13,13 @@ The build will be located in `build/libs`
 > You can use (Linux/Mac) `./gradlew runServer` (Windows) `gradlew.bat runServer` to start a PaperMC server with the plugin automatically built and installed (use `runFolia` for Folia)
 
 ## TODO:
-- [X] Custom Items
+- [ ] Custom Items
     - [X] Regular Items
     - [X] Tools
     - [X] Armors
     - [X] Elytra
     - [X] Trident
+    - [ ] Bows/Crossbows
 - [ ] Custom Blocks
     - [X] Dynamic block hardness
     - [X] Drops/Required tool
@@ -34,6 +35,13 @@ The build will be located in `build/libs`
 - [ ] Furniture
     - [ ] Furniture Entity
     - [ ] Interactable Furniture
+- [ ] Crafts
+  - [ ] Inventory/Crafting table
+  - [ ] Furnace
+- [ ] Glyphs (can copy https://github.com/LostEngine/Glyphs)
+- [ ] GUIs
+- [ ] World generation
+- [ ] Escape menu
 - [ ] Bedrock compatibility
     - [ ] Items
         - [X] Regular items
