@@ -1,3 +1,17 @@
+## Building from source:
+Make sure you have [git](https://git-scm.com/install/) and Java 21+ installed
+```
+git clone https://github.com/LostEngine/LostEngine.git
+cd LostEngine
+# Linux/Mac
+./gradlew shadowJar
+# Windows
+gradlew.bat shadowJar
+```
+The build will be located in `build/libs`
+> [!TIP]
+> You can use (Linux/Mac) `./gradlew runServer` (Windows) `gradlew.bat runServer` to start a PaperMC server with the plugin automatically built and installed (use `runFolia` for Folia)
+
 ## TODO:
 - [X] Custom Items
     - [X] Regular Items
