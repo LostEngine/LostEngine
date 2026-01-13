@@ -4,11 +4,10 @@ import com.mojang.datafixers.util.Pair;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.bootstrap.components.SimpleComponentProperty;
 import net.minecraft.core.Holder;
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
-import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
-import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
-import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
+import net.minecraft.core.SectionPos;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerEntity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -19,7 +18,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
-import org.jspecify.annotations.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Field;
@@ -30,10 +29,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // Make sure the field names are still correct on new Minecraft versions
+@CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
+// Make sure the field names are still correct on new Minecraft versions
 public class ReflectionUtils {
 
     private static final Field STATES_FIELD;
+    private static final Field SECTION_POS_FIELD;
+    private static final Field POSITIONS_FIELD;
     private static final Field BUFFER_FIELD;
     private static final Field ITEMSTACK_FIELD;
     private static final Field EQUIPMENT_SLOTS_FIELD;
@@ -42,6 +44,10 @@ public class ReflectionUtils {
     private static final Field MATERIAL_ITEM_FIELD;
     private static final Field MATERIAL_BLOCK_FIELD;
     private static final Field RECIPE_PROPERTY_SET_ITEMS;
+    private static final Field UPDATE_INTERVAL_FIELD;
+    private static final Field ENTITY_ID_FIELD;
+    private static final Field Y_ROT_FIELD;
+
     private static final Method EQUIPMENT_CREATE_ID_METHOD;
 
     static {
@@ -50,6 +56,18 @@ public class ReflectionUtils {
             STATES_FIELD.setAccessible(true);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize STATES_FIELD", e);
+        }
+        try {
+            SECTION_POS_FIELD = ClientboundSectionBlocksUpdatePacket.class.getDeclaredField("sectionPos");
+            SECTION_POS_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize SECTION_POS_FIELD", e);
+        }
+        try {
+            POSITIONS_FIELD = ClientboundSectionBlocksUpdatePacket.class.getDeclaredField("positions");
+            POSITIONS_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize POSITIONS_FIELD", e);
         }
         try {
             BUFFER_FIELD = ClientboundLevelChunkPacketData.class.getDeclaredField("buffer");
@@ -88,6 +106,24 @@ public class ReflectionUtils {
             throw new RuntimeException("Failed to initialize RECIPE_PROPERTY_SET_ITEMS", e);
         }
         try {
+            UPDATE_INTERVAL_FIELD = ServerEntity.class.getDeclaredField("updateInterval");
+            UPDATE_INTERVAL_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize UPDATE_INTERVAL_FIELD", e);
+        }
+        try {
+            ENTITY_ID_FIELD = ClientboundMoveEntityPacket.class.getDeclaredField("entityId");
+            ENTITY_ID_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize ENTITY_ID_FIELD", e);
+        }
+        try {
+            Y_ROT_FIELD = ClientboundMoveEntityPacket.class.getDeclaredField("yRot");
+            Y_ROT_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize Y_ROT_FIELD", e);
+        }
+        try {
             EQUIPMENT_CREATE_ID_METHOD = EquipmentAssets.class.getDeclaredMethod("createId", String.class);
             EQUIPMENT_CREATE_ID_METHOD.setAccessible(true);
         } catch (Exception e) {
@@ -101,6 +137,14 @@ public class ReflectionUtils {
 
     public static void setBlockStates(ClientboundSectionBlocksUpdatePacket packet, BlockState[] states) throws Exception {
         STATES_FIELD.set(packet, states);
+    }
+
+    public static SectionPos getSectionPos(ClientboundSectionBlocksUpdatePacket packet) throws Exception {
+        return (SectionPos) SECTION_POS_FIELD.get(packet);
+    }
+
+    public static short[] getPositions(ClientboundSectionBlocksUpdatePacket packet) throws Exception {
+        return (short[]) POSITIONS_FIELD.get(packet);
     }
 
     public static void setBuffer(ClientboundLevelChunkPacketData packet, byte[] buffer) throws Exception {
@@ -127,7 +171,7 @@ public class ReflectionUtils {
         ((Map<Material, net.minecraft.world.item.Item>) MATERIAL_ITEM_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, itemStack.getItem());
     }
 
-    public static @Nullable Class<?> getTypeArgument(@NonNull Class<?> clazz) {
+    public static @Nullable Class<?> getTypeArgument(@NotNull Class<?> clazz) {
         for (Type type : clazz.getGenericInterfaces()) {
             if (type instanceof ParameterizedType parameterizedType &&
                     parameterizedType.getRawType().equals(SimpleComponentProperty.class)) {
@@ -147,6 +191,18 @@ public class ReflectionUtils {
 
     public static void setItems(RecipePropertySet recipePropertySet, Set<Holder<Item>> items) throws Exception {
         RECIPE_PROPERTY_SET_ITEMS.set(recipePropertySet, items);
+    }
+
+    public static void setUpdateInterval(ServerEntity entity, int updateInterval) throws Exception {
+        UPDATE_INTERVAL_FIELD.set(entity, updateInterval);
+    }
+
+    public static int getEntityId(ClientboundMoveEntityPacket packet) throws Exception {
+        return ENTITY_ID_FIELD.getInt(packet);
+    }
+
+    public static void setYRot(ClientboundMoveEntityPacket packet, byte yRot) throws Exception {
+        Y_ROT_FIELD.setByte(packet, yRot);
     }
 
     @SuppressWarnings("unchecked")

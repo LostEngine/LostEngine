@@ -19,8 +19,13 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Unit;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.BlockItemStateProperties;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.component.Weapon;
 import net.minecraft.world.item.equipment.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,7 +34,6 @@ import org.bukkit.Material;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -44,7 +48,7 @@ public class ItemInjector {
     }
 
     @Contract("_, _, _, _, _, _, _, _ -> new")
-    public static @NonNull ArmorMaterial createArmorMaterial(int durability, Map<net.minecraft.world.item.equipment.ArmorType, Integer> defense, int enchantmentValue, String equipSound, float toughness, float knockbackResistance, TagKey<Item> repairItems, String assetId) {
+    public static @NotNull ArmorMaterial createArmorMaterial(int durability, Map<net.minecraft.world.item.equipment.ArmorType, Integer> defense, int enchantmentValue, String equipSound, float toughness, float knockbackResistance, TagKey<Item> repairItems, String assetId) {
         return new ArmorMaterial(
                 durability,
                 defense,
@@ -285,6 +289,59 @@ public class ItemInjector {
                         .durability(durability)
         );
         ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.ELYTRA);
+        return item;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static @NotNull Item injectTrident(
+            String name,
+            int durability,
+            float attackDamage,
+            DataPackGenerator dataPackGenerator,
+            @Nullable Map<DataComponentType<?>, ?> components
+    ) throws Exception {
+        String fullName = "lost_engine:" + name;
+        Item.Properties properties = new Item.Properties();
+        if (components != null) {
+            for (Map.Entry<DataComponentType<?>, ?> component : components.entrySet()) {
+                properties.component((DataComponentType<Object>) component.getKey(), component.getValue());
+            }
+        }
+
+        Item item = registerItem(
+                fullName,
+                pr -> new CustomTridentItem(pr, fullName),
+                new Item.Properties()
+                        .durability(durability)
+                        .attributes(
+                                ItemAttributeModifiers.builder()
+                                        .add(
+                                                Attributes.ATTACK_DAMAGE,
+                                                new AttributeModifier(
+                                                        Item.BASE_ATTACK_DAMAGE_ID,
+                                                        attackDamage,
+                                                        AttributeModifier.Operation.ADD_VALUE
+                                                ),
+                                                EquipmentSlotGroup.MAINHAND
+                                        )
+                                        .add(
+                                                Attributes.ATTACK_SPEED,
+                                                new AttributeModifier(
+                                                        Item.BASE_ATTACK_SPEED_ID,
+                                                        -2.9F,
+                                                        AttributeModifier.Operation.ADD_VALUE
+                                                ),
+                                                EquipmentSlotGroup.MAINHAND
+                                        )
+                                        .build()
+                        )
+                        .component(DataComponents.TOOL, TridentItem.createToolProperties())
+                        .enchantable(1)
+                        .component(DataComponents.WEAPON, new Weapon(1))
+        );
+
+        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.TRIDENT);
+        dataPackGenerator.addTrident(fullName);
         return item;
     }
 

@@ -2,8 +2,12 @@ name: Build LostEngine
 
 on:
   push:
+    paths-ignore:
+      - 'README.md'
     branches: [ "main" ]
   pull_request:
+    paths-ignore:
+      - 'README.md'
     branches: [ "main" ]
 
 jobs:
@@ -28,7 +32,7 @@ jobs:
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
       - name: Build LostEngine
-        run: ./gradlew build
+        run: ./gradlew shadowJar
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v6.0.0

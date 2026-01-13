@@ -118,6 +118,16 @@ items:
       use_player_skin: false
       repair_item: lost_engine:ingot
     texture: item/elytra
+  trident:
+    name:
+      en_US: "Lost Trident"
+      fr_FR: "Trident Perdu"
+    type: trident
+    trident:
+      durability: 300
+      attack_damage: 9.0
+    icon: item/trident_icon
+    texture: item/trident
 blocks:
   ore:
     name:

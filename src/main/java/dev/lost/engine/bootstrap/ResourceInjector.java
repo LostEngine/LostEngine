@@ -214,6 +214,12 @@ public class ResourceInjector {
                         ItemInjector.injectElytra(key, repairItem, durability, components);
                     }
 
+                    case "trident" -> {
+                        int durability = itemSection.getInt("trident.durability", 250);
+                        float attackDamage = (float) itemSection.getDouble("trident.attack_damage", 8.0F);
+                        ItemInjector.injectTrident(key, durability, attackDamage, dataPackGenerator, components);
+                    }
+
                     default -> context.getLogger().warn("Unknown item type: {} for item: {}", type, key);
                 }
             } catch (Exception e) {
