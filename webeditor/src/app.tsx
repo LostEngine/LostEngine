@@ -258,7 +258,7 @@ export function App() {
                 </div>
             </header>
             <SidebarProvider>
-                <Sidebar className="top-18">
+                <Sidebar className="pt-18">
                     <SidebarContent>
                         <SidebarGroup>
                             <SidebarGroupContent>
@@ -938,7 +938,7 @@ function FileViewer({
         return <ResizablePanelGroup
             className="h-full w-full"
         >
-            <ResizablePanel defaultSize={70}>
+            <ResizablePanel defaultSize={70} className="overflow-y-auto max-h-[calc(100vh-180px)]">
                 <ConfigEditor
                     text={content}
                     token={token || ""}
