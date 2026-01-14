@@ -1090,72 +1090,70 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                             </Button>
                         </div>
                     </AccordionTrigger>
-                    <AccordionContent className="flex flex-col gap-4 text-balance">
-                        <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
-                            {(() => {
-                                if (!config.items) return null;
-                                return Array.from(Object.entries(config.items)).map(value => {
-                                    return (<>
-                                        <CardContainer>
-                                            <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                                <CardItem
-                                                    translateZ="50"
-                                                    className="text-xl font-bold text-neutral-600 dark:text-white"
-                                                >
-                                                    {value[0]}
+                    <AccordionContent className="h-full w-full flex flex-wrap gap-4 text-balance">
+                        {(() => {
+                            if (!config.items) return null;
+                            return Array.from(Object.entries(config.items)).map(value => {
+                                return (<>
+                                    <CardContainer>
+                                        <CardBody
+                                            className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                            <CardItem
+                                                translateZ="50"
+                                                className="text-xl font-bold text-neutral-600 dark:text-white"
+                                            >
+                                                {value[0]}
+                                            </CardItem>
+                                            <CardItem translateZ="50" className="w-full mt-4">
+                                                <img
+                                                    src={
+                                                        (() => {
+                                                            let textureName;
+                                                            if (value[1].icon) textureName = value[1].icon;
+                                                            else if (value[1].texture) textureName = value[1].texture;
+                                                            else return notfoundImage;
+                                                            if (!textureName.endsWith(".png")) textureName += ".png";
+                                                            return `/api/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
+                                                        })()
+                                                    }
+                                                    className="w-full object-cover group-hover/card:shadow-xl"
+                                                    style={{
+                                                        imageRendering: "pixelated",
+                                                    }}
+                                                    alt="thumbnail"
+                                                />
+                                            </CardItem>
+                                            <div className="flex justify-between items-center mt-20">
+                                                <CardItem translateZ={20}>
+                                                    <Button variant="outline" size="sm">
+                                                        <Pencil/> Edit
+                                                    </Button>
                                                 </CardItem>
-                                                <CardItem translateZ="50" className="w-full mt-4">
-                                                    <img
-                                                        src={
-                                                            (() => {
-                                                                let textureName;
-                                                                if (value[1].icon) textureName = value[1].icon;
-                                                                else if (value[1].texture) textureName = value[1].texture;
-                                                                else return notfoundImage;
-                                                                if (!textureName.endsWith(".png")) textureName += ".png";
-                                                                return `/api/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
-                                                            })()
-                                                        }
-                                                        className="w-full object-cover group-hover/card:shadow-xl"
-                                                        style={{
-                                                            imageRendering: "pixelated",
-                                                        }}
-                                                        alt="thumbnail"
-                                                    />
-                                                </CardItem>
-                                                <div className="flex justify-between items-center mt-20">
-                                                    <CardItem translateZ={20}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Pencil/> Edit
-                                                        </Button>
-                                                    </CardItem>
-                                                    <CardItem translateZ={20}>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setConfirmDialogAction(() => () => {
-                                                                    const itemsNode = doc.get("items", true) as yaml.YAMLMap | null;
+                                                <CardItem translateZ={20}>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setConfirmDialogAction(() => () => {
+                                                                const itemsNode = doc.get("items", true) as yaml.YAMLMap | null;
 
-                                                                    itemsNode?.delete(value[0]);
-                                                                    onEditConfig();
-                                                                });
-                                                                setConfirmDialogMessage(`Delete item "${value[0]}"?`);
-                                                                setConfirmDialogOpen(true);
-                                                            }}
-                                                        >
-                                                            <Trash2/>
-                                                            Delete
-                                                        </Button>
-                                                    </CardItem>
-                                                </div>
-                                            </CardBody>
-                                        </CardContainer>
-                                    </>);
-                                })
-                            })()}
-                        </div>
+                                                                itemsNode?.delete(value[0]);
+                                                                onEditConfig();
+                                                            });
+                                                            setConfirmDialogMessage(`Delete item "${value[0]}"?`);
+                                                            setConfirmDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <Trash2/>
+                                                        Delete
+                                                    </Button>
+                                                </CardItem>
+                                            </div>
+                                        </CardBody>
+                                    </CardContainer>
+                                </>);
+                            })
+                        })()}y
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">
