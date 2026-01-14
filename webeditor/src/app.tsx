@@ -103,6 +103,8 @@ type ApiData = {
     files: TreeItem[];
 };
 
+const notfoundImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAAAnRSTlMAAHaTzTgAAABTSURBVHjalMixDcRACERRmtpKTkRIE08HZNR+oBHWOvTP3rcvub/lZNzKTme1xyufqjLMWasmTw+WhAhoUIogZ4Bc4hyzOTPQGurgt9LxW/8RBAD63zSW3JrlEQAAAABJRU5ErkJggg==";
+
 export function App() {
     const [theme, setTheme] = useState<"dark" | "light">(getPreferredTheme());
     const [searchOpen, setSearchOpen] = useState(false);
@@ -229,7 +231,8 @@ export function App() {
                         <TextHoverEffect text="LostEngine"/>
                     </div>
                     <div className="-ml-18 pt-2">
-                        {readonly && <span className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
+                        {readonly && <span
+                            className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -357,7 +360,8 @@ export function App() {
                     </SidebarContent>
                 </Sidebar>
                 <SidebarInset className="pt-18">
-                    <header className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4 fixed top-18 z-50 bg-white dark:bg-neutral-950">
+                    <header
+                        className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4 fixed top-18 z-50 bg-white dark:bg-neutral-950">
                         <div className="flex items-center gap-4">
                             <SidebarTrigger/>
                             <Separator
@@ -1051,24 +1055,24 @@ function ConfigEditor({text, onValueChange, folder, token}: {
 }) {
 
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-    const [confirmDialogAction, setConfirmDialogAction] = useState<() => void>(() => {});
+    const [confirmDialogAction, setConfirmDialogAction] = useState<() => void>(() => {
+    });
     const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
 
-    let doc;
-    let config: Config | undefined;
+    let doc: yaml.Document;
+    let config: Config;
 
     try {
-        doc = yaml.parse(text);
-        config = doc as Config;
+        doc = yaml.parseDocument(text);
+        config = doc.toJS() as Config;
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         return (<div className="text-red-500">{message}</div>);
     }
 
     const onEditConfig = () => {
-        const updatedText = yaml.stringify(doc);
-        onValueChange(updatedText);
-    }
+        onValueChange(String(doc));
+    };
 
     return (
         <>
@@ -1094,7 +1098,7 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                     return (<>
                                         <CardContainer>
                                             <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-neutral-950 dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[15rem] h-auto rounded-xl p-6 border">
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
                                                 <CardItem
                                                     translateZ="50"
                                                     className="text-xl font-bold text-neutral-600 dark:text-white"
@@ -1104,12 +1108,15 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                 <CardItem translateZ="50" className="w-full mt-4">
                                                     <img
                                                         src={
-                                                            value[1].texture ?
-                                                                `/api/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + (value[1].texture.endsWith(".png") ? value[1].texture : (value[1].texture + ".png")))}&token=${encodeURIComponent(token)}` :
-                                                                `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAXNSR0IArs4c6QAAAI5JREFUKJG10DsKwlAQRuHvYiAYCCkE9+CC7hJdjQsIWIkIgp2IAQu5FknIw5Q6zcxwDsPw85eKKaZ+DnMEGzzsw0ToUdXt904J38hECTHtvBb+yPFykXGznSg5HSwdZQxKj67eWEErtMqAoOx6RqNYgI0ahxCIaa1QjQ7X4DDk0CqNp/MITZKMidMM/ao+PCEzK4GxfXsAAAAASUVORK5CYII=`
+                                                            (() => {
+                                                                let textureName;
+                                                                if (value[1].icon) textureName = value[1].icon;
+                                                                else if (value[1].texture) textureName = value[1].texture;
+                                                                else return notfoundImage;
+                                                                if (!textureName.endsWith(".png")) textureName += ".png";
+                                                                return `/api/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
+                                                            })()
                                                         }
-                                                        height="1000"
-                                                        width="1000"
                                                         className="w-full object-cover group-hover/card:shadow-xl"
                                                         style={{
                                                             imageRendering: "pixelated",
@@ -1129,7 +1136,9 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                             size="sm"
                                                             onClick={() => {
                                                                 setConfirmDialogAction(() => () => {
-                                                                    delete config?.items?.[value[0]];
+                                                                    const itemsNode = doc.get("items", true) as yaml.YAMLMap | null;
+
+                                                                    itemsNode?.delete(value[0]);
                                                                     onEditConfig();
                                                                 });
                                                                 setConfirmDialogMessage(`Delete item "${value[0]}"?`);
@@ -1152,7 +1161,7 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                 <AccordionItem value="item-2">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            Tool Materials
+                            Materials
                             <Button variant="ghost" size="icon-sm" onClick={event => event.stopPropagation()}>
                                 <Plus/>
                             </Button>
@@ -1161,12 +1170,12 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                     <AccordionContent className="flex flex-col gap-4 text-balance">
                         <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
                             {(() => {
-                                if (!config.tool_materials) return null;
-                                return Array.from(Object.entries(config.tool_materials)).map(value => {
+                                if (!config.materials) return null;
+                                return Array.from(Object.entries(config.materials)).map(value => {
                                     return (<>
                                         <CardContainer>
                                             <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-neutral-950 dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[15rem] h-auto rounded-xl p-6 border">
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
                                                 <CardItem
                                                     translateZ="50"
                                                     className="text-xl font-bold text-neutral-600 dark:text-white"
@@ -1175,9 +1184,7 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                 </CardItem>
                                                 <CardItem translateZ="50" className="w-full mt-4">
                                                     <img
-                                                        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAXNSR0IArs4c6QAAAI5JREFUKJG10DsKwlAQRuHvYiAYCCkE9+CC7hJdjQsIWIkIgp2IAQu5FknIw5Q6zcxwDsPw85eKKaZ+DnMEGzzsw0ToUdXt904J38hECTHtvBb+yPFykXGznSg5HSwdZQxKj67eWEErtMqAoOx6RqNYgI0ahxCIaa1QjQ7X4DDk0CqNp/MITZKMidMM/ao+PCEzK4GxfXsAAAAASUVORK5CYII="
-                                                        height="1000"
-                                                        width="1000"
+                                                        src={notfoundImage}
                                                         className="w-full object-cover group-hover/card:shadow-xl"
                                                         style={{
                                                             imageRendering: "pixelated",
@@ -1197,7 +1204,9 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                             size="sm"
                                                             onClick={() => {
                                                                 setConfirmDialogAction(() => () => {
-                                                                    delete config?.tool_materials?.[value[0]];
+                                                                    const materialsNode = doc.get("materials", true) as yaml.YAMLMap | null;
+
+                                                                    materialsNode?.delete(value[0]);
                                                                     onEditConfig();
                                                                 });
                                                                 setConfirmDialogMessage(`Delete tool material "${value[0]}"?`);

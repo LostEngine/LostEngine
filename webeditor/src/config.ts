@@ -1,38 +1,56 @@
 export type Item = {
-    type?: "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe";
+    type?: "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe" | "elytra" | "trident";
 
     // Only for sword, shovel, pickaxe, axe and hoe
     attack_damage?: number;
     attack_speed?: number;
     material?: string; // Ask API for enum
 
+    // Only for elytra
+    elytra?: {
+        durability?: number;
+        texture?: string;
+        use_player_skin?: boolean;
+        repair_item?: string;
+    }
+
+    // Only for trident
+    trident?: {
+        durability?: number;
+        attack_damage?: number;
+    }
+
     // Components
-    enchantment_glint_override?: boolean;
-    fire_resistant?: boolean;
-    food?: {
-        nutrition?: number;
-        saturation_modifier?: number;
-        can_always_eat?: boolean;
-        consumeSeconds?: number;
-    }
-    max_damage?: number;
-    max_stack_size?: number; // (1-99)
-    rarity?: "COMMON" | "UNCOMMON" | "RARE" | "EPIC";
-    tooltip_display?: {
-        hide_tooltip?: boolean;
-        hidden_components?: string[]; // Minecraft components (ex: enchantments, attribute_modifiers)
-    }
-    unbreakable?: boolean;
-    use_cooldown?: {
-        cooldown_seconds?: number;
-        group?: string; // You most likely don't need this, it will be generated automatically
+    components?: {
+        enchantment_glint_override?: boolean;
+        fire_resistant?: boolean;
+        food?: {
+            nutrition?: number;
+            saturation_modifier?: number;
+            can_always_eat?: boolean;
+            consumeSeconds?: number;
+        }
+        max_damage?: number;
+        max_stack_size?: number; // (1-99)
+        rarity?: "COMMON" | "UNCOMMON" | "RARE" | "EPIC";
+        tooltip_display?: {
+            hide_tooltip?: boolean;
+            hidden_components?: string[]; // Minecraft components (ex: enchantments, attribute_modifiers)
+        }
+        unbreakable?: boolean;
+        use_cooldown?: {
+            cooldown_seconds?: number;
+            group?: string; // You most likely don't need this, it will be generated automatically
+        }
     }
 
     // Resource pack generation
     model?: string; // Either model or texture
     texture?: string;
+    icon?: string; // Only for trident
     name?: Record<string, string>; // locale: display name (ex: en_US:Iron Sword)
 }
+
 
 export type Block = {
     type?: "regular" | "tnt";
@@ -58,16 +76,31 @@ export type Block = {
 }
 
 export type Material = {
-    base?: string; // Ask API for enum
-    durability?: number;
-    speed?: number;
-    attack_damage_bonus?: number;
     enchantment_value?: number;
     repair_item?: string;
+    tool?: {
+        base?: string; // Ask API for enum
+        durability?: number;
+        speed?: number;
+        attack_damage_bonus?: number;
+    }
+    armor?: {
+        durability?: number;
+        defense?: {
+            boots?: number;
+            leggings?: number;
+            chestplate?: number;
+            helmet?: number;
+        }
+        equip_sound?: string;
+        toughness?: number;
+        knockback_resistance?: number;
+        texture?: string;
+    }
 }
 
 export type Config = {
     items?: Record<string, Item>;
     blocks?: Record<string, Block>;
-    tool_materials?: Record<string, Material>;
+    materials?: Record<string, Material>;
 }
