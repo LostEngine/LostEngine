@@ -24,12 +24,17 @@ materials:
 
 items:
   $string: # item id (generated identifier would be lost_engine:id)
-    type: STRING # generic, sword, shovel, pickaxe, axe, hoe
+    type: STRING # generic, sword, shovel, pickaxe, axe, hoe, armor, elytra, trident
 
-    # Only for sword, shovel, pickaxe, axe, hoe, elytra and trident
+    # Only for sword, shovel, pickaxe, axe, hoe, armor
+    material: STRING
+
+    # Only for sword, shovel, pickaxe, axe, hoe
     attack_damage: float
     attack_speed: float
-    material: STRING
+
+    # Only for armor
+    armor_type: STRING # helmet, chestplate, leggings, boots
 
     # Only for elytra
     elytra:

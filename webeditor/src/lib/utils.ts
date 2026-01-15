@@ -1,15 +1,15 @@
 import {type ClassValue, clsx} from "clsx"
 import {twMerge} from "tailwind-merge"
-import type {TreeItem} from "@/app.tsx";
+import {apiPrefix, type TreeItem} from "@/app.tsx";
 import {toast} from "sonner";
 
 export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs))
+    return twMerge(clsx(inputs));
 }
 
 export function deleteFile(path: string, token: string, reload: () => void) {
     const asyncDeleteFile = async () => {
-        const response = await fetch(`/api/delete_resource?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`${apiPrefix}/delete_resource?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`, {
             method: "DELETE",
         });
         if (!response.ok) {
@@ -26,7 +26,7 @@ export function deleteFile(path: string, token: string, reload: () => void) {
             error: "Error",
             closeButton: true,
         }
-    )
+    );
 }
 
 
@@ -41,7 +41,7 @@ export function uploadFile(path: string, token: string, file: Blob | File | Arra
             form.append("file", new Blob([file]));
         }
 
-        const response = await fetch(`/api/upload_resource?token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`${apiPrefix}/upload_resource?token=${encodeURIComponent(token)}`, {
             method: "POST",
             body: form,
         });
@@ -60,7 +60,7 @@ export function uploadFile(path: string, token: string, file: Blob | File | Arra
             error: "Error",
             closeButton: true,
         }
-    )
+    );
 }
 
 export function isFileInData(item: TreeItem, targetPath: string, parentPath = ""): boolean {

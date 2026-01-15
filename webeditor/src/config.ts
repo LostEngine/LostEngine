@@ -1,10 +1,15 @@
 export type Item = {
-    type?: "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe" | "elytra" | "trident";
+    type?: "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe" | "armor" | "elytra" | "trident";
 
-    // Only for sword, shovel, pickaxe, axe and hoe
+    // Only for sword, shovel, pickaxe, axe, hoe, armor
+    material?: string; // Ask API for enum
+
+    // Only for sword, shovel, pickaxe, axe, hoe
     attack_damage?: number;
     attack_speed?: number;
-    material?: string; // Ask API for enum
+
+    // Only for armor
+    armor_type?: "helmet" | "chestplate" | "leggings" | "boots";
 
     // Only for elytra
     elytra?: {

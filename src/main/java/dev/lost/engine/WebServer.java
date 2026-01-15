@@ -52,6 +52,14 @@ public class WebServer {
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
 
+            if (method.equalsIgnoreCase("OPTIONS")) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
             try {
                 if (path.startsWith("/api/")) {
                     handleApiRoutes(exchange, path, method);
@@ -143,6 +151,7 @@ public class WebServer {
             String mime = getMimeType(target.getName());
             try (FileInputStream fis = new FileInputStream(target)) {
                 byte[] bytes = fis.readAllBytes();
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
                 exchange.getResponseHeaders().set("Content-Type", mime);
                 exchange.sendResponseHeaders(200, bytes.length);
 
@@ -311,6 +320,7 @@ public class WebServer {
             return;
         }
 
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", mimeType);
         exchange.sendResponseHeaders(200, file.length());
 
@@ -328,6 +338,7 @@ public class WebServer {
             }
 
             byte[] content = is.readAllBytes();
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().set("Content-Type", mimeType);
             exchange.sendResponseHeaders(200, content.length);
 
@@ -340,6 +351,7 @@ public class WebServer {
 
     private static void sendResponse(@NotNull HttpExchange exchange, int statusCode, @NotNull String response, String contentType) throws IOException {
         byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
