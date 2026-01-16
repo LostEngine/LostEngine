@@ -13,6 +13,7 @@ import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ReflectionUtils;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import lombok.Getter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -36,6 +37,7 @@ import java.util.Map;
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
+    @Getter
     @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // If there is a new Material
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>(Map.of(
             "WOOD", ToolMaterial.WOOD,
@@ -46,6 +48,7 @@ public class ResourceInjector {
             "GOLD", ToolMaterial.GOLD,
             "NETHERITE", ToolMaterial.NETHERITE
     ));
+    @Getter
     static Map<String, ArmorMaterial> armorMaterials = new Object2ObjectOpenHashMap<>(Map.of(
             "LEATHER", ArmorMaterials.LEATHER,
             "COPPER", ArmorMaterials.COPPER,
