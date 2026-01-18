@@ -8,7 +8,7 @@ cd LostEngine
 # Windows
 gradlew.bat shadowJar
 ```
-The build will be located in `build/libs`
+The build will be located in `build/libs/`
 > [!TIP]
 > You can use (Linux/Mac) `./gradlew runServer` (Windows) `gradlew.bat runServer` to start a PaperMC server with the plugin automatically built and installed (use `runFolia` for Folia)
 
