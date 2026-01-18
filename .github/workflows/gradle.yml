@@ -38,13 +38,15 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: "LostEngine-Paper"
-          path: "build/libs/LostEngine-1.0-SNAPSHOT.jar"
+          path: "build/libs/"
+          if-no-files-found: error
 
       - name: Upload Web Editor Artifact
         uses: actions/upload-artifact@v6.0.0
         with:
           name: "WebEditor"
-          path: "webeditor/dist/index.html"
+          path: "webeditor/dist/"
+          if-no-files-found: error
 
 
   dependency-submission:
