@@ -12,8 +12,8 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
@@ -26,7 +26,9 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.Weapon;
-import net.minecraft.world.item.equipment.*;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.EquipmentAssets;
+import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -57,7 +59,7 @@ public class ItemInjector {
                 toughness,
                 knockbackResistance,
                 repairItems,
-                ReflectionUtils.createEquipmentAssetId(assetId)
+                ResourceKey.create(EquipmentAssets.ROOT_ID, Identifier.fromNamespaceAndPath("lost_engine", assetId))
         );
     }
 
@@ -282,7 +284,7 @@ public class ItemInjector {
                                 DataComponents.EQUIPPABLE,
                                 Equippable.builder(EquipmentSlot.CHEST)
                                         .setEquipSound(SoundEvents.ARMOR_EQUIP_ELYTRA)
-                                        .setAsset(ReflectionUtils.createEquipmentAssetId(name))
+                                        .setAsset(ResourceKey.create(EquipmentAssets.ROOT_ID, Identifier.fromNamespaceAndPath("lost_engine", name)))
                                         .setDamageOnHurt(false)
                                         .build()
                         )
