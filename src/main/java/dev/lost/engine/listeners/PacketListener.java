@@ -684,6 +684,7 @@ public class PacketListener {
             for (TypedDataComponent<?> component : newItem.getComponents()) newItem.remove(component.type());
             newItem.setCount(item.getCount());
             newItem.applyComponents(item.getComponents());
+            newItem.remove(DataComponents.REPAIRABLE);
             ItemUtils.addCustomStringData(newItem, "lost_engine_id", customItem.getId());
             item = newItem;
         }
@@ -739,6 +740,7 @@ public class PacketListener {
                     ItemUtils.removeCustomStringData(newItem, "lost_engine_id");
                     newItem.set(DataComponents.TOOL, newItem.getItem().getDefaultInstance().get(DataComponents.TOOL));
                     newItem.set(DataComponents.BLOCK_STATE, newItem.getItem().getDefaultInstance().get(DataComponents.BLOCK_STATE));
+                    newItem.set(DataComponents.REPAIRABLE, newItem.getItem().getDefaultInstance().get(DataComponents.REPAIRABLE));
                     return newItem;
                 });
             } else {
