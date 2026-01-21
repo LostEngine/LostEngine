@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.lost.engine.assetsgenerators.BlockStateGenerator;
 import dev.lost.engine.assetsgenerators.LangFileGenerator;
+import dev.lost.engine.assetsgenerators.LostEngineMappingGenerator;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.furnace.files.model.Model;
@@ -34,7 +35,7 @@ import java.util.stream.Stream;
 public class ResourcePackBuilder {
 
     // TODO: Clean up this class
-    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile) throws IOException {
+    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile, @Nullable LostEngineMappingGenerator mappingGenerator) throws IOException {
         JavaResourcePack resourcePack = ResourcePack.java();
         BedrockResourcePack bedrockResourcePack = plugin.getConfig().getBoolean("geyser_compatibility", false)
                 ? ResourcePack.bedrock() :
@@ -225,7 +226,7 @@ public class ResourcePackBuilder {
                 }
             }
         }
-        langFileGenerator.build(resourcePack, bedrockResourcePack);
+        langFileGenerator.build(resourcePack, mappingGenerator);
         blockStateGenerator.build(resourcePack);
 
         // TODO: Add options to disable oxipng and choose compression level

@@ -38,33 +38,22 @@ public final class LostEngine extends JavaPlugin {
     @Getter private static File resourcePackFile;
 
     @Override
-    public void onLoad() {
+    public void onEnable() {
         instance = this;
         getConfig().options().copyDefaults(true);
         saveConfig();
+        LostEngineMappingGenerator mappingGenerator = null;
         if (getConfig().getBoolean("geyser_compatibility", false)) {
-            try {
-                getLogger().info("Geyser compatibility is enabled, generating mapping file...");
-                LostEngineMappingGenerator mappingGenerator = new LostEngineMappingGenerator();
-                for (Item item: BuiltInRegistries.ITEM.stream().toList()) {
-                    if (item instanceof CustomItem customItem) {
-                        mappingGenerator.addItem(item, customItem.getId().replaceAll(":", "_"));
-                    }
-                }
-                mappingGenerator.build(getDataFolder());
-                getLogger().info("Finished generating mapping file!");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            mappingGenerator = new LostEngineMappingGenerator();
+            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
+                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
             }
         }
-    }
 
-    @Override
-    public void onEnable() {
         // Building the resource pack
         resourcePackFile = new File(getDataFolder(), "resource-pack.zip");
         try {
-            ResourcePackBuilder.buildResourcePack(this, resourcePackFile);
+            ResourcePackBuilder.buildResourcePack(this, resourcePackFile, mappingGenerator);
             resourcePackHash = getFileHashString(resourcePackFile);
             resourcePackUUID = UUID.nameUUIDFromBytes(resourcePackHash.getBytes());
         } catch (IOException | NoSuchAlgorithmException e) {
@@ -94,9 +83,18 @@ public final class LostEngine extends JavaPlugin {
         // Listeners
         PacketListener.inject();
 
-        if (getConfig().getBoolean("geyser_compatibility", false)) {
-            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
-                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
+        if (mappingGenerator != null) {
+            try {
+                getLogger().info("Geyser compatibility is enabled, generating mapping file...");
+                for (Item item: BuiltInRegistries.ITEM.stream().toList()) {
+                    if (item instanceof CustomItem customItem) {
+                        mappingGenerator.addItem(item, customItem.getId().replaceAll(":", "_"));
+                    }
+                }
+                mappingGenerator.build(getDataFolder());
+                getLogger().info("Finished generating mapping file!");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }

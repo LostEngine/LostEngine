@@ -24,7 +24,7 @@ import java.util.stream.Stream;
  */
 public class FileUtils {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder().create();
 
     public static void deleteFolder(@NotNull Path folder) throws IOException {
         if (Files.exists(folder)) {

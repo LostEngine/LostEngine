@@ -31,7 +31,7 @@ public class ReloadCommand implements BasicCommand {
 
         byte[] resourcePackHash;
         try {
-            ResourcePackBuilder.buildResourcePack(plugin, LostEngine.getResourcePackFile());
+            ResourcePackBuilder.buildResourcePack(plugin, LostEngine.getResourcePackFile(), null);
             resourcePackHash = getFileHash(LostEngine.getResourcePackFile());
         } catch (IOException | NoSuchAlgorithmException e) {
             if (sender instanceof Player) {
