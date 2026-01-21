@@ -1,5 +1,6 @@
 package dev.lost.engine;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.lost.engine.assetsgenerators.BlockStateGenerator;
@@ -14,6 +15,8 @@ import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
 import dev.lost.furnace.utils.PngOptimizer;
+import it.unimi.dsi.fastutil.ints.Int2CharOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kyori.adventure.key.Key;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -215,6 +218,7 @@ public class ResourcePackBuilder {
                 }
             }
         });
+        buildGlyphs(plugin, resourcePack, langFileGenerator, configs);
         File[] files = resourceFolder.listFiles();
         if (files != null) {
             for (File file : files) {
@@ -245,6 +249,83 @@ public class ResourcePackBuilder {
                     dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION
             );
         }
+    }
+
+    public static void buildGlyphs(@NotNull LostEngine plugin, @NotNull ResourcePack resourcePack, @NotNull LangFileGenerator langFileGenerator, @NotNull List<FileUtils.ItemConfig> configs) {
+        char c = 57344;
+        JsonArray providers = new JsonArray();
+        if (plugin.getConfig().getBoolean("resource_pack.glyphs.offset_characters.enabled", false)) {
+            int from = plugin.getConfig().getInt("resource_pack.glyphs.offset_characters.from", -1023);
+            int to = plugin.getConfig().getInt("resource_pack.glyphs.offset_characters.to", 1023);
+            int maxExp = 0;
+            while ((1 << (maxExp + 1)) <= Math.max(Math.abs(from), Math.abs(to))) {
+                maxExp++;
+            }
+            IntArrayList offsets = new IntArrayList();
+
+            for (int exp = 0; exp <= maxExp; exp++) {
+                int value = 1 << exp;
+                if (-value >= from) offsets.add(-value);
+                if (value <= to) offsets.add(value);
+            }
+            offsets.sort(null);
+            Int2CharOpenHashMap characters = new Int2CharOpenHashMap();
+            JsonObject providerObject = new JsonObject();
+            providerObject.addProperty("type", "space");
+            JsonObject advancesObject = new JsonObject();
+            for (int offset : offsets) {
+                if (c >= 63743) {
+                    throw new RuntimeException("Exceeded maximum number of glyphs (6400)");
+                }
+                advancesObject.addProperty(String.valueOf(c++), offset);
+                characters.addTo(offset, c);
+            }
+            providerObject.add("advances", advancesObject);
+            providers.add(providerObject);
+            for (int i = from; i <= to; i++) {
+                int remaining = i;
+                StringBuilder sb = new StringBuilder();
+
+                for (int j = offsets.size() - 1; j >= 0; j--) {
+                    int off = offsets.getInt(j);
+                    if (remaining == 0) break;
+                    if ((remaining > 0 && off > 0 && (remaining & off) == off) ||
+                            (remaining < 0 && off < 0 && ((-remaining) & (-off)) == -off)) {
+                        sb.append(characters.get(off));
+                        remaining -= off;
+                    }
+                }
+                langFileGenerator.addTranslation("en_us","offsets." + i, sb.toString(), LangFileGenerator.Edition.JAVA);
+            }
+        }
+        for (FileUtils.ItemConfig config : configs) {
+            ConfigurationSection glyphSection = config.config().getConfigurationSection("glyphs");
+            if (glyphSection == null) continue;
+            for (String key : glyphSection.getKeys(false)) {
+                ConfigurationSection glyph = glyphSection.getConfigurationSection(key);
+                if (glyph == null) continue;
+                if (c >= 63743) {
+                    throw new RuntimeException("Exceeded maximum number of glyphs (6400)");
+                }
+                JsonObject providerObject = new JsonObject();
+                providerObject.addProperty("type", "bitmap");
+                String imagePath = glyph.getString("image_path");
+                if (imagePath == null) throw new RuntimeException("Missing image path for glyph: " + key);
+                if (!imagePath.endsWith(".png")) imagePath += ".png";
+                providerObject.addProperty("file", "lost_engine" + ":" + imagePath);
+                providerObject.addProperty("ascent", glyph.getInt("ascent", 7));
+                providerObject.addProperty("height", glyph.getInt("height", 8));
+                JsonArray charsObject = new JsonArray();
+                String character = String.valueOf(c++);
+                charsObject.add(character);
+                providerObject.add("chars", charsObject);
+                providers.add(providerObject);
+                langFileGenerator.addTranslation("en_us", "glyph." + key, character, LangFileGenerator.Edition.JAVA);
+            }
+        }
+        JsonObject fontObject = new JsonObject();
+        fontObject.add("providers", providers);
+        resourcePack.jsonFile("assets/minecraft/font/default.json", fontObject);
     }
 
     private static void addTexturesRecursively(ResourcePack resourcePack, @Nullable BedrockResourcePack bedrockResourcePack, @NotNull File texturesDirectory, String namespace) {
