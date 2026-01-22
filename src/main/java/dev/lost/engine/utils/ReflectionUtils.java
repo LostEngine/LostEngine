@@ -6,14 +6,11 @@ import dev.lost.engine.bootstrap.components.SimpleComponentProperty;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 import net.minecraft.network.protocol.game.*;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipePropertySet;
-import net.minecraft.world.item.equipment.EquipmentAsset;
-import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Material;
@@ -22,13 +19,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("unchecked")
 @CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
 // Make sure the field names are still correct on new Minecraft versions
 public class ReflectionUtils {
@@ -47,8 +44,6 @@ public class ReflectionUtils {
     private static final Field UPDATE_INTERVAL_FIELD;
     private static final Field ENTITY_ID_FIELD;
     private static final Field Y_ROT_FIELD;
-
-    private static final Method EQUIPMENT_CREATE_ID_METHOD;
 
     static {
         try {
@@ -123,12 +118,6 @@ public class ReflectionUtils {
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize Y_ROT_FIELD", e);
         }
-        try {
-            EQUIPMENT_CREATE_ID_METHOD = EquipmentAssets.class.getDeclaredMethod("createId", String.class);
-            EQUIPMENT_CREATE_ID_METHOD.setAccessible(true);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize EQUIPMENT_CREATE_ID_METHOD", e);
-        }
     }
 
     public static BlockState[] getBlockStates(ClientboundSectionBlocksUpdatePacket packet) throws Exception {
@@ -159,13 +148,11 @@ public class ReflectionUtils {
         EQUIPMENT_SLOTS_FIELD.set(packet, slots);
     }
 
-    @SuppressWarnings("unchecked")
     public static void setBlockMaterial(Block block, Material material) throws Exception {
         ((Map<Block, Material>) BLOCK_MATERIAL_FIELD.get(CraftMagicNumbers.INSTANCE)).put(block, material);
         ((Map<Material, Block>) MATERIAL_BLOCK_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, block);
     }
 
-    @SuppressWarnings("unchecked")
     public static void setItemMaterial(ItemStack itemStack, Material material) throws Exception {
         ((Map<net.minecraft.world.item.Item, Material>) ITEM_MATERIAL_FIELD.get(CraftMagicNumbers.INSTANCE)).put(itemStack.getItem(), material);
         ((Map<Material, net.minecraft.world.item.Item>) MATERIAL_ITEM_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, itemStack.getItem());
@@ -184,7 +171,6 @@ public class ReflectionUtils {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     public static Set<Holder<Item>> getItems(RecipePropertySet recipePropertySet) throws Exception {
         return (Set<Holder<Item>>) RECIPE_PROPERTY_SET_ITEMS.get(recipePropertySet);
     }
@@ -203,14 +189,5 @@ public class ReflectionUtils {
 
     public static void setYRot(ClientboundMoveEntityPacket packet, byte yRot) throws Exception {
         Y_ROT_FIELD.setByte(packet, yRot);
-    }
-
-    @SuppressWarnings("unchecked")
-    public static ResourceKey<EquipmentAsset> createEquipmentAssetId(String name) {
-        try {
-            return (ResourceKey<EquipmentAsset>) EQUIPMENT_CREATE_ID_METHOD.invoke(null, name);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to invoke EquipmentAssets#createId via reflection", e);
-        }
     }
 }
