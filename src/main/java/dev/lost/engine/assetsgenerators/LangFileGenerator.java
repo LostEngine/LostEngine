@@ -11,7 +11,7 @@ import java.util.Locale;
 
 public class LangFileGenerator {
 
-    Object2ObjectOpenHashMap<String, Lang> languages = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<String, Lang> languages = new Object2ObjectOpenHashMap<>();
 
     public void addTranslation(@NotNull String langCode, @NotNull String key, String value) {
         addTranslation(langCode, key, value, Edition.BOTH);
