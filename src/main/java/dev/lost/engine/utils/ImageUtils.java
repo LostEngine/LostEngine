@@ -9,19 +9,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class ImageUtils {
-
-    private static final RenderingHints QUALITY_HINTS = new RenderingHints(null);
-
-    static {
-        QUALITY_HINTS.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        QUALITY_HINTS.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        QUALITY_HINTS.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-    }
-
     public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
         BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = resizedImage.createGraphics();
-        g2d.setRenderingHints(QUALITY_HINTS);
         g2d.drawImage(image, 0, 0, width, height, null);
         g2d.dispose();
         return resizedImage;
