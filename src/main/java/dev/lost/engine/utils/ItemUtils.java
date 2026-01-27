@@ -6,11 +6,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.item.component.CustomModelData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 public class ItemUtils {
     @SuppressWarnings("deprecation")
@@ -48,17 +45,5 @@ public class ItemUtils {
             throw new IllegalStateException("Item is not registered: " + item);
         }
         return id;
-    }
-
-    public static void setCustomModelData(@NotNull ItemStack itemStack, float modelData) {
-        itemStack.set(
-                DataComponents.CUSTOM_MODEL_DATA,
-                new CustomModelData(
-                        List.of(modelData),
-                        List.of(),
-                        List.of(),
-                        List.of()
-                )
-        );
     }
 }

@@ -23,6 +23,9 @@ repositories {
     maven {
         url = uri("https://repo.opencollab.dev/main/")
     }
+    maven {
+        url = uri("https://repo.misieur.me/repository")
+    }
     mavenLocal()
 }
 
@@ -33,7 +36,8 @@ dependencies {
 
     implementation(project(":furnace"))
 
-    compileOnly('org.geysermc.floodgate:api:2.2.4-SNAPSHOT')
+    compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
+    implementation("dev.misieur:fast:1.0-SNAPSHOT")
 }
 
 runPaper.folia.registerTask()

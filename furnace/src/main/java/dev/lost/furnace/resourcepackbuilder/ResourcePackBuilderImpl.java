@@ -10,7 +10,8 @@ import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
-import dev.lost.furnace.utils.PngOptimizer;
+import dev.misieur.fast.FastImage;
+import dev.misieur.fast.Native;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -18,7 +19,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
@@ -64,12 +64,6 @@ public class ResourcePackBuilderImpl implements ResourcePackBuilder {
                 writeEntry(zos, rf.getPath(), rf.getBytes(), option == BuildOptions.MAX_COMPRESSION);
             }
 
-            if (option == BuildOptions.MAX_COMPRESSION) {
-                if (PngOptimizer.EXE == null || !Files.exists(PngOptimizer.EXE)) {
-                    System.err.println("Warning: PNG optimization executable not found but MAX_COMPRESSION is enabled.");
-                }
-            }
-
             zos.finish();
         } catch (IOException ex) {
             throw new UncheckedIOException("Cannot build resource-pack zip", ex);
@@ -84,7 +78,10 @@ public class ResourcePackBuilderImpl implements ResourcePackBuilder {
         ZipEntry entry = new ZipEntry(path);
         entry.setTime(System.currentTimeMillis());
         zos.putNextEntry(entry);
-        if (compress && path.endsWith(".png")) bytes = PngOptimizer.optimise(bytes);
+        if (compress && path.endsWith(".png")){
+            if (!Native.enabled()) Native.load();
+            bytes = FastImage.optimizePng(bytes);
+        }
         zos.write(bytes);
         zos.closeEntry();
     }

@@ -7,7 +7,6 @@ import dev.lost.furnace.files.texture.Texture;
 import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder;
-import dev.lost.furnace.utils.PngOptimizer;
 import org.junit.jupiter.api.*;
 
 import javax.imageio.ImageIO;
@@ -17,11 +16,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -97,39 +94,7 @@ public class BedrockResourcePackTests {
 
     @Order(2)
     @Test
-    void testPNGCompression() throws Exception {
-        Path binDir = Files.createTempDirectory("oxipng-bin");
-        System.out.println("Temp bin directory: " + binDir.toAbsolutePath());
-        try {
-            PngOptimizer.downloadOxipng(binDir);
-            assertNotNull(PngOptimizer.EXE);
-            assertTrue(Files.exists(PngOptimizer.EXE));
-            System.out.println("Downloaded oxipng to: " + PngOptimizer.EXE);
-
-            byte[] png = pngBytes(512, 512);
-            byte[] out = PngOptimizer.optimise(png);
-            System.out.println("Original PNG size: " + png.length + ", optimized size: " + out.length);
-            assertTrue(png.length > out.length);
-        } finally {
-            try (Stream<Path> files = Files.walk(binDir)) {
-                files.sorted((a, b) -> b.getNameCount() - a.getNameCount())
-                        .forEach(p -> {
-                            try {
-                                Files.deleteIfExists(p);
-                            } catch (IOException ignored) {
-                            }
-                        });
-            }
-        }
-        Files.deleteIfExists(binDir);
-    }
-
-    @Order(3)
-    @Test
     void testResourcePackCompression() throws Exception {
-        System.out.println("Loading oxipng...");
-        Path binDir = Files.createTempDirectory("oxipng-bin");
-        PngOptimizer.downloadOxipng(binDir);
         System.out.println("Creating resource pack...");
         BedrockResourcePack pack = BedrockResourcePack.resourcePack();
         pack.manifest(Manifest.manifest("Test Pack", "Test Description"));

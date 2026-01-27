@@ -9,14 +9,13 @@ import dev.lost.engine.assetsgenerators.LangFileGenerator;
 import dev.lost.engine.assetsgenerators.LostEngineMappingGenerator;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.utils.FileUtils;
-import dev.lost.engine.utils.ImageUtils;
 import dev.lost.furnace.files.model.Model;
 import dev.lost.furnace.files.texture.Texture;
 import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
-import dev.lost.furnace.utils.PngOptimizer;
+import dev.misieur.fast.FastBufferedImage;
 import it.unimi.dsi.fastutil.ints.Int2CharOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kyori.adventure.key.Key;
@@ -238,15 +237,6 @@ public class ResourcePackBuilder {
         langFileGenerator.build(resourcePack, mappingGenerator);
         blockStateGenerator.build(resourcePack);
 
-        // TODO: Add options to disable oxipng and choose compression level
-        File oxipngFolder = new File(plugin.getDataFolder(), "lostengine_files/oxipng");
-        if (!oxipngFolder.isDirectory()) {
-            oxipngFolder.mkdirs();
-            plugin.getSLF4JLogger().info("Downloading oxipng for resource pack compression... " +
-                    "(this will only happen once, if it fails you can download the file manually and place it in {} " +
-                    "named {})", oxipngFolder.getAbsolutePath(), PngOptimizer.Os.current() == PngOptimizer.Os.WINDOWS ? "oxipng.exe" : "oxipng");
-        }
-        PngOptimizer.downloadOxipng(oxipngFolder.toPath()); // Downloads oxipng if not present
         resourcePack.build(resourcePackFile, dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION);
         if (bedrockResourcePack != null) {
             bedrockResourcePack.build(
@@ -341,7 +331,7 @@ public class ResourcePackBuilder {
                                 LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", imagePath, width, height);
                                 continue;
                             }
-                            BufferedImage resizedImage = ImageUtils.resizeImage(image, width, height);
+                            BufferedImage resizedImage = FastBufferedImage.resizeImage(image, width, height);
                             // Set the opacity of the first and last pixel to at least 1
                             int firstPixel = resizedImage.getRGB(0, 0);
                             if (((firstPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(0, 0, firstPixel | 0x01000000);
