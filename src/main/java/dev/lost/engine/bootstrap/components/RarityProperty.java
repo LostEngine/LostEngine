@@ -1,7 +1,7 @@
 package dev.lost.engine.bootstrap.components;
 
 import dev.lost.engine.bootstrap.components.annotations.Property;
-import dev.lost.engine.utils.EnumUtils;
+import dev.misieur.fast.FastEnum;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class RarityProperty implements SimpleComponentProperty<String> {
     @Override
     public void applyComponent(@NotNull BootstrapContext context, @NotNull String rarityString, @NotNull String itemID, @NotNull Map<DataComponentType<?>, Object> components) {
-        Optional<Rarity> rarity = EnumUtils.match(rarityString.trim().toUpperCase(Locale.ROOT), Rarity.class);
+        Optional<Rarity> rarity = FastEnum.getOptional(rarityString.trim().toUpperCase(Locale.ROOT), Rarity.class);
 
         rarity.ifPresentOrElse(
                 r -> components.put(DataComponents.RARITY, r),
