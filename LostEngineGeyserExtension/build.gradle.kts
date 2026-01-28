@@ -11,9 +11,16 @@ val geyserApiVersion = "2.9.2"
 
 repositories {
     mavenCentral()
-    mavenLocal()
-    maven("https://repo.opencollab.dev/main/")
     maven("https://repo.misieur.me/repository")
+    // Tell Gradle to use OpenCollab's repo for some dependencies not provided by https://repo.misieur.me/repository
+    maven("https://repo.opencollab.dev/main/") {
+        content {
+            includeGroup("org.geysermc.api")
+            includeGroup("org.cloudburstmc.math")
+            includeGroup("org.geysermc.cumulus")
+            includeGroup("org.geysermc.event")
+        }
+    }
 }
 
 dependencies {
