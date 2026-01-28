@@ -10,13 +10,9 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Comparator;
 import java.util.List;
-import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 /**
@@ -25,20 +21,6 @@ import java.util.stream.Stream;
 public class FileUtils {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
-    public static void deleteFolder(@NotNull Path folder) throws IOException {
-        if (Files.exists(folder)) {
-            try (Stream<@NotNull Path> paths = Files.walk(folder)) {
-                paths.sorted(Comparator.reverseOrder()).forEach(path -> {
-                    try {
-                        Files.delete(path);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-            }
-        }
-    }
 
     public static @NotNull List<ItemConfig> yamlFiles(@NotNull File resourceFolder) {
         List<ItemConfig> configs = new ObjectArrayList<>();
@@ -58,38 +40,6 @@ public class FileUtils {
             throw new IllegalArgumentException("Resource folder does not exist or is not a directory");
         }
         return configs;
-    }
-
-    public static void extractDirectoryFromJar(@NotNull Path jarPath, String dirName, Path targetDir) throws IOException {
-        try (JarFile jarFile = new JarFile(jarPath.toFile())) {
-            jarFile.stream()
-                    .filter(entry -> entry.getName().startsWith(dirName + "/") && !entry.isDirectory())
-                    .forEach(entry -> {
-                        Path outPath = targetDir.resolve(entry.getName().substring(dirName.length() + 1));
-                        try {
-                            Files.createDirectories(outPath.getParent());
-                            try (InputStream is = jarFile.getInputStream(entry)) {
-                                Files.copy(is, outPath, StandardCopyOption.REPLACE_EXISTING);
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException("Failed to extract " + entry.getName(), e);
-                        }
-                    });
-        }
-    }
-
-    public static void extractFileFromJar(@NotNull Path jarPath, String fileName, Path targetFile) throws IOException {
-        try (JarFile jarFile = new JarFile(jarPath.toFile())) {
-            var entry = jarFile.getJarEntry(fileName);
-            if (entry != null && !entry.isDirectory()) {
-                Files.createDirectories(targetFile.getParent());
-                try (InputStream is = jarFile.getInputStream(entry)) {
-                    Files.copy(is, targetFile, StandardCopyOption.REPLACE_EXISTING);
-                }
-            } else {
-                throw new IOException("File " + fileName + " not found in JAR " + jarPath);
-            }
-        }
     }
 
     public static void saveJsonToFile(JsonElement json, @NotNull File file) throws IOException {
