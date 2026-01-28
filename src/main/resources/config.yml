@@ -9,6 +9,7 @@ pack_hosting:
     url: ""
 geyser_compatibility: false
 resource_pack:
+  file_name: "resource-pack"
   glyphs:
     offset_characters: # Java Edition only
       enabled: true

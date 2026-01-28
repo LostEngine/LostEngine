@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 public class ResourcePackBuilder {
 
     // TODO: Clean up this class
-    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile, @Nullable LostEngineMappingGenerator mappingGenerator) throws IOException {
+    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile, File bedrockResourcePackFile, @Nullable LostEngineMappingGenerator mappingGenerator) throws IOException {
         JavaResourcePack resourcePack = ResourcePack.java();
         BedrockResourcePack bedrockResourcePack = plugin.getConfig().getBoolean("geyser_compatibility", false)
                 ? ResourcePack.bedrock() :
@@ -235,7 +235,7 @@ public class ResourcePackBuilder {
         resourcePack.build(resourcePackFile, dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION);
         if (bedrockResourcePack != null) {
             bedrockResourcePack.build(
-                    FileUtils.withExtension(resourcePackFile, "mcpack"),
+                    bedrockResourcePackFile,
                     dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION
             );
         }
