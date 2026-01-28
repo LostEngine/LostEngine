@@ -23,7 +23,9 @@ repositories {
     maven {
         url = uri("https://repo.opencollab.dev/main/")
     }
-    mavenLocal()
+    maven {
+        url = uri("https://repo.misieur.me/repository")
+    }
 }
 
 dependencies {
@@ -32,6 +34,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
     implementation(project(":furnace"))
+    compileOnly 'dev.misieur:fast:1.0-SNAPSHOT'
 
     compileOnly('org.geysermc.floodgate:api:2.2.4-SNAPSHOT')
 }

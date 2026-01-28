@@ -14,7 +14,6 @@ import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
-import dev.lost.furnace.utils.PngOptimizer;
 import it.unimi.dsi.fastutil.ints.Int2CharOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kyori.adventure.key.Key;
@@ -233,15 +232,6 @@ public class ResourcePackBuilder {
         langFileGenerator.build(resourcePack, mappingGenerator);
         blockStateGenerator.build(resourcePack);
 
-        // TODO: Add options to disable oxipng and choose compression level
-        File oxipngFolder = new File(plugin.getDataFolder(), "lostengine_files/oxipng");
-        if (!oxipngFolder.isDirectory()) {
-            oxipngFolder.mkdirs();
-            plugin.getSLF4JLogger().info("Downloading oxipng for resource pack compression... " +
-                    "(this will only happen once, if it fails you can download the file manually and place it in {} " +
-                    "named {})", oxipngFolder.getAbsolutePath(), PngOptimizer.Os.current() == PngOptimizer.Os.WINDOWS ? "oxipng.exe" : "oxipng");
-        }
-        PngOptimizer.downloadOxipng(oxipngFolder.toPath()); // Downloads oxipng if not present
         resourcePack.build(resourcePackFile, dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION);
         if (bedrockResourcePack != null) {
             bedrockResourcePack.build(
