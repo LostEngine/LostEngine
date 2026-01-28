@@ -8,3 +8,11 @@ pack_hosting:
     enabled: false
     url: ""
 geyser_compatibility: false
+resource_pack:
+  file_name: "resource-pack"
+  glyphs:
+    offset_characters: # Java Edition only
+      enabled: true
+      # from -1023 to 1023 will use 20 characters (6400 characters available in total)
+      from: -1023
+      to: 1023
