@@ -193,13 +193,29 @@ export function FileViewer({
 function ZoomableImage({src, alt}: { src: string; alt?: string }) {
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({x: 0, y: 0});
+    const containerRef = useRef<HTMLDivElement>(null);
     const dragging = useRef(false);
     const lastPos = useRef({x: 0, y: 0});
 
     const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
+        if (!containerRef.current) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - rect.width / 2;
+        const mouseY = e.clientY - rect.top - rect.height / 2;
+
         const delta = -e.deltaY / 400;
-        setScale((prev) => Math.min(Math.max(prev + delta, 0.1), 5));
+        const newScale = Math.min(Math.max(scale + delta, 0.1), 10);
+
+        if (newScale !== scale) {
+            const ratio = newScale / scale;
+            setOffset({
+                x: mouseX - (mouseX - offset.x) * ratio,
+                y: mouseY - (mouseY - offset.y) * ratio,
+            });
+            setScale(newScale);
+        }
     };
 
     const handleMouseDown = (e: MouseEvent) => {
@@ -224,6 +240,7 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
 
     return (
         <div
+            ref={containerRef}
             className="h-full w-full overflow-auto flex justify-center items-center p-[15px] pb-10"
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
@@ -235,11 +252,19 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
             <img
                 src={src}
                 alt={alt}
-                className="block"
                 style={{
+                    height: "256px",
+                    width: "auto",
                     transform: `scale(${scale}) translate(${offset.x / scale}px, ${offset.y / scale}px)`,
-                    transformOrigin: "center center",
                     imageRendering: "pixelated",
+                    backgroundImage: `
+                            linear-gradient(45deg, #80808020 25%, transparent 25%),
+                            linear-gradient(-45deg, #80808020 25%, transparent 25%),
+                            linear-gradient(45deg, transparent 75%, #80808020 75%),
+                            linear-gradient(-45deg, transparent 75%, #80808020 75%)
+                        `,
+                    backgroundSize: `32px 32px`,
+                    backgroundPosition: `0 0, 0 16px, 16px -16px, -16px 0px`
                 }}
                 draggable={false}
             />
