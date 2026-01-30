@@ -11,6 +11,7 @@ import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ReflectionUtils;
+import dev.misieur.fast.FastFiles;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.Getter;
@@ -76,7 +77,7 @@ public class ResourceInjector {
     public static void injectResources(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator) throws Exception {
         File resourceFolder = new File(context.getDataDirectory().toFile(), "resources");
         if (!resourceFolder.exists())
-            FileUtils.extractDirectoryFromJar(context.getPluginSource(), "resources", resourceFolder.toPath());
+            FastFiles.extractFolderFromJar("resources", resourceFolder.toPath());
 
         List<FileUtils.ItemConfig> configs = FileUtils.yamlFiles(resourceFolder);
         for (FileUtils.ItemConfig config : configs) {

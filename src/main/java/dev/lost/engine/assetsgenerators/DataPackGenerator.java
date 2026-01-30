@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
-import dev.lost.engine.utils.FileUtils;
+import dev.misieur.fast.FastFiles;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.SharedConstants;
 import org.jetbrains.annotations.NotNull;
@@ -238,7 +238,7 @@ public class DataPackGenerator {
     }
 
     public void build(@NotNull File dataPackFolder) throws IOException {
-        FileUtils.deleteFolder(dataPackFolder.toPath());
+        FastFiles.deleteFolderSync(dataPackFolder.toPath());
         saveJsonToFile(MCMETA,                   new File(dataPackFolder + "/pack.mcmeta"));
         saveJsonToFile(swords,                   new File(dataPackFolder + "/data/minecraft/tags/item/swords.json"));
         saveJsonToFile(pickaxes,                 new File(dataPackFolder + "/data/minecraft/tags/item/pickaxes.json"));

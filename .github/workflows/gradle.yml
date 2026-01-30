@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - 'README.md'
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -38,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: "LostEngine-Paper"
-          path: "build/libs/"
+          path: "build/libs/*.jar"
           if-no-files-found: error
 
       - name: Upload Web Editor Artifact

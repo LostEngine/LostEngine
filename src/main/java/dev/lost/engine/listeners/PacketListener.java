@@ -309,8 +309,6 @@ public class PacketListener {
                 }
             }
             case ClientboundLevelChunkWithLightPacket packet -> {
-                ServerPlayer player = handler.getPlayer(ctx);
-                if (player == null) break;
                 ClientboundLevelChunkPacketData chunkData = packet.getChunkData();
                 if (handler.sectionsCount <= 0) break;
                 processChunkPacket(packet.getX(), packet.getZ(), chunkData, handler.sectionsCount, handler.minY, handler.customBlockStateCache);
