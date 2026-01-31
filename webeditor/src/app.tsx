@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useRef, useState} from "preact/compat";
+import React, {useEffect, useState} from "preact/compat";
 import githubLogo from "./assets/github-mark.svg";
 import codeLogo from "./assets/code.svg";
 import discordLogo from "./assets/discord.svg";
@@ -48,7 +48,6 @@ import {
 } from "@/components/ui/breadcrumb.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Skeleton} from "@/components/ui/skeleton.tsx";
-import {Field} from "@/components/ui/field.tsx";
 import {deleteFile, isFileInData, uploadFile} from "@/lib/utils.ts";
 import {
     AlertDialog,
@@ -65,7 +64,6 @@ import {toast} from "sonner";
 import {Input} from "@/components/ui/input.tsx";
 import {Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle,} from "@/components/ui/dialog.tsx";
 import {TextHoverEffect} from "@/components/ui/text-hover-effect";
-import {Editor} from "@monaco-editor/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -82,6 +80,7 @@ import {
     FileUploadItemPreview,
     FileUploadList,
 } from "@/components/ui/file-upload.tsx";
+import {FileViewer} from "@/fileviewer.tsx";
 
 function getPreferredTheme(): "dark" | "light" {
     const stored = localStorage.getItem("theme");
@@ -96,13 +95,15 @@ type ApiData = {
     files: TreeItem[];
 };
 
+//export const apiPrefix = "http://localhost:7270/api";
+export const apiPrefix = "/api";
+
 export function App() {
     const [theme, setTheme] = useState<"dark" | "light">(getPreferredTheme());
     const [searchOpen, setSearchOpen] = useState(false);
     const [data, setData] = useState<ApiData>({
         items: [""],
-        //files: ["loading..."],
-        files: [["default", ["assets", ["textures", ["block", "block.png", "ore.png", "tnt.png"], ["item", "axe.png", "baguette.png", "hoe.png", "ingot.png", "pickaxe.png", "shovel.png", "sword.png",],],], "items.yml",],],
+        files: ["loading..."],
     });
     const [readonly, setReadonly] = useState(false);
     const [token] = useState<string | null>(() => {
@@ -137,7 +138,7 @@ export function App() {
 
     const reload = () => {
         const asyncReload = async () => {
-            const response = await fetch(`/api/data?token=${token}`);
+            const response = await fetch(`${apiPrefix}/data?token=${token}`);
             if (!response.ok) {
                 console.error(`HTTP error ${response.status}`);
             }
@@ -222,7 +223,8 @@ export function App() {
                         <TextHoverEffect text="LostEngine"/>
                     </div>
                     <div className="-ml-18 pt-2">
-                        {readonly && <span className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
+                        {readonly && <span
+                            className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -248,7 +250,7 @@ export function App() {
                 </div>
             </header>
             <SidebarProvider>
-                <Sidebar className="top-18">
+                <Sidebar className="pt-18">
                     <SidebarContent>
                         <SidebarGroup>
                             <SidebarGroupContent>
@@ -302,11 +304,11 @@ export function App() {
                                         variant="ghost"
                                         size="icon-sm"
                                         onClick={() => {
-                                            const fileInput = document.createElement('input');
-                                            fileInput.type = 'file';
+                                            const fileInput = document.createElement("input");
+                                            fileInput.type = "file";
                                             fileInput.webkitdirectory = true;
-                                            fileInput.style.display = 'none';
-                                            fileInput.addEventListener('change', (event) => {
+                                            fileInput.style.display = "none";
+                                            fileInput.addEventListener("change", (event) => {
                                                 setNewFilePath((event.target as HTMLInputElement).dirName || "folder");
                                                 setFilesFromFolder((event.target as HTMLInputElement).files);
                                             });
@@ -350,7 +352,8 @@ export function App() {
                     </SidebarContent>
                 </Sidebar>
                 <SidebarInset className="pt-18">
-                    <header className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4">
+                    <header
+                        className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4 fixed top-18 z-50 bg-white dark:bg-neutral-950">
                         <div className="flex items-center gap-4">
                             <SidebarTrigger/>
                             <Separator
@@ -396,7 +399,7 @@ export function App() {
                             })()}
                         </div>
                     </header>
-                    <div className="p-[15px] pb-10 h-full w-full">
+                    <div className="p-[15px] pb-10 h-full w-full pt-18">
                         <FileViewer
                             filePath={openedFile}
                             token={token}
@@ -817,192 +820,6 @@ function Path({file}: { file: string | null }) {
                 ))}
             </BreadcrumbList>
         </Breadcrumb>
-    );
-}
-
-function FileViewer({
-                        filePath,
-                        token,
-                        content,
-                        onContentChange,
-                        theme,
-                    }: {
-    filePath: string | null;
-    token: string | null;
-    content: string | null;
-    onContentChange: (content: string | null) => void;
-    theme: string;
-}) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!filePath || !token || content !== null) {
-            setLoading(false);
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        const fetchFile = async () => {
-            try {
-                const url = `/api/download_resource?path=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`;
-                const res = await fetch(url);
-
-                if (!res.ok) throw new Error(`Failed to load file: ${res.status}`);
-
-                const lower = filePath.toLowerCase();
-                if (
-                    lower.endsWith(".png") ||
-                    lower.endsWith(".jpg") ||
-                    lower.endsWith(".jpeg") ||
-                    lower.endsWith(".gif")
-                ) {
-                    onContentChange(url);
-                } else {
-                    const text = await res.text();
-                    onContentChange(text);
-                }
-            } catch (err: unknown) {
-                console.error(err);
-                if (err instanceof Error) setError(err.message);
-                else setError("An unexpected error occurred");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchFile();
-    }, [filePath, token, content, onContentChange]);
-
-    if (loading) return <Skeleton className="h-full w-full"/>;
-    if (error) return <div className="text-red-500">{error}</div>;
-    if (content === null) return <Skeleton className="h-full w-full"/>;
-
-    const lower = filePath?.toLowerCase() || "";
-    if (
-        lower.endsWith(".png") ||
-        lower.endsWith(".jpg") ||
-        lower.endsWith(".jpeg") ||
-        lower.endsWith(".gif")
-    ) {
-        return <ZoomableImage src={content} alt={filePath || ""}/>;
-    } else if (lower.endsWith(".yml") || lower.endsWith(".yaml")) {
-        return <Field className="h-full w-full"/>;
-    } else {
-        const getLanguage = (filePath: string) => {
-            const ext = filePath.split(".").pop()?.toLowerCase();
-            const languageMap: Record<string, string> = {
-                css: "css",
-                go: "go",
-                html: "html",
-                htm: "html",
-                ini: "ini",
-                java: "java",
-                js: "javascript",
-                mjs: "javascript",
-                cjs: "javascript",
-                jsx: "javascript",
-                kt: "kotlin",
-                kts: "kotlin",
-                markdown: "markdown",
-                md: "markdown",
-                php: "php",
-                ps1: "powershell",
-                psm1: "powershell",
-                psd1: "powershell",
-                py: "python",
-                pyw: "python",
-                rs: "rust",
-                sh: "shell",
-                bash: "shell",
-                sql: "sql",
-                ts: "typescript",
-                tsx: "typescript",
-                xml: "xml",
-                yaml: "yaml",
-                yml: "yaml",
-            };
-            return languageMap[ext || ""] || "plaintext";
-        };
-
-        return (
-            <Editor
-                height="100%"
-                defaultLanguage={getLanguage(filePath || "file.txt")}
-                value={content}
-                onChange={(value) => {
-                    onContentChange(value || "");
-                }}
-                theme={theme === "dark" ? "vs-dark" : "light"}
-                options={{
-                    minimap: {enabled: false},
-                    fontSize: 14,
-                    wordWrap: "on",
-                    formatOnPaste: true,
-                    formatOnType: true,
-                    automaticLayout: true,
-                }}
-            />
-        );
-    }
-}
-
-function ZoomableImage({src, alt}: { src: string; alt?: string }) {
-    const [scale, setScale] = useState(1);
-    const [offset, setOffset] = useState({x: 0, y: 0});
-    const dragging = useRef(false);
-    const lastPos = useRef({x: 0, y: 0});
-
-    const handleWheel = (e: WheelEvent) => {
-        e.preventDefault();
-        const delta = -e.deltaY / 400;
-        setScale((prev) => Math.min(Math.max(prev + delta, 0.1), 5));
-    };
-
-    const handleMouseDown = (e: MouseEvent) => {
-        if (e.button === 1 || e.button === 0) {
-            dragging.current = true;
-            lastPos.current = {x: e.clientX, y: e.clientY};
-            e.preventDefault();
-        }
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        if (!dragging.current) return;
-        const dx = e.clientX - lastPos.current.x;
-        const dy = e.clientY - lastPos.current.y;
-        setOffset((prev) => ({x: prev.x + dx, y: prev.y + dy}));
-        lastPos.current = {x: e.clientX, y: e.clientY};
-    };
-
-    const handleMouseUp = () => {
-        dragging.current = false;
-    };
-
-    return (
-        <div
-            className="h-full w-full overflow-auto flex justify-center items-center p-[15px] pb-10"
-            onWheel={handleWheel}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            style={{cursor: dragging.current ? "grabbing" : "grab"}}
-        >
-            <img
-                src={src}
-                alt={alt}
-                className="block"
-                style={{
-                    transform: `scale(${scale}) translate(${offset.x / scale}px, ${offset.y / scale}px)`,
-                    transformOrigin: "center center",
-                    imageRendering: "pixelated",
-                }}
-                draggable={false}
-            />
-        </div>
     );
 }
 

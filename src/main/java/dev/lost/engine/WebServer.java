@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import dev.lost.engine.bootstrap.ResourceInjector;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -50,6 +51,14 @@ public class WebServer {
         server.createContext("/", exchange -> {
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
+
+            if (method.equalsIgnoreCase("OPTIONS")) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
 
             try {
                 if (path.startsWith("/api/")) {
@@ -107,6 +116,12 @@ public class WebServer {
             BuiltInRegistries.ITEM.forEach(item -> items.add(BuiltInRegistries.ITEM.getKey(item).toString()));
             json.add("items", items);
             json.add("files", buildFileTree(new File(LostEngine.getInstance().getDataFolder(), "resources")));
+            JsonArray toolMaterials = new JsonArray();
+            ResourceInjector.getToolMaterials().forEach((id, toolMaterial) -> toolMaterials.add(id));
+            json.add("tool_materials", toolMaterials);
+            JsonArray armorMaterials = new JsonArray();
+            ResourceInjector.getArmorMaterials().forEach((id, toolMaterial) -> armorMaterials.add(id));
+            json.add("armor_materials", toolMaterials);
             sendResponse(exchange, 200, json.toString(), "application/json");
             return;
         }
@@ -136,6 +151,7 @@ public class WebServer {
             String mime = getMimeType(target.getName());
             try (FileInputStream fis = new FileInputStream(target)) {
                 byte[] bytes = fis.readAllBytes();
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
                 exchange.getResponseHeaders().set("Content-Type", mime);
                 exchange.sendResponseHeaders(200, bytes.length);
 
@@ -304,6 +320,7 @@ public class WebServer {
             return;
         }
 
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", mimeType);
         exchange.sendResponseHeaders(200, file.length());
 
@@ -321,6 +338,7 @@ public class WebServer {
             }
 
             byte[] content = is.readAllBytes();
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().set("Content-Type", mimeType);
             exchange.sendResponseHeaders(200, content.length);
 
@@ -333,6 +351,7 @@ public class WebServer {
 
     private static void sendResponse(@NotNull HttpExchange exchange, int statusCode, @NotNull String response, String contentType) throws IOException {
         byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
