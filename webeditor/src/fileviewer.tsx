@@ -25,6 +25,7 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx
 import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {apiPrefix} from "@/app.tsx";
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 
 const notfoundImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAAAnRSTlMAAHaTzTgAAABTSURBVHjalMixDcRACERRmtpKTkRIE08HZNR+oBHWOvTP3rcvub/lZNzKTme1xyufqjLMWasmTw+WhAhoUIogZ4Bc4hyzOTPQGurgt9LxW/8RBAD63zSW3JrlEQAAAABJRU5ErkJggg==";
 
@@ -481,16 +482,26 @@ function NewItemDialog({
 }) {
     const [tab, setTab] = useState("itemidtype");
     const [itemID, setItemID] = useState("");
-    const [itemType, setItemType] = React.useState("");
+    const [itemType, setItemType] = useState("");
+    const [itemNames, setItemNames] = useState<Record<string, string>>({});
+    const setOpen = (open: boolean) => {
+        onOpenChange(open);
+        if (!open) {
+            setItemID("");
+            setItemType("");
+            setTab("itemidtype");
+            setItemNames({});
+        }
+    };
 
     return (<>
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent>
                 <DialogHeader>
                     <Tabs value={tab} onValueChange={setTab}>
                         <TabsList>
                             <TabsTrigger value="itemidtype">Item ID and Type</TabsTrigger>
-                            <TabsTrigger value="display" disabled={!(itemID && itemType)}>Display</TabsTrigger>
+                            <TabsTrigger value="name" disabled={!(itemID && itemType)}>Item Name</TabsTrigger>
                         </TabsList>
                         <TabsContent value="itemidtype">
                             <Card>
@@ -514,20 +525,78 @@ function NewItemDialog({
                                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                                     <Button
                                         disabled={!(itemID && itemType)}
-                                        onClick={() => setTab("display")}
+                                        onClick={() => setTab("name")}
                                     >
                                         Next
                                     </Button>
                                 </CardFooter>
                             </Card>
                         </TabsContent>
-                        <TabsContent value="display">
+                        <TabsContent value="name">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Display</CardTitle>
+                                    <CardTitle>Item Name</CardTitle>
                                 </CardHeader>
                                 <CardContent className="grid gap-6">
-                                    W.I.P.
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <div>
+                                                    <TableHead>Language</TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="icon-sm" onClick={event => {
+                                                            event.stopPropagation();
+                                                            setItemNames(prev => ({
+                                                                ...prev,
+                                                                "": ""
+                                                            }));
+                                                        }}>
+                                                            <Plus/>
+                                                        </Button>
+                                                    </TableHead>
+                                                </div>
+                                                <TableHead className="text-right">Name</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {Object.entries(itemNames).map(([lang, name], index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell>
+                                                        <LangCombobox
+                                                            value={lang}
+                                                            setValue={(newLang) => {
+                                                                setItemNames(prev => {
+                                                                    const next: Record<string, string> = {};
+                                                                    Object.keys(prev).forEach(key => {
+                                                                        if (key === lang) {
+                                                                            next[newLang] = name;
+                                                                        } else {
+                                                                            next[key] = prev[key];
+                                                                        }
+                                                                    });
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Input
+                                                            placeholder="Item Name"
+                                                            className="text-right"
+                                                            value={name}
+                                                            onInput={(e) => {
+                                                                const newName = (e.target as HTMLInputElement).value;
+                                                                setItemNames(prev => ({
+                                                                    ...prev,
+                                                                    [lang]: newName
+                                                                }));
+                                                            }}
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 </CardContent>
                                 <CardFooter className="flex justify-between items-center">
                                     <Button
@@ -605,6 +674,64 @@ function ItemTypeCombobox({
                                         className={cn(
                                             "ml-auto",
                                             value === type.value ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+const languages = ["af_za", "ar_sa", "ast_es", "az_az", "ba_ru", "bar", "be_by", "be_latn", "bg_bg", "br_fr", "brb", "bs_ba", "ca_es", "cs_cz", "cy_gb", "da_dk", "de_at", "de_ch", "de_de", "el_gr", "en_au", "en_ca", "en_gb", "en_nz", "en_pt", "en_ud", "en_us", "enp", "enws", "eo_uy", "es_ar", "es_cl", "es_ec", "es_es", "es_mx", "es_uy", "es_ve", "esan", "et_ee", "eu_es", "fa_ir", "fi_fi", "fil_ph", "fo_fo", "fr_ca", "fr_fr", "fra_de", "fur_it", "fy_nl", "ga_ie", "gd_gb", "gl_es", "hal_ua", "haw_us", "he_il", "hi_in", "hn_no", "hr_hr", "hu_hu", "hy_am", "id_id", "ig_ng", "io_en", "is_is", "isv", "it_it", "ja_jp", "jbo_en", "ka_ge", "kk_kz", "kn_in", "ko_kr", "ksh", "kw_gb", "ky_kg", "la_la", "lb_lu", "li_li", "lmo", "lo_la", "lol_us", "lt_lt", "lv_lv", "lzh", "mk_mk", "mn_mn", "ms_my", "mt_mt", "nah", "nds_de", "nl_be", "nl_nl", "nn_no", "no_no", "oc_fr", "ovd", "pl_pl", "pls", "pt_br", "pt_pt", "qcb_es", "qid", "qya_aa", "ro_ro", "rpr", "ru_ru", "ry_ua", "sah_sah", "se_no", "sk_sk", "sl_si", "so_so", "sq_al", "sr_cs", "sr_sp", "sv_se", "sxu", "szl", "ta_in", "th_th", "tl_ph", "tlh_aa", "tok", "tr_tr", "tt_ru", "tzo_mx", "uk_ua", "val_es", "vec_it", "vi_vn", "vp_vl", "yi_de", "yo_ng", "zh_cn", "zh_hk", "zh_tw", "zlm_arab"];
+
+function LangCombobox({
+                          value,
+                          setValue
+                      }: {
+    value: string;
+    setValue: (value: string) => void;
+}) {
+    const [open, setOpen] = React.useState(false);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen} modal={true}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-[200px] justify-between"
+                >
+                    {value
+                        ? languages.find((lang) => lang === value)
+                        : "Select language..."}
+                    <ChevronsUpDown className="opacity-50"/>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0">
+                <Command>
+                    <CommandInput placeholder="Search language..." className="h-9"/>
+                    <CommandList>
+                        <CommandEmpty>No language found.</CommandEmpty>
+                        <CommandGroup>
+                            {languages.map((lang) => (
+                                <CommandItem
+                                    key={lang}
+                                    value={lang}
+                                    onSelect={(currentValue) => {
+                                        setValue(currentValue === value ? "" : currentValue);
+                                        setOpen(false);
+                                    }}
+                                >
+                                    {lang}
+                                    <Check
+                                        className={cn(
+                                            "ml-auto",
+                                            value === lang ? "opacity-100" : "opacity-0"
                                         )}
                                     />
                                 </CommandItem>
