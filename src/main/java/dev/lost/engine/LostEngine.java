@@ -13,12 +13,16 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.UUID;
@@ -42,29 +46,33 @@ public final class LostEngine extends JavaPlugin {
         instance = this;
         getConfig().options().copyDefaults(true);
         saveConfig();
+        LostEngineMappingGenerator mappingGenerator = null;
         if (getConfig().getBoolean("geyser_compatibility", false)) {
-            try {
-                getLogger().info("Geyser compatibility is enabled, generating mapping file...");
-                LostEngineMappingGenerator mappingGenerator = new LostEngineMappingGenerator();
-                for (Item item: BuiltInRegistries.ITEM.stream().toList()) {
-                    if (item instanceof CustomItem customItem) {
-                        mappingGenerator.addItem(item, customItem.getId().replaceAll(":", "_"));
-                    }
-                }
-                mappingGenerator.build(getDataFolder());
-                getLogger().info("Finished generating mapping file!");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            mappingGenerator = new LostEngineMappingGenerator();
+            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
+                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
             }
         }
-    }
 
-    @Override
-    public void onEnable() {
         // Building the resource pack
-        resourcePackFile = new File(getDataFolder(), "resource-pack.zip");
+        resourcePackFile = new File(getDataFolder(), getConfig().getString("resource_pack.file_name", "resource-pack") + ".zip");
+        File bedrockResourcePack = new File(getDataFolder().getAbsolutePath(), getConfig().getString("resource_pack.file_name", "resource-pack") + ".mcpack");
         try {
-            ResourcePackBuilder.buildResourcePack(this, resourcePackFile);
+            logger().info("Building resource pack...");
+            ResourcePackBuilder.buildResourcePack(this, resourcePackFile, bedrockResourcePack, mappingGenerator);
+            logger().info("Finished building resource pack!");
+
+            if (getConfig().getBoolean("geyser_compatibility", false) && bedrockResourcePack.exists() && bedrockResourcePack.isFile()) {
+                Plugin geyserPlugin = Bukkit.getPluginManager().getPlugin("Geyser-Spigot");
+                if (geyserPlugin != null) {
+                    logger().info("Detected Geyser, putting resource pack in Geyser's resource pack folder...");
+                    Files.copy(
+                            bedrockResourcePack.toPath(),
+                            geyserPlugin.getDataPath().resolve("packs/").resolve(bedrockResourcePack.getName()),
+                            StandardCopyOption.REPLACE_EXISTING
+                    );
+                }
+            }
             resourcePackHash = getFileHashString(resourcePackFile);
             resourcePackUUID = UUID.nameUUIDFromBytes(resourcePackHash.getBytes());
         } catch (IOException | NoSuchAlgorithmException e) {
@@ -94,9 +102,30 @@ public final class LostEngine extends JavaPlugin {
         // Listeners
         PacketListener.inject();
 
-        if (getConfig().getBoolean("geyser_compatibility", false)) {
-            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
-                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
+        if (mappingGenerator != null) {
+            try {
+                logger().info("Geyser compatibility is enabled, generating mapping file...");
+                for (Item item: BuiltInRegistries.ITEM.stream().toList()) {
+                    if (item instanceof CustomItem customItem) {
+                        mappingGenerator.addItem(item, customItem.getId().replaceAll(":", "_"));
+                    }
+                }
+                mappingGenerator.build(getDataFolder());
+                logger().info("Finished generating mapping file!");
+                File mappingFile = new File(getDataFolder(), "mappings.lomapping");
+                if (getConfig().getBoolean("geyser_compatibility", false) && mappingFile.exists() && mappingFile.isFile()) {
+                    Plugin geyserPlugin = Bukkit.getPluginManager().getPlugin("Geyser-Spigot");
+                    if (geyserPlugin != null) {
+                        logger().info("Detected Geyser, putting mapping file in LostEngine Geyser Extension's config folder...");
+                        Files.copy(
+                                mappingFile.toPath(),
+                                geyserPlugin.getDataPath().resolve("extensions/lostenginegeyserextension/").resolve(mappingFile.getName()),
+                                StandardCopyOption.REPLACE_EXISTING
+                        );
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }

@@ -166,3 +166,8 @@ blocks:
     explosion_power: 8
     drops:
       type: self
+glyphs:
+  larry_emoji:
+    image_path: "font/larry_emoji"
+    height: 8
+    ascent: 7

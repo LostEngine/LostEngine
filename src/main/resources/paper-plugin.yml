@@ -9,6 +9,10 @@ folia-supported: true
 dependencies:
   server:
     floodgate:
-      load: BEFORE
+      load: OMIT
       required: false
       join-classpath: true
+    Geyser-Spigot:
+      load: AFTER
+      required: false
+      join-classpath: false

@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  */
 public class FileUtils {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder().create();
 
     public static @NotNull List<ItemConfig> yamlFiles(@NotNull File resourceFolder) {
         List<ItemConfig> configs = new ObjectArrayList<>();
