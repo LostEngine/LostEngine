@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -328,15 +329,34 @@ public class ResourcePackBuilder {
                             BufferedImage image = ImageIO.read(bais);
                             int width = (int) ((double) (image.getWidth() / image.getHeight()) * height);
                             if (height > 64 || width > 64) {
-                                LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", imagePath, width, height);
+                                LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", key, width, height);
                                 continue;
                             }
                             BufferedImage resizedImage = FastBufferedImage.resizeImage(image, width, height);
+                            int defaultAscent = height / 2 + 3; // compared to Minecraft Java, this is the ascent that Bedrock characters have
+                            int ascentOffset = (defaultAscent - ascent) * 2;
+                            if (ascentOffset != 0) {
+                                int newHeight = height + Math.abs(ascentOffset);
+                                if (newHeight > 64) {
+                                    int maxOffset = (64 - height) / 2;
+                                    LostEngine.logger().warn(
+                                            "Ascent of glyph {} is too {} for bedrock font. Please set it between {} and {} (inclusive) or lower the height.",
+                                            key, (ascentOffset > 0 ? "low" : "high"),
+                                            defaultAscent - maxOffset, defaultAscent + maxOffset
+                                    );
+                                    continue;
+                                }
+                                BufferedImage newImage = new BufferedImage(width, newHeight, BufferedImage.TYPE_INT_ARGB);
+                                Graphics2D g = newImage.createGraphics();
+                                g.drawImage(resizedImage, 0, Math.max(0, ascentOffset), width, height, null);
+                                g.dispose();
+                                resizedImage = newImage;
+                            }
                             // Set the opacity of the first and last pixel to at least 1
                             int firstPixel = resizedImage.getRGB(0, 0);
                             if (((firstPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(0, 0, firstPixel | 0x01000000);
-                            int lastPixel = resizedImage.getRGB(width - 1, height - 1);
-                            if (((lastPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(0, 0, lastPixel | 0x01000000);
+                            int lastPixel = resizedImage.getRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1);
+                            if (((lastPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1, lastPixel | 0x01000000);
                             bedrockFontGenerator.addGlyph(key, resizedImage);
                         } catch (IOException e) {
                             LostEngine.logger().warn("Failed to parse texture for glyph: {}", key, e);

@@ -3,6 +3,7 @@ package dev.lost.engine.assetsgenerators;
 import dev.lost.engine.LostEngine;
 import dev.lost.furnace.files.texture.Texture;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.jetbrains.annotations.NotNull;
@@ -57,13 +58,14 @@ public class BedrockFontGenerator {
                 BufferedImage glyphImage = glyphEntry.getValue();
                 String characterHex = atlasName + String.format("%02x", i);
                 char character = (char) Integer.parseInt(characterHex, 16);
-                LostEngine.logger().info("Glyph `{}`: \\u{}", glyphName, characterHex);
                 langFileGenerator.addTranslation("en_us", "glyph." + glyphName, String.valueOf(character), LangFileGenerator.Edition.BEDROCK);
                 int gridSize = atlas.size / 16;
-                int height = i / 16 * gridSize;
-                int width = i % 16 * gridSize;
+                int x = i % 16 * gridSize;
+                int y = i / 16 * gridSize;
+                int offsetX = (gridSize - glyphImage.getWidth()) / 2;
+                int offsetY = (gridSize - glyphImage.getHeight()) / 2;
                 Graphics2D graphics = atlasImage.createGraphics();
-                graphics.drawImage(glyphImage, width, height, null);
+                graphics.drawImage(glyphImage, x + offsetX, y + offsetY, null);
                 graphics.dispose();
                 i++;
             }
@@ -76,8 +78,8 @@ public class BedrockFontGenerator {
     }
 
     static class Atlas {
-        private final Object2ObjectOpenHashMap<String, BufferedImage> glyphs = new Object2ObjectOpenHashMap<>();
-        int size = 8;
+        private final Object2ObjectLinkedOpenHashMap<String, BufferedImage> glyphs = new Object2ObjectLinkedOpenHashMap<>();
+        int size = 128;
     }
 
 }
