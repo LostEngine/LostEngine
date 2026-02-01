@@ -47,7 +47,7 @@ The build will be located in `build/libs/`
         - [X] Regular items
         - [X] Tools
         - [ ] Armor/Elytra/Trident
-    - [ ] Translations (generated but not working correctly with geyser)
+    - [X] Translations
     - [ ] Custom blocks
 - [ ] Commands
   - [X] `/give`
