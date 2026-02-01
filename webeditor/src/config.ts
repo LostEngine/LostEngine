@@ -104,8 +104,15 @@ export type Material = {
     }
 }
 
+export type Glyph = {
+    image_path?: string;
+    height?: number; // at most 64 for bedrock support
+    ascent?: number; // smaller than height, between (height / 2 + 3 - (64 - height) / 2) and (height / 2 + 3 + (64 - height) / 2) (inclusive) for bedrock support
+}
+
 export type Config = {
     items?: Record<string, Item>;
     blocks?: Record<string, Block>;
     materials?: Record<string, Material>;
+    glyphs?: Record<string, Glyph>;
 }

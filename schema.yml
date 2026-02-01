@@ -99,3 +99,9 @@ blocks:
     texture: string
     name:
       $string: string # locale: display name (ex: en_US:Note Block)
+
+glyphs:
+  $string: # glyph id (generated translation key: glyph.id)
+    image_path: string
+    height: integer # at most 64 for bedrock support
+    ascent: integer # smaller than height, between (height / 2 + 3 - (64 - height) / 2) and (height / 2 + 3 + (64 - height) / 2) (inclusive) for bedrock support

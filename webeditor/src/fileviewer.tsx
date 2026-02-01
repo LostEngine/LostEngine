@@ -26,9 +26,7 @@ import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components
 import {Input} from "@/components/ui/input.tsx";
 import {apiPrefix} from "@/app.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
-
-const notfoundImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAAAnRSTlMAAHaTzTgAAABTSURBVHjalMixDcRACERRmtpKTkRIE08HZNR+oBHWOvTP3rcvub/lZNzKTme1xyufqjLMWasmTw+WhAhoUIogZ4Bc4hyzOTPQGurgt9LxW/8RBAD63zSW3JrlEQAAAABJRU5ErkJggg==";
-
+import type {CSSProperties} from "preact";
 export function FileViewer({
                                filePath,
                                token,
@@ -134,7 +132,7 @@ export function FileViewer({
         lower.endsWith(".jpeg") ||
         lower.endsWith(".gif")
     ) {
-        return <ZoomableImage src={content} alt={filePath || ""}/>;
+        return <ZoomableImage src={content}/>;
     } else if (lower.endsWith(".yml") || lower.endsWith(".yaml")) {
         return <ResizablePanelGroup
             className="h-full w-full"
@@ -195,7 +193,7 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({x: 0, y: 0});
     const containerRef = useRef<HTMLDivElement>(null);
-    const dragging = useRef(false);
+    const [isDragging, setIsDragging] = useState(false);
     const lastPos = useRef({x: 0, y: 0});
 
     const handleWheel = (e: WheelEvent) => {
@@ -221,14 +219,14 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
 
     const handleMouseDown = (e: MouseEvent) => {
         if (e.button === 1 || e.button === 0) {
-            dragging.current = true;
+            setIsDragging(true);
             lastPos.current = {x: e.clientX, y: e.clientY};
             e.preventDefault();
         }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-        if (!dragging.current) return;
+        if (!isDragging) return;
         const dx = e.clientX - lastPos.current.x;
         const dy = e.clientY - lastPos.current.y;
         setOffset((prev) => ({x: prev.x + dx, y: prev.y + dy}));
@@ -236,7 +234,7 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
     };
 
     const handleMouseUp = () => {
-        dragging.current = false;
+        setIsDragging(false);
     };
 
     return (
@@ -248,7 +246,7 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            style={{cursor: dragging.current ? "grabbing" : "grab"}}
+            style={{cursor: isDragging ? "grabbing" : "grab"}}
         >
             <img
                 src={src}
@@ -267,7 +265,6 @@ function ZoomableImage({src, alt}: { src: string; alt?: string }) {
                     backgroundSize: `32px 32px`,
                     backgroundPosition: `0 0, 0 16px, 16px -16px, -16px 0px`
                 }}
-                draggable={false}
             />
         </div>
     );
@@ -322,7 +319,7 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                     </AccordionTrigger>
                     <AccordionContent className="h-full w-full flex flex-wrap gap-4 text-balance">
                         {(() => {
-                            if (!config.items) return null;
+                            if (!config.items) return;
                             return Array.from(Object.entries(config.items)).map(value => {
                                 return (<>
                                     <CardContainer>
@@ -335,22 +332,21 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                 {value[0]}
                                             </CardItem>
                                             <CardItem translateZ="50" className="w-full mt-4">
-                                                <img
+                                                <ImageWithSkeleton
                                                     src={
                                                         (() => {
                                                             let textureName;
                                                             if (value[1].icon) textureName = value[1].icon;
                                                             else if (value[1].texture) textureName = value[1].texture;
-                                                            else return notfoundImage;
+                                                            else return;
                                                             if (!textureName.endsWith(".png")) textureName += ".png";
                                                             return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
                                                         })()
                                                     }
-                                                    className="w-full object-cover group-hover/card:shadow-xl"
                                                     style={{
                                                         imageRendering: "pixelated",
                                                     }}
-                                                    alt="thumbnail"
+                                                    className="w-full object-cover group-hover/card:shadow-xl"
                                                 />
                                             </CardItem>
                                             <div className="flex justify-between items-center mt-20">
@@ -383,7 +379,82 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                     </CardContainer>
                                 </>);
                             });
-                        })()}y
+                        })()}
+                    </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="blocks">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                            Blocks
+                            <Button variant="ghost" size="icon-sm" onClick={event => {
+                                event.stopPropagation();
+                            }}>
+                                <Plus/>
+                            </Button>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="h-full w-full flex flex-wrap gap-4 text-balance">
+                        {(() => {
+                            if (!config.blocks) return;
+                            return Array.from(Object.entries(config.blocks)).map(value => {
+                                return (<>
+                                    <CardContainer>
+                                        <CardBody
+                                            className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                            <CardItem
+                                                translateZ="50"
+                                                className="text-xl font-bold text-neutral-600 dark:text-white"
+                                            >
+                                                {value[0]}
+                                            </CardItem>
+                                            <CardItem translateZ="50" className="w-full mt-4">
+                                                <ImageWithSkeleton
+                                                    src={
+                                                        (() => {
+                                                            let textureName = value[1].texture;
+                                                            if (textureName) {
+                                                                if (!textureName.endsWith(".png")) textureName += ".png";
+                                                                return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
+                                                            }
+                                                        })()
+                                                    }
+                                                    style={{
+                                                        imageRendering: "pixelated",
+                                                    }}
+                                                    className="w-full object-cover group-hover/card:shadow-xl"
+                                                />
+                                            </CardItem>
+                                            <div className="flex justify-between items-center mt-20">
+                                                <CardItem translateZ={20}>
+                                                    <Button variant="outline" size="sm">
+                                                        <Pencil/> Edit
+                                                    </Button>
+                                                </CardItem>
+                                                <CardItem translateZ={20}>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setConfirmDialogAction(() => () => {
+                                                                const blocksNode = doc.get("blocks", true) as yaml.YAMLMap | null;
+
+                                                                blocksNode?.delete(value[0]);
+                                                                onEditConfig();
+                                                            });
+                                                            setConfirmDialogMessage(`Delete block "${value[0]}"?`);
+                                                            setConfirmDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <Trash2/>
+                                                        Delete
+                                                    </Button>
+                                                </CardItem>
+                                            </div>
+                                        </CardBody>
+                                    </CardContainer>
+                                </>);
+                            });
+                        })()}
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="materials">
@@ -398,7 +469,7 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                     <AccordionContent className="flex flex-col gap-4 text-balance">
                         <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
                             {(() => {
-                                if (!config.materials) return null;
+                                if (!config.materials) return;
                                 return Array.from(Object.entries(config.materials)).map(value => {
                                     return (<>
                                         <CardContainer>
@@ -411,12 +482,25 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                     {value[0]}
                                                 </CardItem>
                                                 <CardItem translateZ="50" className="w-full mt-4">
-                                                    <img
-                                                        src={notfoundImage}
-                                                        className="w-full object-cover group-hover/card:shadow-xl"
+                                                    <ImageWithSkeleton
+                                                        src={
+                                                            (() => {
+                                                                const repairItem = value[1].repair_item;
+                                                                if (repairItem) {
+                                                                    const repairItemValue = config.items?.[repairItem];
+                                                                    let textureName;
+                                                                    if (repairItemValue?.icon) textureName = repairItemValue.icon;
+                                                                    else if (repairItemValue?.texture) textureName = repairItemValue.texture;
+                                                                    else return;
+                                                                    if (!textureName.endsWith(".png")) textureName += ".png";
+                                                                    return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
+                                                                }
+                                                            })()
+                                                        }
                                                         style={{
                                                             imageRendering: "pixelated",
                                                         }}
+                                                        className="w-full object-cover group-hover/card:shadow-xl"
                                                         alt="thumbnail"
                                                     />
                                                 </CardItem>
@@ -437,7 +521,81 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                                                                     materialsNode?.delete(value[0]);
                                                                     onEditConfig();
                                                                 });
-                                                                setConfirmDialogMessage(`Delete tool material "${value[0]}"?`);
+                                                                setConfirmDialogMessage(`Delete material "${value[0]}"?`);
+                                                                setConfirmDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2/>
+                                                            Delete
+                                                        </Button>
+                                                    </CardItem>
+                                                </div>
+                                            </CardBody>
+                                        </CardContainer>
+                                    </>);
+                                });
+                            })()}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="glyphs">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                            Glyphs
+                            <Button variant="ghost" size="icon-sm" onClick={event => event.stopPropagation()}>
+                                <Plus/>
+                            </Button>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-4 text-balance">
+                        <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
+                            {(() => {
+                                if (!config.glyphs) return;
+                                return Array.from(Object.entries(config.glyphs)).map(value => {
+                                    return (<>
+                                        <CardContainer>
+                                            <CardBody
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardItem
+                                                    translateZ="50"
+                                                    className="text-xl font-bold text-neutral-600 dark:text-white"
+                                                >
+                                                    {value[0]}
+                                                </CardItem>
+                                                <CardItem translateZ="50" className="w-full mt-4">
+                                                    <ImageWithSkeleton
+                                                        src={(() => {
+                                                            let textureName = value[1].image_path;
+                                                            if (textureName) {
+                                                                if (!textureName.endsWith(".png")) textureName += ".png";
+                                                                return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
+                                                            }
+                                                        })()}
+                                                        className="w-full object-cover group-hover/card:shadow-xl"
+                                                        style={{
+                                                            imageRendering: "pixelated",
+                                                        }}
+                                                        alt="thumbnail"
+                                                    />
+                                                </CardItem>
+                                                <div className="flex justify-between items-center mt-20">
+                                                    <CardItem translateZ={20}>
+                                                        <Button variant="outline" size="sm">
+                                                            <Pencil/> Edit
+                                                        </Button>
+                                                    </CardItem>
+                                                    <CardItem translateZ={20}>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setConfirmDialogAction(() => () => {
+                                                                    const glyphsNode = doc.get("glyphs", true) as yaml.YAMLMap | null;
+
+                                                                    glyphsNode?.delete(value[0]);
+                                                                    onEditConfig();
+                                                                });
+                                                                setConfirmDialogMessage(`Delete glyph "${value[0]}"?`);
                                                                 setConfirmDialogOpen(true);
                                                             }}
                                                         >
@@ -616,6 +774,53 @@ function NewItemDialog({
             </DialogContent>
         </Dialog>
     </>);
+}
+
+export function ImageWithSkeleton({
+                                      src,
+                                      alt,
+                                      style,
+                                      className,
+                                  }: {
+    src?: string
+    alt?: string
+    style?: string | CSSProperties
+    className?: string
+}) {
+    const imgRef = useRef<HTMLImageElement | null>(null);
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        setLoaded(false);
+        const img = imgRef.current;
+        if (!img) return;
+
+        if (img.complete && img.naturalWidth > 0) {
+            setLoaded(true);
+        }
+    }, [src]);
+
+    return (
+        <div className={`relative overflow-hidden aspect-square ${className}`} style={style}>
+            {!loaded && (
+                <Skeleton className="absolute inset-0"/>
+            )}
+
+            <img
+                ref={imgRef}
+                src={src}
+                alt={alt}
+                onLoad={() => setLoaded(true)}
+                className={`h-full w-full ${
+                    loaded ? "opacity-100" : "opacity-0"
+                }`}
+                style={{
+                    imageRendering: "inherit"
+                }}
+                draggable={false}
+            />
+        </div>
+    );
 }
 
 const itemTypes = [
