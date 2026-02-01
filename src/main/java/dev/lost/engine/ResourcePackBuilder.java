@@ -314,6 +314,10 @@ public class ResourcePackBuilder {
                 if (!imagePath.endsWith(".png")) imagePath += ".png";
                 int ascent = glyph.getInt("ascent", 7);
                 int height = glyph.getInt("height", 8);
+                if (ascent > height) {
+                    LostEngine.logger().warn("Glyph {} has ascent {} greater than height {}, please lower ascent in the glyph config in order for it to work.", key, ascent, height);
+                    continue;
+                }
                 providerObject.addProperty("file", "lost_engine" + ":" + imagePath);
                 providerObject.addProperty("ascent", ascent);
                 providerObject.addProperty("height", height);
