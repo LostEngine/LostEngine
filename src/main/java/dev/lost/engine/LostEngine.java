@@ -129,8 +129,10 @@ public final class LostEngine extends JavaPlugin {
         // Listeners
         PacketListener.inject();
 
-        if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
-            logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
+        if (getConfig().getBoolean("geyser_compatibility", false)) {
+            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
+                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
+            }
         }
     }
 
