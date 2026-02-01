@@ -12,3 +12,7 @@ dependencies:
       load: BEFORE
       required: false
       join-classpath: true
+    Geyser-Spigot:
+      load: AFTER
+      required: false
+      join-classpath: false

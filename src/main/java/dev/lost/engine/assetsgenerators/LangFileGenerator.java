@@ -1,45 +1,55 @@
 package dev.lost.engine.assetsgenerators;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import dev.lost.furnace.files.unknown.UnknownFile;
-import dev.lost.furnace.resourcepack.BedrockResourcePack;
+import com.google.gson.JsonObject;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Locale;
 
 public class LangFileGenerator {
 
-    private static final Gson GSON = new Gson();
-    Map<String, Lang> languages = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<String, Lang> languages = new Object2ObjectOpenHashMap<>();
 
-    public void addTranslation(String langCode, String key, String value) {
-        languages.computeIfAbsent(langCode, k -> new Lang()).put(key, value);
+    public void addTranslation(@NotNull String langCode, @NotNull String key, String value) {
+        addTranslation(langCode, key, value, Edition.BOTH);
     }
 
-    public void build(JavaResourcePack resourcePack, @Nullable BedrockResourcePack bedrockResourcePack) {
-        JsonArray jsonLanguages = bedrockResourcePack != null ? new JsonArray() : null;
-        languages.forEach((langCode, lang) -> {
-            resourcePack.jsonFile("assets/minecraft/lang/%s.json".formatted(langCode.toLowerCase()), GSON.toJsonTree(lang));
-            if (bedrockResourcePack != null) {
-                jsonLanguages.add(langCode);
-                StringBuilder sb = new StringBuilder();
-                lang.forEach((key, value) -> {
-                    if (key.startsWith("item.lost_engine."))
-                        key = key.replaceFirst("item.lost_engine.", "item.lost_engine:");
-                    sb.append(key).append("=").append(value).append("\n");
+    public void addTranslation(@NotNull String langCode, @NotNull String key, String value, @NotNull Edition edition) {
+        languages.computeIfAbsent(langCode.toLowerCase(Locale.ROOT), k -> new Lang()).add(new Translation(key, value, edition));
+    }
+
+    public void build(JavaResourcePack resourcePack, @Nullable LostEngineMappingGenerator mappingGenerator) {
+        for (Object2ObjectMap.Entry<String, Lang> entry : languages.object2ObjectEntrySet()) {
+            JsonObject javaLangJson = new JsonObject();
+            entry.getValue().forEach(translation -> {
+                if (translation.edition() == Edition.JAVA || translation.edition() == Edition.BOTH) {
+                    javaLangJson.addProperty(translation.key(), translation.value());
+                }
+            });
+            resourcePack.jsonFile("assets/minecraft/lang/%s.json".formatted(entry.getKey()), javaLangJson);
+            if (mappingGenerator != null) {
+                JsonObject bedrockLangJson = new JsonObject();
+                entry.getValue().forEach((translation) -> {
+                    if (translation.edition() == Edition.BEDROCK || translation.edition() == Edition.BOTH) {
+                        bedrockLangJson.addProperty(translation.key(), translation.value());
+                    }
                 });
-                bedrockResourcePack.unknownFile(UnknownFile.utf8("texts/" + langCode + ".lang", sb.toString()));
+                mappingGenerator.addLocale(entry.getKey(), bedrockLangJson);
             }
-        });
-        if (bedrockResourcePack != null) {
-            bedrockResourcePack.unknownFile(UnknownFile.utf8("texts/languages.json", jsonLanguages.toString()));
         }
     }
 
-    public static class Lang extends HashMap<String, String> {
+    public static class Lang extends ObjectArrayList<Translation> {
+    }
+
+    private record Translation(String key, String value, Edition edition) {
+    }
+
+    public enum Edition {
+        JAVA, BEDROCK, BOTH
     }
 }
