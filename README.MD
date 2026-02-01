@@ -38,7 +38,7 @@ The build will be located in `build/libs/`
 - [ ] Crafts
   - [ ] Inventory/Crafting table
   - [ ] Furnace
-- [ ] Glyphs (can copy https://github.com/LostEngine/Glyphs)
+- [X] Glyphs
 - [ ] GUIs
 - [ ] World generation
 - [ ] Escape menu
