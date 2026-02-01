@@ -49,9 +49,6 @@ public final class LostEngine extends JavaPlugin {
         LostEngineMappingGenerator mappingGenerator = null;
         if (getConfig().getBoolean("geyser_compatibility", false)) {
             mappingGenerator = new LostEngineMappingGenerator();
-            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
-                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
-            }
         }
 
         // Building the resource pack
@@ -91,17 +88,6 @@ public final class LostEngine extends JavaPlugin {
             resourcePackUrl = getConfig().getString("pack_hosting.external_host.url");
         }
 
-        // Commands
-        registerCommand("lostenginereload", List.of("lereload","ler") , new ReloadCommand());
-        registerCommand("editor", List.of("webeditor"), new EditorCommand());
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
-            commands.registrar().register(GiveCommand.getCommand());
-            commands.registrar().register(SetBlockCommand.getCommand());
-        });
-
-        // Listeners
-        PacketListener.inject();
-
         if (mappingGenerator != null) {
             try {
                 logger().info("Geyser compatibility is enabled, generating mapping file...");
@@ -127,6 +113,24 @@ public final class LostEngine extends JavaPlugin {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    @Override
+    public void onEnable() {
+        // Commands
+        registerCommand("lostenginereload", List.of("lereload","ler") , new ReloadCommand());
+        registerCommand("editor", List.of("webeditor"), new EditorCommand());
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
+            commands.registrar().register(GiveCommand.getCommand());
+            commands.registrar().register(SetBlockCommand.getCommand());
+        });
+
+        // Listeners
+        PacketListener.inject();
+
+        if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
+            logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
         }
     }
 
