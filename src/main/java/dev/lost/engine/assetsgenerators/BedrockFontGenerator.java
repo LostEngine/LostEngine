@@ -38,7 +38,7 @@ public class BedrockFontGenerator {
                 .toList()
         ) {
             int atlasIndex = i++ / 255;
-            if (atlasIndex < 0 || atlasIndex > 22) throw new IllegalStateException("Too many glyphs");
+            if (atlasIndex < 0 || atlasIndex > 21) throw new IllegalStateException("Exceeded maximum number of bedrock glyphs (5610)");
             String atlasName = Integer.toHexString(0xE2 + atlasIndex).toUpperCase();
             atlasGlyphs.compute(atlasName, (s, atlas) -> {
                 if (atlas == null) atlas = new Atlas();

@@ -46,7 +46,7 @@ public class LangFileGenerator {
     public static class Lang extends ObjectArrayList<Translation> {
     }
 
-    private record Translation(String key ,String value, Edition edition) {
+    private record Translation(String key, String value, Edition edition) {
     }
 
     public enum Edition {

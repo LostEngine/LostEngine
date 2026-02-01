@@ -63,6 +63,7 @@ public final class LostEngine extends JavaPlugin {
                 Plugin geyserPlugin = Bukkit.getPluginManager().getPlugin("Geyser-Spigot");
                 if (geyserPlugin != null) {
                     logger().info("Detected Geyser, putting resource pack in Geyser's resource pack folder...");
+                    Files.createDirectories(geyserPlugin.getDataPath().resolve("packs/"));
                     Files.copy(
                             bedrockResourcePack.toPath(),
                             geyserPlugin.getDataPath().resolve("packs/").resolve(bedrockResourcePack.getName()),
@@ -103,6 +104,7 @@ public final class LostEngine extends JavaPlugin {
                     Plugin geyserPlugin = Bukkit.getPluginManager().getPlugin("Geyser-Spigot");
                     if (geyserPlugin != null) {
                         logger().info("Detected Geyser, putting mapping file in LostEngine Geyser Extension's config folder...");
+                        Files.createDirectories(geyserPlugin.getDataPath().resolve("extensions/lostenginegeyserextension/"));
                         Files.copy(
                                 mappingFile.toPath(),
                                 geyserPlugin.getDataPath().resolve("extensions/lostenginegeyserextension/").resolve(mappingFile.getName()),

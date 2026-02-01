@@ -52,13 +52,15 @@ public class LostEngineGeyserExtension implements Extension {
         }
         mapping = MappingReader.read(mappingFile.toPath());
         Path localeOverridesDir = GeyserApi.api().configDirectory().resolve("locales/overrides/");
-        try (Stream<Path> stream = Files.list(localeOverridesDir)) {
-            if (stream.findAny().isPresent()) {
-                logger().info("It looks like you already have locale overrides in locales/overrides/ of your Geyser config directory, " +
-                        "LostEngineGeyserExtension needs to overwrite them in order to work.");
-                FileUtils.deleteFolder(localeOverridesDir);
+        if (!Files.exists(localeOverridesDir)) {
+            try (Stream<Path> stream = Files.list(localeOverridesDir)) {
+                if (stream.findAny().isPresent()) {
+                    logger().info("It looks like you already have locale overrides in locales/overrides/ of your Geyser config directory, " +
+                            "LostEngineGeyserExtension needs to overwrite them in order to work.");
+                    FileUtils.deleteFolder(localeOverridesDir);
+                }
+            } catch (IOException ignored) {
             }
-        } catch (IOException ignored) {
         }
         for (Map.Entry<String, JsonElement> entry : mapping.locales().entrySet()) {
             try {

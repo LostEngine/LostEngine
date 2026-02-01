@@ -273,8 +273,9 @@ public class ResourcePackBuilder {
                 if (c >= 63743) {
                     throw new RuntimeException("Exceeded maximum number of glyphs (6400)");
                 }
-                advancesObject.addProperty(String.valueOf(c++), offset);
+                advancesObject.addProperty(String.valueOf(c), offset);
                 characters.addTo(offset, c);
+                c++;
             }
             providerObject.add("advances", advancesObject);
             providers.add(providerObject);
@@ -327,7 +328,8 @@ public class ResourcePackBuilder {
                     if (texture != null) {
                         try (ByteArrayInputStream bais = new ByteArrayInputStream(texture.file().getBytes())) {
                             BufferedImage image = ImageIO.read(bais);
-                            int width = (int) ((double) (image.getWidth() / image.getHeight()) * height);
+                            if (image.getWidth() < 1 || image.getHeight() < 1) throw new RuntimeException("Invalid image for glyph: " + key);
+                            int width = (int) ((double) image.getWidth() / image.getHeight() * height);
                             if (height > 64 || width > 64) {
                                 LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", key, width, height);
                                 continue;
