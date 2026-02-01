@@ -60,8 +60,8 @@ public class BedrockFontGenerator {
                 char character = (char) Integer.parseInt(characterHex, 16);
                 langFileGenerator.addTranslation("en_us", "glyph." + glyphName, String.valueOf(character), LangFileGenerator.Edition.BEDROCK);
                 int gridSize = atlas.size / 16;
-                int x = i % 16 * gridSize;
-                int y = i / 16 * gridSize;
+                int x = (i % 16) * gridSize;
+                int y = (i / 16) * gridSize;
                 int offsetX = (gridSize - glyphImage.getWidth()) / 2;
                 int offsetY = (gridSize - glyphImage.getHeight()) / 2;
                 Graphics2D graphics = atlasImage.createGraphics();
