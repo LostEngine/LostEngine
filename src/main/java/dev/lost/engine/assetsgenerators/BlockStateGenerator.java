@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 @CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
 public class BlockStateGenerator {
 
-    Object2ObjectOpenHashMap<String, JsonObject> blockStates = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<String, JsonObject> blockStates = new Object2ObjectOpenHashMap<>();
 
     public void addBlockState(@NotNull BlockState blockState, @NotNull String modelPath) {
         String key = BuiltInRegistries.BLOCK.getKey(blockState.getBlock()).getPath();
@@ -26,7 +26,7 @@ public class BlockStateGenerator {
         StringBuilder stateKeyBuilder = new StringBuilder();
         blockState.getValues().forEach((property, comparable) -> {
             if (!stateKeyBuilder.isEmpty()) stateKeyBuilder.append(",");
-            stateKeyBuilder.append(property.getName()).append("=").append(comparable.toString());
+            stateKeyBuilder.append(property.getName()).append("=").append(comparable);
         });
         String stateKey = stateKeyBuilder.toString();
         JsonObject stateObject = new JsonObject();

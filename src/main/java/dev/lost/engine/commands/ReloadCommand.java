@@ -3,6 +3,7 @@ package dev.lost.engine.commands;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.ResourcePackBuilder;
 import dev.lost.engine.WebServer;
+import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.HashUtils;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -31,7 +32,7 @@ public class ReloadCommand implements BasicCommand {
 
         byte[] resourcePackHash;
         try {
-            ResourcePackBuilder.buildResourcePack(plugin, LostEngine.getResourcePackFile());
+            ResourcePackBuilder.buildResourcePack(plugin, LostEngine.getResourcePackFile(), FileUtils.withExtension(LostEngine.getResourcePackFile(), "mcpack"), null);
             resourcePackHash = getFileHash(LostEngine.getResourcePackFile());
         } catch (IOException | NoSuchAlgorithmException e) {
             if (sender instanceof Player) {

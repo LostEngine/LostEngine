@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipePropertySet;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.SingleValuePalette;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.jetbrains.annotations.NotNull;
@@ -44,6 +45,7 @@ public class ReflectionUtils {
     private static final Field UPDATE_INTERVAL_FIELD;
     private static final Field ENTITY_ID_FIELD;
     private static final Field Y_ROT_FIELD;
+    private static final Field SINGLE_VALUE_PALETTE_VALUE_FIELD;
 
     static {
         try {
@@ -118,6 +120,12 @@ public class ReflectionUtils {
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize Y_ROT_FIELD", e);
         }
+        try {
+            SINGLE_VALUE_PALETTE_VALUE_FIELD = SingleValuePalette.class.getDeclaredField("value");
+            SINGLE_VALUE_PALETTE_VALUE_FIELD.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize SINGLE_VALUE_PALETTE_VALUE_FIELD", e);
+        }
     }
 
     public static BlockState[] getBlockStates(ClientboundSectionBlocksUpdatePacket packet) throws Exception {
@@ -189,5 +197,9 @@ public class ReflectionUtils {
 
     public static void setYRot(ClientboundMoveEntityPacket packet, byte yRot) throws Exception {
         Y_ROT_FIELD.setByte(packet, yRot);
+    }
+
+    public static <T> void setValue(SingleValuePalette<T> palette, T value) throws Exception {
+        SINGLE_VALUE_PALETTE_VALUE_FIELD.set(palette, value);
     }
 }

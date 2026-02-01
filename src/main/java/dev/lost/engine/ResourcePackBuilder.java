@@ -1,9 +1,12 @@
 package dev.lost.engine;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.lost.engine.assetsgenerators.BedrockFontGenerator;
 import dev.lost.engine.assetsgenerators.BlockStateGenerator;
 import dev.lost.engine.assetsgenerators.LangFileGenerator;
+import dev.lost.engine.assetsgenerators.LostEngineMappingGenerator;
 import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.furnace.files.model.Model;
@@ -12,6 +15,9 @@ import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
+import dev.misieur.fast.FastBufferedImage;
+import it.unimi.dsi.fastutil.ints.Int2CharOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kyori.adventure.key.Key;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -21,6 +27,10 @@ import org.intellij.lang.annotations.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,7 +43,7 @@ import java.util.stream.Stream;
 public class ResourcePackBuilder {
 
     // TODO: Clean up this class
-    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile) throws IOException {
+    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile, File bedrockResourcePackFile, @Nullable LostEngineMappingGenerator mappingGenerator) throws IOException {
         JavaResourcePack resourcePack = ResourcePack.java();
         BedrockResourcePack bedrockResourcePack = plugin.getConfig().getBoolean("geyser_compatibility", false)
                 ? ResourcePack.bedrock() :
@@ -224,16 +234,151 @@ public class ResourcePackBuilder {
                 }
             }
         }
-        langFileGenerator.build(resourcePack, bedrockResourcePack);
+        buildGlyphs(plugin, resourcePack, bedrockResourcePack, langFileGenerator, configs);
+        langFileGenerator.build(resourcePack, mappingGenerator);
         blockStateGenerator.build(resourcePack);
 
         resourcePack.build(resourcePackFile, dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION);
         if (bedrockResourcePack != null) {
             bedrockResourcePack.build(
-                    FileUtils.withExtension(resourcePackFile, "mcpack"),
+                    bedrockResourcePackFile,
                     dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION
             );
         }
+    }
+
+    public static void buildGlyphs(@NotNull LostEngine plugin, @NotNull ResourcePack resourcePack, @Nullable BedrockResourcePack bedrockResourcePack, @NotNull LangFileGenerator langFileGenerator, @NotNull List<FileUtils.ItemConfig> configs) {
+        char c = 57344;
+        JsonArray providers = new JsonArray();
+        if (plugin.getConfig().getBoolean("resource_pack.glyphs.offset_characters.enabled", false)) {
+            int from = plugin.getConfig().getInt("resource_pack.glyphs.offset_characters.from", -1023);
+            int to = plugin.getConfig().getInt("resource_pack.glyphs.offset_characters.to", 1023);
+            int maxExp = 0;
+            while ((1 << (maxExp + 1)) <= Math.max(Math.abs(from), Math.abs(to))) {
+                maxExp++;
+            }
+            IntArrayList offsets = new IntArrayList();
+
+            for (int exp = 0; exp <= maxExp; exp++) {
+                int value = 1 << exp;
+                if (-value >= from) offsets.add(-value);
+                if (value <= to) offsets.add(value);
+            }
+            offsets.sort(null);
+            Int2CharOpenHashMap characters = new Int2CharOpenHashMap();
+            JsonObject providerObject = new JsonObject();
+            providerObject.addProperty("type", "space");
+            JsonObject advancesObject = new JsonObject();
+            for (int offset : offsets) {
+                if (c >= 63743) {
+                    throw new RuntimeException("Exceeded maximum number of glyphs (6400)");
+                }
+                advancesObject.addProperty(String.valueOf(c), offset);
+                characters.addTo(offset, c);
+                c++;
+            }
+            providerObject.add("advances", advancesObject);
+            providers.add(providerObject);
+            for (int i = from; i <= to; i++) {
+                int remaining = i;
+                StringBuilder sb = new StringBuilder();
+
+                for (int j = offsets.size() - 1; j >= 0; j--) {
+                    int off = offsets.getInt(j);
+                    if (remaining == 0) break;
+                    if ((remaining > 0 && off > 0 && (remaining & off) == off) ||
+                            (remaining < 0 && off < 0 && ((-remaining) & (-off)) == -off)) {
+                        sb.append(characters.get(off));
+                        remaining -= off;
+                    }
+                }
+                langFileGenerator.addTranslation("en_us", "offsets." + i, sb.toString(), LangFileGenerator.Edition.JAVA);
+            }
+        }
+        BedrockFontGenerator bedrockFontGenerator = bedrockResourcePack != null ?
+                new BedrockFontGenerator() :
+                null;
+        for (FileUtils.ItemConfig config : configs) {
+            ConfigurationSection glyphSection = config.config().getConfigurationSection("glyphs");
+            if (glyphSection == null) continue;
+            for (String key : glyphSection.getKeys(false)) {
+                ConfigurationSection glyph = glyphSection.getConfigurationSection(key);
+                if (glyph == null) continue;
+                if (c >= 63743) {
+                    throw new RuntimeException("Exceeded maximum number of glyphs (6400)");
+                }
+                JsonObject providerObject = new JsonObject();
+                providerObject.addProperty("type", "bitmap");
+                String imagePath = glyph.getString("image_path");
+                if (imagePath == null) throw new RuntimeException("Missing image path for glyph: " + key);
+                if (!imagePath.endsWith(".png")) imagePath += ".png";
+                int ascent = glyph.getInt("ascent", 7);
+                int height = glyph.getInt("height", 8);
+                if (ascent > height) {
+                    LostEngine.logger().warn("Glyph {} has ascent {} greater than height {}, please lower ascent in the glyph config in order for it to work.", key, ascent, height);
+                    continue;
+                }
+                providerObject.addProperty("file", "lost_engine" + ":" + imagePath);
+                providerObject.addProperty("ascent", ascent);
+                providerObject.addProperty("height", height);
+                JsonArray charsObject = new JsonArray();
+                String character = String.valueOf(c++);
+                charsObject.add(character);
+                providerObject.add("chars", charsObject);
+                providers.add(providerObject);
+                langFileGenerator.addTranslation("en_us", "glyph." + key, character, LangFileGenerator.Edition.JAVA);
+                if (bedrockFontGenerator != null) {
+                    Texture texture = resourcePack.textures().get("assets/lost_engine/textures/" + imagePath);
+                    if (texture != null) {
+                        try (ByteArrayInputStream bais = new ByteArrayInputStream(texture.file().getBytes())) {
+                            BufferedImage image = ImageIO.read(bais);
+                            if (image.getWidth() < 1 || image.getHeight() < 1) throw new RuntimeException("Invalid image for glyph: " + key);
+                            int width = (int) ((double) image.getWidth() / image.getHeight() * height);
+                            if (height > 64 || width > 64) {
+                                LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", key, width, height);
+                                continue;
+                            }
+                            BufferedImage resizedImage = FastBufferedImage.resizeImage(image, width, height);
+                            int defaultAscent = height / 2 + 3; // compared to Minecraft Java, this is the ascent that Bedrock characters have
+                            int ascentOffset = (defaultAscent - ascent) * 2;
+                            if (ascentOffset != 0) {
+                                int newHeight = height + Math.abs(ascentOffset);
+                                if (newHeight > 64) {
+                                    int maxOffset = (64 - height) / 2;
+                                    LostEngine.logger().warn(
+                                            "Ascent of glyph {} is too {} for bedrock font. Please set it between {} and {} (inclusive) or lower the height.",
+                                            key, (ascentOffset > 0 ? "low" : "high"),
+                                            defaultAscent - maxOffset, defaultAscent + maxOffset
+                                    );
+                                    continue;
+                                }
+                                BufferedImage newImage = new BufferedImage(width, newHeight, BufferedImage.TYPE_INT_ARGB);
+                                Graphics2D g = newImage.createGraphics();
+                                g.drawImage(resizedImage, 0, Math.max(0, ascentOffset), width, height, null);
+                                g.dispose();
+                                resizedImage = newImage;
+                            }
+                            // Set the opacity of the first and last pixel to at least 1
+                            int firstPixel = resizedImage.getRGB(0, 0);
+                            if (((firstPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(0, 0, firstPixel | 0x01000000);
+                            int lastPixel = resizedImage.getRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1);
+                            if (((lastPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1, lastPixel | 0x01000000);
+                            bedrockFontGenerator.addGlyph(key, resizedImage);
+                        } catch (IOException e) {
+                            LostEngine.logger().warn("Failed to parse texture for glyph: {}", key, e);
+                        }
+                    } else {
+                        LostEngine.logger().warn("Glyph texture not found for glyph {}: {}", key, imagePath);
+                    }
+                }
+            }
+        }
+        if (bedrockFontGenerator != null) {
+            bedrockFontGenerator.build(bedrockResourcePack, langFileGenerator);
+        }
+        JsonObject fontObject = new JsonObject();
+        fontObject.add("providers", providers);
+        resourcePack.jsonFile("assets/minecraft/font/default.json", fontObject);
     }
 
     private static void addTexturesRecursively(ResourcePack resourcePack, @Nullable BedrockResourcePack bedrockResourcePack, @NotNull File texturesDirectory, String namespace) {

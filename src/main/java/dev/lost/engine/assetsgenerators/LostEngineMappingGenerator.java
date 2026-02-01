@@ -22,16 +22,16 @@ import java.io.IOException;
 
 public class LostEngineMappingGenerator {
 
-    private final JsonArray items;
-    private final JsonArray blocks;
-
-    public LostEngineMappingGenerator() {
-        this.items = new JsonArray();
-        this.blocks = new JsonArray();
-    }
+    private final JsonArray items = new JsonArray();
+    private final JsonArray blocks = new JsonArray();
+    private final JsonObject locales = new JsonObject();
 
     public void addItem(JsonObject item) {
         items.add(item);
+    }
+
+    public void addLocale(String langCode, JsonObject locale) {
+        locales.add(langCode, locale);
     }
 
     @SuppressWarnings("deprecation")
@@ -116,6 +116,7 @@ public class LostEngineMappingGenerator {
         JsonObject mapping = new JsonObject();
         mapping.add("items", items);
         mapping.add("blocks", blocks);
+        mapping.add("locales", locales);
         return mapping;
     }
 
