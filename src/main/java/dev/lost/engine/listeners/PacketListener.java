@@ -71,10 +71,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunkSection;
-import net.minecraft.world.level.chunk.Palette;
-import net.minecraft.world.level.chunk.PalettedContainer;
-import net.minecraft.world.level.chunk.PalettedContainerFactory;
+import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.dimension.DimensionType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -309,8 +306,6 @@ public class PacketListener {
                 }
             }
             case ClientboundLevelChunkWithLightPacket packet -> {
-                ServerPlayer player = handler.getPlayer(ctx);
-                if (player == null) break;
                 ClientboundLevelChunkPacketData chunkData = packet.getChunkData();
                 if (handler.sectionsCount <= 0) break;
                 processChunkPacket(packet.getX(), packet.getZ(), chunkData, handler.sectionsCount, handler.minY, handler.customBlockStateCache);
@@ -624,6 +619,8 @@ public class PacketListener {
             int sectionY = (i + (minY >> 4)) << 4;
 
             PalettedContainer<BlockState> container = section.getStates();
+            Palette<BlockState> palette = container.data.palette();
+            Object[] values = palette.moonrise$getRawPalette(null);
 
             for (int x = 0; x < 16; x++) {
                 for (int y = 0; y < 16; y++) {
@@ -634,7 +631,12 @@ public class PacketListener {
                         if (clientBlockState.isPresent()) {
                             // If we used section.setBlockState(x, y, z, clientBlockState.get());
                             // it wouldn't remove custom blocks from the palette and make the client crash,
-                            // we don't have the choice to also modify the palette
+                            // we don't have the choice to also modify the palette.
+                            // But if it is a global palette, we need to edit the actual blocks.
+                            if (values == null) {
+                                section.setBlockState(x, y, z, clientBlockState.get());
+                                requiresEdit = true;
+                            }
                             customBlockStateCache.put(blockPosLong, Block.getId(blockState));
                         } else {
                             customBlockStateCache.remove(blockPosLong);
@@ -644,16 +646,25 @@ public class PacketListener {
             }
 
 
-            Palette<BlockState> palette = container.data.palette();
-            Object[] values = palette.moonrise$getRawPalette(null);
 
-            for (int j = 0; j < values.length; j++) {
-                Object obj = values[j];
-                if (obj instanceof BlockState state) {
-                    Optional<BlockState> clientBlockState = getClientBlockState(state);
-                    if (clientBlockState.isPresent()) {
-                        values[j] = clientBlockState.get();
+            if (values != null) {
+                if (palette instanceof SingleValuePalette<BlockState> singleValuePalette) {
+                    Optional<BlockState> blockState = getClientBlockState((BlockState) values[0]);
+                    if (blockState.isPresent()) {
+                        values[0] = blockState.get();
+                        ReflectionUtils.setValue(singleValuePalette, blockState.get());
                         requiresEdit = true;
+                    }
+                } else {
+                    for (int j = 0; j < values.length; j++) {
+                        Object obj = values[j];
+                        if (obj instanceof BlockState state) {
+                            Optional<BlockState> clientBlockState = getClientBlockState(state);
+                            if (clientBlockState.isPresent()) {
+                                values[j] = clientBlockState.get();
+                                requiresEdit = true;
+                            }
+                        }
                     }
                 }
             }

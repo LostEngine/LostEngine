@@ -71,7 +71,7 @@ public class LostEngineBootstrap implements PluginBootstrap {
             dataPackGenerator.build(new File(levelName + File.separator + "datapacks" + File.separator + "lost_engine_generated"));
             elapsedNanos = System.nanoTime() - startTime;
             context.getLogger().info("\u001b[1A\u001b[2KFinished building the data pack! ({})", TimeUtils.formatNanos(elapsedNanos));
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
             context.getLogger().error("Failed to inject custom resources are you using Minecraft/Paper 1.21.11?", e);
             stopServer(context);
         }
