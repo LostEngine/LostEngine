@@ -143,6 +143,60 @@ public class ResourcePackBuilder {
                                 }
                             });
                         }
+                        if (bedrockResourcePack != null && type.equals("armor")) {
+                            String armorType = itemSection.getString("armor_type", "chestplate");
+                            String material = itemSection.getString("material");
+                            if (material == null) {
+                                LostEngine.logger().error("Armor material not specified for item {}.", key);
+                                continue;
+                            }
+                            bedrockResourcePack.jsonFile("attachables/lost_engine." + key + ".json", JsonParser.parseString("""
+                                            {
+                                                "format_version": "1.8.0",
+                                                "minecraft:attachable": {
+                                                    "description": {
+                                                        "identifier": "lost_engine:%s",
+                                                        "materials": {
+                                                            "default": "armor",
+                                                            "enchanted": "armor_enchanted"
+                                                        },
+                                                        "textures": {
+                                                            "enchanted": "textures/misc/enchanted_actor_glint",
+                                                            "default": "textures/entity/equipment/%s/%s"
+                                                        },
+                                                        "geometry": {
+                                                            "default": "%s"
+                                                        },
+                                                        "scripts": {
+                                                            "parent_setup": "v.%s_layer_visible = 0.0;"
+                                                        },
+                                                        "render_controllers": ["controller.render.armor"]
+                                                    }
+                                                }
+                                            }
+                                            """.formatted(
+                                            key.toLowerCase(Locale.ROOT),
+                                            armorType.equals("leggings") ? "humanoid_leggings" : "humanoid",
+                                            material.toLowerCase(Locale.ROOT),
+                                            switch (armorType) {
+                                                case "chestplate" -> "geometry.player.armor.chestplate";
+                                                case "leggings" -> "geometry.humanoid.armor.leggings";
+                                                case "helmet" -> "geometry.player.armor.helmet";
+                                                case "boots" -> "geometry.player.armor.boots";
+                                                default ->
+                                                        throw new IllegalStateException("Unexpected value for armor type: " + armorType);
+                                            },
+                                            switch (armorType) {
+                                                case "chestplate" -> "chest";
+                                                case "leggings" -> "leg";
+                                                case "helmet" -> "helmet";
+                                                case "boots" -> "boot";
+                                                default ->
+                                                        throw new IllegalStateException("Unexpected value for armor type: " + armorType);
+                                            }
+                                    )
+                            ));
+                        }
                         ConfigurationSection elytraSection = itemSection.getConfigurationSection("elytra");
                         if (elytraSection != null) {
                             String texture = elytraSection.getString("texture", null);
@@ -332,7 +386,8 @@ public class ResourcePackBuilder {
                     if (texture != null) {
                         try (ByteArrayInputStream bais = new ByteArrayInputStream(texture.file().getBytes())) {
                             BufferedImage image = ImageIO.read(bais);
-                            if (image.getWidth() < 1 || image.getHeight() < 1) throw new RuntimeException("Invalid image for glyph: " + key);
+                            if (image.getWidth() < 1 || image.getHeight() < 1)
+                                throw new RuntimeException("Invalid image for glyph: " + key);
                             int width = (int) ((double) image.getWidth() / image.getHeight() * height);
                             if (height > 64 || width > 64) {
                                 LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", key, width, height);
@@ -362,7 +417,8 @@ public class ResourcePackBuilder {
                             int firstPixel = resizedImage.getRGB(0, 0);
                             if (((firstPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(0, 0, firstPixel | 0x01000000);
                             int lastPixel = resizedImage.getRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1);
-                            if (((lastPixel >> 24) & 0xFF) == 0) resizedImage.setRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1, lastPixel | 0x01000000);
+                            if (((lastPixel >> 24) & 0xFF) == 0)
+                                resizedImage.setRGB(resizedImage.getWidth() - 1, resizedImage.getHeight() - 1, lastPixel | 0x01000000);
                             bedrockFontGenerator.addGlyph(key, resizedImage);
                         } catch (IOException e) {
                             LostEngine.logger().warn("Failed to parse texture for glyph: {}", key, e);

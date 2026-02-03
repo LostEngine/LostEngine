@@ -13,6 +13,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.enchantment.Enchantable;
+import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -105,7 +106,13 @@ public class LostEngineMappingGenerator {
                 }
             }
         });
-        items.add(itemJson);
+        Equippable equippable = item.components().get(DataComponents.EQUIPPABLE);
+        if (equippable != null) {
+            switch (equippable.slot()) {
+                case HEAD, CHEST, LEGS, FEET -> itemJson.addProperty("equitableSlot", equippable.slot().toString());
+            }
+        }
+        addItem(itemJson);
     }
 
     public void addBlock(JsonObject block) {
