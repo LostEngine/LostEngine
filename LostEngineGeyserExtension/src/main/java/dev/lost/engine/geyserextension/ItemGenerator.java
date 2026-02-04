@@ -4,10 +4,7 @@ import dev.lost.engine.geyserextension.lomapping.Mapping;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCustomItemsEvent;
 import org.geysermc.geyser.api.item.custom.v2.CustomItemBedrockOptions;
 import org.geysermc.geyser.api.item.custom.v2.NonVanillaCustomItemDefinition;
-import org.geysermc.geyser.api.item.custom.v2.component.java.JavaConsumable;
-import org.geysermc.geyser.api.item.custom.v2.component.java.JavaFoodProperties;
-import org.geysermc.geyser.api.item.custom.v2.component.java.JavaItemDataComponents;
-import org.geysermc.geyser.api.item.custom.v2.component.java.JavaToolProperties;
+import org.geysermc.geyser.api.item.custom.v2.component.java.*;
 import org.geysermc.geyser.api.util.CreativeCategory;
 import org.geysermc.geyser.api.util.Holders;
 import org.geysermc.geyser.api.util.Identifier;
@@ -39,6 +36,8 @@ public class ItemGenerator {
                     .component(
                             JavaItemDataComponents.TOOL, getGeyserToolProperties(item.toolProperties())
                     );
+            if (item.equitableSlot() != null) builder
+                    .component(JavaItemDataComponents.EQUIPPABLE, JavaEquippable.of(JavaEquippable.EquipmentSlot.valueOf(item.equitableSlot().toUpperCase(Locale.ROOT))));
             event.register(builder.build());
         });
     }

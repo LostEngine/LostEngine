@@ -15,7 +15,8 @@ public record ItemImpl(
         float consumeSeconds,
         boolean isTool,
         String creativeCategory,
-        String creativeGroup
+        String creativeGroup,
+        String equitableSlot
 ) implements Item {
 }
 
