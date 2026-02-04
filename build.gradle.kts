@@ -80,6 +80,9 @@ tasks.processResources {
         include("*.html")
         into("generated")
     }
+    from("LICENSE.MD") {
+        into("META-INF")
+    }
 
     filesMatching("paper-plugin.yml") {
         filter<ReplaceTokens>("tokens" to mapOf("version" to project.version.toString()))
@@ -89,7 +92,4 @@ tasks.processResources {
 tasks.shadowJar {
     archiveClassifier.set("")
     minimize()
-    from("LICENSE.MD") {
-        into("META-INF")
-    }
 }
