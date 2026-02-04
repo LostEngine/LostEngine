@@ -15,33 +15,38 @@ import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.FloodgateUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.papermc.paper.network.ChannelInitializeListenerHolder;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.kyori.adventure.key.Key;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
-import net.minecraft.core.SectionPos;
+import net.minecraft.core.*;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.VarInt;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
 import net.minecraft.network.protocol.configuration.ClientboundFinishConfigurationPacket;
+import net.minecraft.network.protocol.configuration.ClientboundRegistryDataPacket;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -50,6 +55,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
@@ -81,6 +87,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 import java.util.*;
+import java.util.function.BiFunction;
 
 public class PacketListener {
 
@@ -106,6 +113,99 @@ public class PacketListener {
                 Key.key("lost_engine", "packet_listener"),
                 channel -> channel.pipeline().addBefore("packet_handler", "lost_engine_packet_listener", new ChannelDupeHandler())
         );
+        ChannelInitializeListenerHolder.addListener(
+                Key.key("lost_engine", "raw_packet_listener"),
+                channel -> channel.pipeline().addBefore("decoder", "lost_engine_raw_packet_listener", new RawChannelDupeHandler())
+        );
+    }
+
+    private static class RawChannelDupeHandler extends ChannelDuplexHandler {
+        private Boolean isNotBedrockClient = null;
+
+        private boolean isNotBedrockClient(ChannelHandlerContext ctx) {
+            if (isNotBedrockClient != null) return isNotBedrockClient;
+            Channel channel = ctx.channel();
+            Connection connection = (Connection) channel.pipeline().get("packet_handler");
+            if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
+                return isNotBedrockClient = !FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
+            }
+            return true;
+        }
+
+        private @Nullable ChannelDupeHandler getDupeHandler(ChannelHandlerContext ctx) {
+            return (ChannelDupeHandler) ctx.pipeline().get("lost_engine_packet_listener");
+        }
+
+        private boolean isPlay(ChannelHandlerContext ctx) {
+            Channel channel = ctx.channel();
+            Connection connection = (Connection) channel.pipeline().get("packet_handler");
+            return connection != null && connection.getPacketListener() instanceof ServerGamePacketListenerImpl;
+        }
+
+        @Override
+        public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (isPlay(ctx) && isNotBedrockClient(ctx) && msg instanceof ByteBuf byteBuf) {
+                byteBuf.markReaderIndex();
+                try {
+                    FriendlyByteBuf friendlyBuf = new FriendlyByteBuf(byteBuf);
+                    int packetId = friendlyBuf.readVarInt();
+
+                    if (packetId == 0x37) { // set_creative_mode_slot
+                        short slot = friendlyBuf.readShort();
+                        int itemCount = friendlyBuf.readVarInt();
+                        if (itemCount > 0) {
+                            int itemId = friendlyBuf.readVarInt();
+                            int componentsToAdd = friendlyBuf.readVarInt();
+                            int componentsToRemove = friendlyBuf.readVarInt();
+                            if (itemId == BuiltInRegistries.ITEM.getId(Items.PAINTING) && componentsToAdd == 1 && componentsToRemove == 0) {
+                                int componentTypeId = friendlyBuf.readVarInt();
+                                if (componentTypeId == BuiltInRegistries.DATA_COMPONENT_TYPE.getId(DataComponents.PAINTING_VARIANT)) {
+                                    /// {@link net.minecraft.network.codec.ByteBufCodecs#lengthPrefixed(int, BiFunction)
+                                    int i = friendlyBuf.readVarInt();
+                                    int i1 = friendlyBuf.readerIndex();
+                                    int paintingId = VarInt.read(friendlyBuf.slice(i1, i));
+                                    ChannelDupeHandler channelDupeHandler = getDupeHandler(ctx);
+                                    if (channelDupeHandler != null) {
+                                        CustomItem customItem = channelDupeHandler.paintingItems.get(paintingId);
+                                        if (customItem != null) {
+                                            int newItemId = BuiltInRegistries.ITEM.getId(customItem.asItem());
+                                            ByteBuf newPacket = ctx.alloc().buffer();
+                                            FriendlyByteBuf out = new FriendlyByteBuf(newPacket);
+                                            out.writeVarInt(0x37);
+                                            out.writeShort(slot);
+                                            out.writeVarInt(itemCount);
+                                            out.writeVarInt(newItemId);
+                                            out.writeVarInt(0);
+                                            out.writeVarInt(0);
+
+                                            ctx.fireChannelRead(newPacket);
+                                            byteBuf.release();
+
+                                            ServerPlayer player = channelDupeHandler.getPlayer(ctx);
+                                            if (player != null) {
+                                                player.getBukkitEntity().getScheduler().runDelayed(
+                                                        LostEngine.getInstance(),
+                                                        scheduledTask -> player.inventoryMenu.sendAllDataToRemote(),
+                                                        null,
+                                                        1
+                                                );
+                                            }
+
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    LostEngine.logger().error("Failed to parse raw packet set_creative_mode_slot (0x37)", e);
+                } finally {
+                    byteBuf.resetReaderIndex();
+                }
+            }
+            super.channelRead(ctx, msg);
+        }
     }
 
     private static class ChannelDupeHandler extends ChannelDuplexHandler {
@@ -117,6 +217,7 @@ public class PacketListener {
         volatile int minY = 0;
         volatile int maxY = 0;
         private final Long2IntOpenHashMap customBlockStateCache = new Long2IntOpenHashMap();
+        private final Int2ObjectOpenHashMap<CustomItem> paintingItems = new Int2ObjectOpenHashMap<>();
 
         /**
          * @return {@code Blocks.AIR.defaultBlockState()} if not in cache
@@ -539,7 +640,9 @@ public class PacketListener {
                     return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
                 }
             }
-            case ClientboundTeleportEntityPacket(int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround) -> {
+            case ClientboundTeleportEntityPacket(
+                    int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround
+            ) -> {
                 if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(id)) {
                     float yRot = Mth.wrapDegrees(change.yRot() - (change.yRot() - 90) * 2);
                     return new ClientboundTeleportEntityPacket(id, new PositionMoveRotation(change.position(), change.deltaMovement(), yRot, change.xRot()), relatives, onGround);
@@ -563,6 +666,30 @@ public class PacketListener {
                 if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(packet.getId())) {
                     // This packet is useless since we replace tridents with item displays, and they don't support it se we send position packets every tick
                     return null;
+                }
+            }
+            case ClientboundRegistryDataPacket(
+                    ResourceKey<? extends Registry<?>> registry,
+                    List<RegistrySynchronization.PackedRegistryEntry> entries
+            ) -> {
+                if (registry.identifier().equals(Registries.PAINTING_VARIANT.identifier())) {
+                    handler.paintingItems.clear();
+                    entries = new ObjectArrayList<>(entries);
+                    for (CustomItem customItem : LostEngine.getCustomItems()) {
+                        CompoundTag compoundTag = new CompoundTag();
+                        compoundTag.putString("asset_id", "minecraft:");
+                        compoundTag.putString("author", "LostEngine");
+                        compoundTag.putInt("height", 1);
+                        compoundTag.putInt("width", 1);
+                        Tag componentTag = ComponentSerialization.CODEC.encodeStart(
+                                NbtOps.INSTANCE,
+                                customItem.asItem().getName()
+                        ).getOrThrow();
+                        compoundTag.put("title", componentTag);
+                        entries.add(new RegistrySynchronization.PackedRegistryEntry(Identifier.parse(customItem.getId() + "_painting"), Optional.of(compoundTag)));
+                        handler.paintingItems.put(entries.size(), customItem);
+                    }
+                    return new ClientboundRegistryDataPacket(registry, entries);
                 }
             }
             default -> {
@@ -644,7 +771,6 @@ public class PacketListener {
                     }
                 }
             }
-
 
 
             if (values != null) {
