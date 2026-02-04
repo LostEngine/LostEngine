@@ -46,7 +46,8 @@ The build will be located in `build/libs/`
     - [ ] Items
         - [X] Regular items
         - [X] Tools
-        - [ ] Armor/Elytra/Trident
+        - [X] Armor
+        - [ ] Elytra/Trident
     - [X] Translations
     - [ ] Custom blocks
 - [ ] Commands
