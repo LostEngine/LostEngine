@@ -1,4 +1,5 @@
 import com.github.gradle.node.npm.task.NpmTask
+import org.apache.tools.ant.filters.ReplaceTokens
 
 plugins {
     java
@@ -10,7 +11,7 @@ plugins {
 }
 
 group = "dev.misieur"
-version = "0.0.1-mc1.21.11"
+version = "0.0.3-mc1.21.11"
 
 repositories {
     mavenCentral()
@@ -80,11 +81,8 @@ tasks.processResources {
         into("generated")
     }
 
-    val props = mapOf("version" to project.version)
-    inputs.properties(props)
-    filteringCharset = "UTF-8"
     filesMatching("paper-plugin.yml") {
-        expand(props)
+        filter<ReplaceTokens>("tokens" to mapOf("version" to project.version.toString()))
     }
 }
 
