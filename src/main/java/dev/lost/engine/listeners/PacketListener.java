@@ -53,7 +53,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -122,7 +121,7 @@ public class PacketListener {
     private static class RawChannelDupeHandler extends ChannelDuplexHandler {
         private Boolean isNotBedrockClient = null;
 
-        private boolean isNotBedrockClient(ChannelHandlerContext ctx) {
+        private boolean isNotBedrockClient(@NotNull ChannelHandlerContext ctx) {
             if (isNotBedrockClient != null) return isNotBedrockClient;
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
@@ -132,11 +131,11 @@ public class PacketListener {
             return true;
         }
 
-        private @Nullable ChannelDupeHandler getDupeHandler(ChannelHandlerContext ctx) {
+        private @Nullable ChannelDupeHandler getDupeHandler(@NotNull ChannelHandlerContext ctx) {
             return (ChannelDupeHandler) ctx.pipeline().get("lost_engine_packet_listener");
         }
 
-        private boolean isPlay(ChannelHandlerContext ctx) {
+        private boolean isPlay(@NotNull ChannelHandlerContext ctx) {
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
             return connection != null && connection.getPacketListener() instanceof ServerGamePacketListenerImpl;
@@ -236,11 +235,12 @@ public class PacketListener {
 
         private boolean isBedrockClient(ChannelHandlerContext ctx) {
             if (isBedrockClient != null) return isBedrockClient;
-            getPlayer(ctx);
-            if (player != null) {
-                isBedrockClient = FloodgateUtils.isBedrockPlayer(player.getUUID());
+            Channel channel = ctx.channel();
+            Connection connection = (Connection) channel.pipeline().get("packet_handler");
+            if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
+                isBedrockClient = FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
                 if (isBedrockClient) {
-                    LostEngine.logger().info("Bedrock client detected: {}", player.getName().getString());
+                    LostEngine.logger().info("Bedrock client detected: {}", serverCommonPacketListener.getOwner().name());
                 }
                 return isBedrockClient;
             }
@@ -303,7 +303,7 @@ public class PacketListener {
                     if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
                         //noinspection DataFlowIssue -- never get used
                         if (blockState.getDestroyProgress(player, null, packet.getPos()) >= 1.0F) {
-                            player.connection.send(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
+                            ctx.channel().writeAndFlush(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
                             break;
                         }
                         float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
@@ -317,7 +317,7 @@ public class PacketListener {
                             // The ratio is between what the client actually knows and what the server thinks
                             float ratio = blockDestroySpeed / clientBlockDestroySpeed;
                             blockBreakSpeed.setBaseValue(ratio * blockBreakSpeed.getBaseValue());
-                            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                            ctx.channel().writeAndFlush(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
                         }
                     }
                 } else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
@@ -330,7 +330,7 @@ public class PacketListener {
                         if (playerAttribute != null) {
                             blockBreakSpeed.apply(playerAttribute.pack());
                         }
-                        player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                        ctx.channel().writeAndFlush(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
                     }
                 }
             }
@@ -560,6 +560,7 @@ public class PacketListener {
                         packets.add(newPacketCasted);
                     }
                 }
+                if (packets.isEmpty()) return null;
                 return new ClientboundBundlePacket(packets);
             }
             case ClientboundLevelEventPacket packet -> {
@@ -614,18 +615,8 @@ public class PacketListener {
             }
             case ClientboundAddEntityPacket packet -> {
                 if (packet.getType() != EntityType.TRIDENT) break;
-                ServerPlayer player = handler.getPlayer(ctx);
-                if (player == null) break;
                 ItemStack itemStack = CustomThrownTrident.CUSTOM_TRIDENTS.get(packet.getId());
                 if (itemStack != null) {
-                    MinecraftServer.getServer().execute(() -> {
-                        ChunkMap.TrackedEntity entityTracker = player.level().getChunkSource().chunkMap.entityMap.get(packet.getId());
-                        try {
-                            ReflectionUtils.setUpdateInterval(entityTracker.serverEntity, 1);
-                        } catch (Exception e) {
-                            throw new RuntimeException("Unable to edit the thrown trident ServerEntity's update interval: ", e);
-                        }
-                    });
                     ObjectArrayList<SynchedEntityData.DataValue<?>> packedItems = new ObjectArrayList<>();
                     packedItems.add(new SynchedEntityData.DataValue<>(10, EntityDataSerializers.INT, 1));
                     packedItems.add(new SynchedEntityData.DataValue<>(11, EntityDataSerializers.VECTOR3, new Vector3f(0, -0.03125f, 0.6875f)));
@@ -633,11 +624,12 @@ public class PacketListener {
                     packedItems.add(new SynchedEntityData.DataValue<>(13, EntityDataSerializers.QUATERNION, new Quaternionf().rotateX((float) Math.toRadians(-90)).rotateY((float) Math.toRadians(90))));
                     packedItems.add(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.ITEM_STACK, editItem(itemStack, false).orElse(itemStack)));
                     packedItems.add(new SynchedEntityData.DataValue<>(24, EntityDataSerializers.BYTE, (byte) 8));
-                    player.connection.send(
-                            new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
-                    );
                     float yRot = Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2);
-                    return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
+                    ctx.channel().writeAndFlush(new ClientboundBundlePacket(List.of(
+                            new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot()),
+                            new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
+                    )));
+                    return null;
                 }
             }
             case ClientboundTeleportEntityPacket(
