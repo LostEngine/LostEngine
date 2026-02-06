@@ -238,7 +238,8 @@ public class DataPackGenerator {
     }
 
     public void build(@NotNull File dataPackFolder) throws IOException {
-        FastFiles.deleteFolderSync(dataPackFolder.toPath());
+        if (dataPackFolder.exists() && dataPackFolder.isDirectory())
+            FastFiles.deleteFolderSync(dataPackFolder.toPath());
         saveJsonToFile(MCMETA,                   new File(dataPackFolder + "/pack.mcmeta"));
         saveJsonToFile(swords,                   new File(dataPackFolder + "/data/minecraft/tags/item/swords.json"));
         saveJsonToFile(pickaxes,                 new File(dataPackFolder + "/data/minecraft/tags/item/pickaxes.json"));

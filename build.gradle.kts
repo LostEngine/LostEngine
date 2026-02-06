@@ -39,7 +39,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
     implementation(project(":furnace"))
-    compileOnly("dev.misieur:fast:1.0-SNAPSHOT")
+    implementation("dev.misieur:fast:1.0.1")
 
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
 }
