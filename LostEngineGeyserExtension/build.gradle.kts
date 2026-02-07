@@ -7,7 +7,7 @@ version = "1.0-SNAPSHOT"
 val id = "lostenginegeyserextension"
 val extensionName = "LostEngineGeyserExtension"
 val author = "Misieur"
-val geyserApiVersion = "2.9.2"
+val geyserApiVersion = "2.9.3"
 
 repositories {
     mavenCentral()
@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("org.geysermc.geyser:api:2.9.2-SNAPSHOT")
+    compileOnly("org.geysermc.geyser:api:preview-api-2.9.3-SNAPSHOT")
     // Using the same versions as Geyser for compatibility
     compileOnly("it.unimi.dsi:fastutil:8.5.15")
     compileOnly("com.google.code.gson:gson:2.3.1")
