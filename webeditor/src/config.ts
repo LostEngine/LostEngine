@@ -1,5 +1,5 @@
 export type Item = {
-    type?: "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe" | "armor" | "elytra" | "trident";
+    type?: ItemType;
 
     // Only for sword, shovel, pickaxe, axe, hoe, armor
     material?: string; // Ask API for enum
@@ -56,6 +56,7 @@ export type Item = {
     name?: Record<string, string>; // locale: display name (ex: en_US:Iron Sword)
 }
 
+export type ItemType = "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe" | "armor" | "elytra" | "trident";
 
 export type Block = {
     type?: "regular" | "tnt";

@@ -8,7 +8,7 @@ import {Check, ChevronsUpDown, Pencil, Plus, Trash2} from "lucide-react";
 import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList} from "@/components/ui/command.tsx";
 import {cn} from "@/lib/utils.ts";
 import * as yaml from "yaml";
-import type {Config} from "@/config.ts";
+import type {Config, Item, ItemType} from "@/config.ts";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion.tsx";
 import {CardBody, CardContainer, CardItem} from "@/components/ui/3d-card.tsx";
 import {
@@ -27,6 +27,7 @@ import {Input} from "@/components/ui/input.tsx";
 import {apiPrefix} from "@/app.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 import type {CSSProperties} from "preact";
+
 export function FileViewer({
                                filePath,
                                token,
@@ -626,27 +627,31 @@ function ConfigEditor({text, onValueChange, folder, token}: {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            <NewItemDialog onOpenChange={setNewItemDialogOpen} open={newItemDialogOpen}/>
+            <NewItemDialog onOpenChange={setNewItemDialogOpen} open={newItemDialogOpen} doc={doc} onEditConfig={onEditConfig}/>
         </>
     );
 }
 
 function NewItemDialog({
                            onOpenChange,
-                           open
+                           open,
+                           doc,
+                           onEditConfig,
                        }: {
     onOpenChange: (open: boolean) => void;
     open: boolean;
+    doc: yaml.Document;
+    onEditConfig: () => void;
 }) {
     const [tab, setTab] = useState("itemidtype");
     const [itemID, setItemID] = useState("");
-    const [itemType, setItemType] = useState("");
+    const [itemType, setItemType] = useState<ItemType | undefined>();
     const [itemNames, setItemNames] = useState<Record<string, string>>({});
     const setOpen = (open: boolean) => {
         onOpenChange(open);
         if (!open) {
             setItemID("");
-            setItemType("");
+            setItemType(undefined);
             setTab("itemidtype");
             setItemNames({});
         }
@@ -680,7 +685,7 @@ function NewItemDialog({
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex justify-between items-center">
-                                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                                    <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                                     <Button
                                         disabled={!(itemID && itemType)}
                                         onClick={() => setTab("name")}
@@ -763,7 +768,27 @@ function NewItemDialog({
                                     >
                                         Back
                                     </Button>
-                                    <Button>
+                                    <Button onClick={() => {
+                                        let itemsNode = doc.get("items", true) as yaml.YAMLMap | null;
+
+                                        if (!itemsNode) {
+                                            doc.set("items", doc.createNode({}));
+                                            itemsNode = doc.get("items") as yaml.YAMLMap;
+                                        }
+
+                                        const filteredNames = Object.fromEntries(
+                                            Object.entries(itemNames).filter(([lang]) => lang.trim() !== "")
+                                        );
+
+                                        const newItemData: Item = {
+                                            type: itemType,
+                                            name: filteredNames,
+                                        };
+
+                                        itemsNode.set(itemID, doc.createNode(newItemData));
+                                        onEditConfig();
+                                        setOpen(false);
+                                    }}>
                                         Create Item
                                     </Button>
                                 </CardFooter>
@@ -839,8 +864,8 @@ function ItemTypeCombobox({
                               value,
                               setValue
                           }: {
-    value: string;
-    setValue: (value: string) => void;
+    value?: string;
+    setValue: (value?: ItemType) => void;
 }) {
     const [open, setOpen] = React.useState(false);
 
@@ -870,7 +895,8 @@ function ItemTypeCombobox({
                                     key={type.value}
                                     value={type.value}
                                     onSelect={(currentValue) => {
-                                        setValue(currentValue === value ? "" : currentValue);
+                                        const newValue = currentValue === value ? undefined : currentValue as ItemType;
+                                        setValue(newValue);
                                         setOpen(false);
                                     }}
                                 >

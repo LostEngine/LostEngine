@@ -9,4 +9,4 @@ render(<>
         <Toaster/>
     </>,
     document.getElementById('app')!
-)
+);
