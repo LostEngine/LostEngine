@@ -10,6 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -372,12 +373,13 @@ public class ItemInjector {
         ItemStack dynamicMaterial;
         if (customBlock instanceof CustomBlock) {
             BlockState clientBlockState = ((CustomBlock) customBlock).getClientBlockState();
-            ItemStack itemStack = clientBlockState.getBlock().asItem().getDefaultInstance().copy();
+            dynamicMaterial = clientBlockState.getBlock().asItem().getDefaultInstance().copy();
+            for (TypedDataComponent<?> component : dynamicMaterial.getComponents()) dynamicMaterial.remove(component.type());
             Map<String, String> properties = blockStateToPropertyMap(clientBlockState);
-            itemStack.set(DataComponents.BLOCK_STATE, new BlockItemStateProperties(properties));
-            dynamicMaterial = itemStack;
+            dynamicMaterial.set(DataComponents.BLOCK_STATE, new BlockItemStateProperties(properties));
         } else {
             dynamicMaterial = Items.BARRIER.getDefaultInstance();
+            for (TypedDataComponent<?> component : dynamicMaterial.getComponents()) dynamicMaterial.remove(component.type());
         }
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
