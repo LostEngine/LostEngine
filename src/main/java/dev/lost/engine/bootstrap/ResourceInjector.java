@@ -142,85 +142,80 @@ public class ResourceInjector {
             Map<DataComponentType<?>, Object> components = new Object2ObjectOpenHashMap<>();
 
             applyComponents(context, itemSection, components);
+            switch (type) {
+                case "generic" -> ItemInjector.injectItem(key, components);
 
-            try {
-                switch (type) {
-                    case "generic" -> ItemInjector.injectItem(key, components);
+                case "sword" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 3.0F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.4F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    case "sword" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 3.0F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.4F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectSword(key, attackDamage, attackSpeed, material, components);
-                    }
-
-                    case "shovel" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 1.5F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, components);
-                    }
-
-                    case "pickaxe" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 1.0F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.8F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, components);
-                    }
-
-                    case "axe" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 5.0F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, components);
-                    }
-
-                    case "hoe" -> {
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", 0.0F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectHoe(key, attackSpeed, material, components);
-                    }
-
-                    case "armor" -> {
-                        String materialName = itemSection.getString("material", "IRON").toUpperCase(Locale.ROOT);
-                        ItemInjector.ArmorType armorType = switch (itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT)) {
-                            case "HELMET" -> ItemInjector.ArmorType.HELMET;
-                            case "CHESTPLATE" -> ItemInjector.ArmorType.CHESTPLATE;
-                            case "LEGGINGS" -> ItemInjector.ArmorType.LEGGINGS;
-                            case "BOOTS" -> ItemInjector.ArmorType.BOOTS;
-                            default ->
-                                    throw new IllegalStateException("Invalide armor type: " + itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT) + " for item " + key + " (HELMET, CHESTPLATE, LEGGINGS, or BOOTS)");
-                        };
-                        ArmorMaterial material = getOrThrow(armorMaterials, materialName, "Invalid armor material: " + materialName + " for item " + key);
-                        ItemInjector.injectArmor(key, material, armorType, components);
-                    }
-
-                    case "elytra" -> {
-                        int durability = itemSection.getInt("elytra.durability", 432);
-                        String repairItem = itemSection.getString("elytra.repair_item", null);
-                        ItemInjector.injectElytra(key, repairItem, durability, components);
-                    }
-
-                    case "trident" -> {
-                        int durability = itemSection.getInt("trident.durability", 250);
-                        float attackDamage = (float) itemSection.getDouble("trident.attack_damage", 8.0F);
-                        ItemInjector.injectTrident(key, durability, attackDamage, components);
-                    }
-
-                    default -> context.getLogger().warn("Unknown item type: {} for item: {}", type, key);
+                    ItemInjector.injectSword(key, attackDamage, attackSpeed, material, components);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to inject item: " + key, e);
+
+                case "shovel" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 1.5F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, components);
+                }
+
+                case "pickaxe" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 1.0F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.8F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, components);
+                }
+
+                case "axe" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 5.0F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, components);
+                }
+
+                case "hoe" -> {
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", 0.0F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectHoe(key, attackSpeed, material, components);
+                }
+
+                case "armor" -> {
+                    String materialName = itemSection.getString("material", "IRON").toUpperCase(Locale.ROOT);
+                    ItemInjector.ArmorType armorType = switch (itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT)) {
+                        case "HELMET" -> ItemInjector.ArmorType.HELMET;
+                        case "CHESTPLATE" -> ItemInjector.ArmorType.CHESTPLATE;
+                        case "LEGGINGS" -> ItemInjector.ArmorType.LEGGINGS;
+                        case "BOOTS" -> ItemInjector.ArmorType.BOOTS;
+                        default ->
+                                throw new IllegalStateException("Invalide armor type: " + itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT) + " for item " + key + " (HELMET, CHESTPLATE, LEGGINGS, or BOOTS)");
+                    };
+                    ArmorMaterial material = getOrThrow(armorMaterials, materialName, "Invalid armor material: " + materialName + " for item " + key);
+                    ItemInjector.injectArmor(key, material, armorType, components);
+                }
+
+                case "elytra" -> {
+                    int durability = itemSection.getInt("elytra.durability", 432);
+                    String repairItem = itemSection.getString("elytra.repair_item", null);
+                    ItemInjector.injectElytra(key, repairItem, durability, components);
+                }
+
+                case "trident" -> {
+                    int durability = itemSection.getInt("trident.durability", 250);
+                    float attackDamage = (float) itemSection.getDouble("trident.attack_damage", 8.0F);
+                    ItemInjector.injectTrident(key, durability, attackDamage, components);
+                }
+
+                default -> context.getLogger().warn("Unknown item type: {} for item: {}", type, key);
             }
         }
     }
@@ -363,23 +358,19 @@ public class ResourceInjector {
                 }
             }
             String type = blockSection.getString("type", "regular").toLowerCase();
-            try {
-                switch (type) {
-                    case "regular" -> BlockInjector.injectRegularBlock(
-                            key,
-                            BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.REGULAR),
-                            (float) blockSection.getDouble("destroy_time", 0F),
-                            (float) blockSection.getDouble("explosion_resistance", 0F),
-                            BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
-                    );
-                    case "tnt" -> BlockInjector.injectTNTBlock(
-                            key,
-                            BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.REGULAR),
-                            blockSection.getInt("explosion_power", 4)
-                    );
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to inject block: " + key, e);
+            switch (type) {
+                case "regular" -> BlockInjector.injectRegularBlock(
+                        key,
+                        BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.REGULAR),
+                        (float) blockSection.getDouble("destroy_time", 0F),
+                        (float) blockSection.getDouble("explosion_resistance", 0F),
+                        BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
+                );
+                case "tnt" -> BlockInjector.injectTNTBlock(
+                        key,
+                        BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.REGULAR),
+                        blockSection.getInt("explosion_power", 4)
+                );
             }
         }
     }

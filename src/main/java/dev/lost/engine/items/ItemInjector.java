@@ -68,7 +68,7 @@ public class ItemInjector {
             float attackSpeed,
             ToolMaterial material,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -94,7 +94,7 @@ public class ItemInjector {
             float attackSpeed,
             ToolMaterial material,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -120,7 +120,7 @@ public class ItemInjector {
             float attackSpeed,
             ToolMaterial material,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -146,7 +146,7 @@ public class ItemInjector {
             float attackSpeed,
             ToolMaterial material,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -171,7 +171,7 @@ public class ItemInjector {
             float attackSpeed,
             ToolMaterial material,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -194,7 +194,7 @@ public class ItemInjector {
     public static @NotNull Item injectItem(
             String name,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         Item.Properties properties = new Item.Properties();
         if (components != null) {
             for (Map.Entry<DataComponentType<?>, ?> component : components.entrySet()) {
@@ -216,7 +216,7 @@ public class ItemInjector {
             ArmorMaterial armorMaterial,
             ArmorType armorType,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -259,7 +259,7 @@ public class ItemInjector {
             @Nullable String repairItem,
             int durability,
             Map<DataComponentType<?>, Object> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -292,7 +292,7 @@ public class ItemInjector {
             int durability,
             float attackDamage,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {

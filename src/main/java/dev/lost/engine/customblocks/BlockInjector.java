@@ -31,7 +31,7 @@ public class BlockInjector {
             float destroyTime,
             float explosionResistance,
             @NotNull Minable minable
-    ) throws Exception {
+    ) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("lost_engine", id));
 
         BlockBehaviour.Properties properties = BlockBehaviour.Properties.of()
@@ -68,7 +68,7 @@ public class BlockInjector {
             String id,
             BlockState clientBlockState,
             float explosionPower
-    ) throws Exception {
+    ) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("lost_engine", id));
 
         BlockBehaviour.Properties properties = BlockBehaviour.Properties.of()
