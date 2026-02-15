@@ -1,8 +1,8 @@
 package dev.lost.engine.items;
 
 import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.bootstrap.LostEngineBootstrap;
-import dev.lost.engine.customblocks.customblocks.CustomBlock;
 import dev.lost.engine.items.customitems.*;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.Holder;

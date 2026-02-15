@@ -1,9 +1,9 @@
-package dev.lost.engine.customblocks;
+package dev.lost.engine.blocks;
 
 import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.engine.blocks.customblocks.RegularCustomBlock;
+import dev.lost.engine.blocks.customblocks.TNTCustomBlock;
 import dev.lost.engine.bootstrap.LostEngineBootstrap;
-import dev.lost.engine.customblocks.customblocks.RegularCustomBlock;
-import dev.lost.engine.customblocks.customblocks.TNTCustomBlock;
 import dev.lost.engine.items.ItemInjector;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
@@ -50,7 +50,8 @@ public class BlockInjector {
         REGISTRY.createIntrusiveHolder(custom);
         REGISTRY.register(key, custom, RegistrationInfo.BUILT_IN);
 
-        Block.BLOCK_STATE_REGISTRY.add(custom.defaultBlockState());
+        for (BlockState blockstate: custom.getStateDefinition().getPossibleStates())
+            Block.BLOCK_STATE_REGISTRY.add(blockstate);
 
         LostEngineBootstrap.materialManager.setMaterial(custom, "COBBLESTONE");
 
@@ -84,7 +85,8 @@ public class BlockInjector {
         REGISTRY.createIntrusiveHolder(custom);
         REGISTRY.register(key, custom, RegistrationInfo.BUILT_IN);
 
-        Block.BLOCK_STATE_REGISTRY.add(custom.defaultBlockState());
+        for (BlockState blockstate: custom.getStateDefinition().getPossibleStates())
+            Block.BLOCK_STATE_REGISTRY.add(blockstate);
 
         LostEngineBootstrap.materialManager.setMaterial(custom, "TNT");
 

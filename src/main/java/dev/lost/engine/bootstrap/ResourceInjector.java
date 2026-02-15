@@ -2,11 +2,11 @@ package dev.lost.engine.bootstrap;
 
 import com.google.common.collect.Maps;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.engine.blocks.BlockInjector;
+import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.bootstrap.components.*;
 import dev.lost.engine.bootstrap.components.annotations.Parameter;
 import dev.lost.engine.bootstrap.components.annotations.Property;
-import dev.lost.engine.customblocks.BlockInjector;
-import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ReflectionUtils;
