@@ -7,7 +7,6 @@ pack_hosting:
   external_host:
     enabled: false
     url: ""
-geyser_compatibility: false
 resource_pack:
   file_name: "resource-pack"
   glyphs:
@@ -16,3 +15,6 @@ resource_pack:
       # from -1023 to 1023 will use 20 characters (6400 characters available in total)
       from: -1023
       to: 1023
+
+inject_custom_materials: true
+geyser_compatibility: false

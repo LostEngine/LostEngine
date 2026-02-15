@@ -1,24 +1,22 @@
 package dev.lost.engine.customblocks;
 
 import dev.lost.engine.annotations.CanBreakOnUpdates;
-import dev.lost.engine.assetsgenerators.DataPackGenerator;
+import dev.lost.engine.bootstrap.LostEngineBootstrap;
 import dev.lost.engine.customblocks.customblocks.RegularCustomBlock;
 import dev.lost.engine.customblocks.customblocks.TNTCustomBlock;
 import dev.lost.engine.items.ItemInjector;
-import dev.lost.engine.utils.ReflectionUtils;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
-import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 
 @CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
@@ -30,7 +28,6 @@ public class BlockInjector {
     public static void injectRegularBlock(
             String id,
             BlockState clientBlockState,
-            DataPackGenerator dataPackGenerator,
             float destroyTime,
             float explosionResistance,
             @NotNull Minable minable
@@ -55,16 +52,15 @@ public class BlockInjector {
 
         Block.BLOCK_STATE_REGISTRY.add(custom.defaultBlockState());
 
-        // Use a random material to fix some bugs with Bukkit and plugins
-        ReflectionUtils.setBlockMaterial(custom, Material.COBBLESTONE);
+        LostEngineBootstrap.materialManager.setMaterial(custom, "COBBLESTONE");
 
         Item item = ItemInjector.injectBlockItem(id, custom);
 
         switch (minable) {
-            case AXE -> dataPackGenerator.addAxeMinable(key.identifier().toString());
-            case HOE -> dataPackGenerator.addHoeMinable(key.identifier().toString());
-            case PICKAXE -> dataPackGenerator.addPickaxeMinable(key.identifier().toString());
-            case SHOVEL -> dataPackGenerator.addShovelMinable(key.identifier().toString());
+            case AXE -> LostEngineBootstrap.dataPackGenerator.addAxeMinable(key.identifier().toString());
+            case HOE -> LostEngineBootstrap.dataPackGenerator.addHoeMinable(key.identifier().toString());
+            case PICKAXE -> LostEngineBootstrap.dataPackGenerator.addPickaxeMinable(key.identifier().toString());
+            case SHOVEL -> LostEngineBootstrap.dataPackGenerator.addShovelMinable(key.identifier().toString());
         }
     }
 
@@ -90,7 +86,7 @@ public class BlockInjector {
 
         Block.BLOCK_STATE_REGISTRY.add(custom.defaultBlockState());
 
-        ReflectionUtils.setBlockMaterial(custom, Material.TNT);
+        LostEngineBootstrap.materialManager.setMaterial(custom, "TNT");
 
         Item item = ItemInjector.injectBlockItem(id, custom);
     }
