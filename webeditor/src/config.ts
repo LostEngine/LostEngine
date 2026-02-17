@@ -56,10 +56,11 @@ export type Item = {
     name?: Record<string, string>; // locale: display name (ex: en_US:Iron Sword)
 }
 
-export type ItemType = "generic" | "sword" | "shovel" | "pickaxe" | "axe" | "hoe" | "armor" | "elytra" | "trident";
+export const ITEM_TYPES = ["generic", "sword", "shovel", "pickaxe", "axe", "hoe", "armor", "elytra", "trident"] as const;
+export type ItemType = (typeof ITEM_TYPES)[number];
 
 export type Block = {
-    type?: "regular" | "tnt";
+    type?: BlockType;
     drops?: {
         type?: "self" | "ore";
         // Only for ore
@@ -80,6 +81,9 @@ export type Block = {
     texture?: string;
     name?: Record<string, string>; // locale: display name (ex: en_US:Note Block)
 }
+
+export const BLOCK_TYPES = ["regular", "tnt"] as const;
+export type BlockType = (typeof BLOCK_TYPES)[number];
 
 export type Material = {
     enchantment_value?: number;

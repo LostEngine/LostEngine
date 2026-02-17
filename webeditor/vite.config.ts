@@ -10,18 +10,18 @@ export default defineConfig({
         terserOptions: {
             compress: {
                 drop_console: true,
-                drop_debugger: true,
+                passes: 3,
+                unsafe: true,
+                pure_getters: true,
             },
-            mangle: true,
-            format: {
-                comments: false,
-            },
-            toplevel: true,
         },
+        reportCompressedSize: false,
     },
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),
+            "react": "preact/compat",
+            "react-dom": "preact/compat",
         },
     },
 })
