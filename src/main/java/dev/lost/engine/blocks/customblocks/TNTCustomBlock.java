@@ -1,4 +1,4 @@
-package dev.lost.engine.customblocks.customblocks;
+package dev.lost.engine.blocks.customblocks;
 
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
@@ -37,6 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.function.BooleanSupplier;
 
+@SuppressWarnings("JavadocReference")
 public class TNTCustomBlock extends Block implements CustomBlock {
     public static final BooleanProperty UNSTABLE = BlockStateProperties.UNSTABLE;
 
@@ -47,8 +48,8 @@ public class TNTCustomBlock extends Block implements CustomBlock {
 
     public TNTCustomBlock(Properties properties, BlockState clientBlockState, float explosionPower) {
         super(properties);
-        this.clientBlockState = clientBlockState;
         this.registerDefaultState(this.defaultBlockState().setValue(UNSTABLE, false));
+        this.clientBlockState = clientBlockState;
         this.explosionPower = explosionPower;
     }
 
@@ -142,7 +143,7 @@ public class TNTCustomBlock extends Block implements CustomBlock {
             return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         } else {
             if (prime(level, pos, player, () -> CraftEventFactory.callTNTPrimeEvent(level, pos, TNTPrimeEvent.PrimeCause.PLAYER, player, null))) {
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 11);
+                level.setBlock(pos, Blocks.AIR.defaultBlockState(), UPDATE_NEIGHBORS | UPDATE_CLIENTS | UPDATE_IMMEDIATE);
                 Item item = stack.getItem();
                 if (stack.is(Items.FLINT_AND_STEEL)) {
                     stack.hurtAndBreak(1, player, hand.asEquipmentSlot());
