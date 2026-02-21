@@ -7,8 +7,6 @@ import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.bootstrap.components.*;
 import dev.lost.engine.bootstrap.components.annotations.Parameter;
 import dev.lost.engine.bootstrap.components.annotations.Property;
-import dev.lost.engine.customblocks.BlockInjector;
-import dev.lost.engine.customblocks.BlockStateProvider;
 import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ReflectionUtils;
@@ -363,9 +361,9 @@ public class ResourceInjector {
             }
             String type = blockSection.getString("type", "regular").toLowerCase();
             String registry = blockSection.getString("registry", "wood");
-            dev.lost.engine.customblocks.BlockStateProvider.BlockStateType blockStateType = FastEnum.getOrElseGet(
+            BlockStateProvider.BlockStateType blockStateType = FastEnum.getOrElseGet(
                     registry,
-                    dev.lost.engine.customblocks.BlockStateProvider.BlockStateType.class,
+                    BlockStateProvider.BlockStateType.class,
                     () -> {
                         throw new IllegalStateException(
                                 "Unknown registry type: " +
@@ -373,7 +371,7 @@ public class ResourceInjector {
                                         " for block: " +
                                         key +
                                         " possible options: " +
-                                        Arrays.stream(dev.lost.engine.customblocks.BlockStateProvider.BlockStateType.values()).map(Enum::name)
+                                        Arrays.stream(BlockStateProvider.BlockStateType.values()).map(Enum::name)
                         );
                     }
             );
