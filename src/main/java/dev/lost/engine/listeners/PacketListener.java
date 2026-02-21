@@ -12,7 +12,7 @@ import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.entities.CustomThrownTrident;
 import dev.lost.engine.items.customitems.CustomItem;
-import dev.lost.engine.utils.FloodgateUtils;
+import dev.lost.engine.utils.BedrockUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
 import io.netty.buffer.ByteBuf;
@@ -126,7 +126,7 @@ public class PacketListener {
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
             if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
-                return isNotBedrockClient = !FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
+                return isNotBedrockClient = !BedrockUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
             }
             return true;
         }
@@ -239,7 +239,7 @@ public class PacketListener {
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
             if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
-                isBedrockClient = FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
+                isBedrockClient = BedrockUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
                 if (isBedrockClient) {
                     LostEngine.logger().info("Bedrock client detected: {}", serverCommonPacketListener.getOwner().name());
                 }
