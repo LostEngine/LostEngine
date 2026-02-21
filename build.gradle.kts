@@ -40,6 +40,7 @@ dependencies {
 
     implementation(project(":furnace"))
     implementation("dev.misieur:fast:1.0.1")
+    implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
 
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
 }
@@ -75,7 +76,7 @@ val installNpm by tasks.registering(NpmTask::class) {
 }
 
 tasks.processResources {
-    dependsOn(buildNpm)
+    //dependsOn(buildNpm)
     from("webeditor/dist") {
         include("*.html")
         into("generated")
@@ -91,5 +92,4 @@ tasks.processResources {
 
 tasks.shadowJar {
     archiveClassifier.set("")
-    minimize()
 }

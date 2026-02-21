@@ -1,9 +1,8 @@
 package dev.lost.engine;
 
 import dev.lost.engine.assetsgenerators.LostEngineMappingGenerator;
-import dev.lost.engine.commands.EditorCommand;
 import dev.lost.engine.commands.GiveCommand;
-import dev.lost.engine.commands.ReloadCommand;
+import dev.lost.engine.commands.LostEngineCommand;
 import dev.lost.engine.commands.SetBlockCommand;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.listeners.PacketListener;
@@ -130,11 +129,10 @@ public final class LostEngine extends JavaPlugin {
     @Override
     public void onEnable() {
         // Commands
-        registerCommand("lostenginereload", List.of("lereload","ler") , new ReloadCommand());
-        registerCommand("editor", List.of("webeditor"), new EditorCommand());
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
             commands.registrar().register(GiveCommand.getCommand());
             commands.registrar().register(SetBlockCommand.getCommand());
+            commands.registrar().register(LostEngineCommand.getCommand(), List.of("le"));
         });
 
         // Listeners

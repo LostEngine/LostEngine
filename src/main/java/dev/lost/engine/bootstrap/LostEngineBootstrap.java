@@ -4,11 +4,11 @@ import dev.lost.engine.LostEngine;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
 import dev.lost.engine.utils.TimeUtils;
+import io.papermc.paper.ServerBuildInfo;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import io.papermc.paper.plugin.bootstrap.PluginBootstrap;
 import io.papermc.paper.plugin.bootstrap.PluginProviderContext;
-import net.minecraft.SharedConstants;
-import org.bukkit.craftbukkit.util.CraftMagicNumbers;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,10 +23,14 @@ import static dev.lost.engine.bootstrap.ResourceInjector.injectResources;
 @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // Have to update this class every new Minecraft version
 @SuppressWarnings("UnstableApiUsage")
 public class LostEngineBootstrap implements PluginBootstrap {
+
+    public static DataPackGenerator dataPackGenerator;
+    public static MaterialManager materialManager;
+
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {
         try {
-            String versionId = SharedConstants.getCurrentVersion().id();
+            String versionId = ServerBuildInfo.buildInfo().minecraftVersionId();
             if (!versionId.equals("1.21.11")) {
                 context.getLogger().error("This version of LostEngine only supports Minecraft/Paper 1.21.11, detected version: {}", versionId);
                 stopServer(context);
@@ -35,7 +39,6 @@ public class LostEngineBootstrap implements PluginBootstrap {
             long startTime = System.nanoTime();
             Objects.requireNonNull(net.minecraft.world.level.block.Blocks.AIR);
             Objects.requireNonNull(net.minecraft.world.item.Items.AIR);
-            Objects.requireNonNull(CraftMagicNumbers.INSTANCE);
             long elapsedNanos = System.nanoTime() - startTime;
 
             // This is a personalized version of Nancyj-Improved
@@ -51,26 +54,52 @@ public class LostEngineBootstrap implements PluginBootstrap {
                                                                                d8888P""", TimeUtils.formatNanos(elapsedNanos));
             context.getLogger().info("Start injecting custom items...");
             startTime = System.nanoTime();
-            DataPackGenerator dataPackGenerator = new DataPackGenerator();
-            injectResources(context, dataPackGenerator);
+            boolean customMaterialEnabled = false;
+            readConfig: {
+                File file = context.getDataDirectory().resolve("config.yml").toFile();
+                if (!file.exists()) break readConfig;
+                YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+                if (!config.contains("inject_custom_materials")) {
+                    config.set("inject_custom_materials", true);
+                    customMaterialEnabled = true;
+                    break readConfig;
+                }
+                customMaterialEnabled = config.getBoolean("inject_custom_materials", false);
+            }
+
+            dataPackGenerator = new DataPackGenerator();
+            materialManager = new MaterialManager(customMaterialEnabled);
+            injectResources(context);
             elapsedNanos = System.nanoTime() - startTime;
             context.getLogger().info("\u001b[1A\u001b[2KFinished injecting custom items! ({})", TimeUtils.formatNanos(elapsedNanos));
             context.getLogger().info("Start building the data pack...");
             startTime = System.nanoTime();
 
             // Load server properties to get the world name
-            Properties props = new Properties();
-            String levelName;
-            try (FileInputStream fis = new FileInputStream("server.properties")) {
-                props.load(fis);
-                levelName = props.getProperty("level-name");
-            } catch (IOException e) {
-                context.getLogger().warn("Could not load server.properties, it will use the folder 'world' for the data pack.");
-                levelName = "world";
+
+            String levelName = "world";
+            readServerProperties: {
+                Properties props = new Properties();
+                try (FileInputStream fis = new FileInputStream("server.properties")) {
+                    props.load(fis);
+                    String name = props.getProperty("level-name");
+                    if (name == null) {
+                        context.getLogger().warn("Level name not found in server.properties!");
+                        break readServerProperties;
+                    }
+                    levelName = name;
+                } catch (IOException e) {
+                    context.getLogger().warn("Could not load server.properties, will use the folder 'world' for the data pack.");
+                }
             }
+
             dataPackGenerator.build(new File(levelName + File.separator + "datapacks" + File.separator + "lost_engine_generated"));
             elapsedNanos = System.nanoTime() - startTime;
             context.getLogger().info("\u001b[1A\u001b[2KFinished building the data pack! ({})", TimeUtils.formatNanos(elapsedNanos));
+            if (customMaterialEnabled) {
+                context.getLogger().info("Custom material enabled, injecting {} Bukkit materials", materialManager.getSize());
+                materialManager.inject(context.getPluginSource().toAbsolutePath().toString());
+            }
         } catch (Exception | LinkageError e) {
             context.getLogger().error("Failed to inject custom resources are you using Minecraft/Paper 1.21.11?", e);
             stopServer(context);

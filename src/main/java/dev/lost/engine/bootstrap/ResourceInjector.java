@@ -2,7 +2,8 @@ package dev.lost.engine.bootstrap;
 
 import com.google.common.collect.Maps;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
-import dev.lost.engine.assetsgenerators.DataPackGenerator;
+import dev.lost.engine.blocks.BlockInjector;
+import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.bootstrap.components.*;
 import dev.lost.engine.bootstrap.components.annotations.Parameter;
 import dev.lost.engine.bootstrap.components.annotations.Property;
@@ -73,20 +74,20 @@ public class ResourceInjector {
             new UseCooldownProperty()
     );
 
-    public static void injectResources(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator) throws Exception {
+    public static void injectResources(@NotNull BootstrapContext context) throws Exception {
         File resourceFolder = new File(context.getDataDirectory().toFile(), "resources");
         if (!resourceFolder.exists())
             FastFiles.extractFolderFromJar("resources", resourceFolder.toPath());
 
         List<FileUtils.ItemConfig> configs = FileUtils.yamlFiles(resourceFolder);
         for (FileUtils.ItemConfig config : configs) {
-            injectMaterials(dataPackGenerator, config.config());
-            injectItems(context, dataPackGenerator, config.config());
-            injectBlocks(context, dataPackGenerator, config.config());
+            injectMaterials(config.config());
+            injectItems(context, config.config());
+            injectBlocks(context, config.config());
         }
     }
 
-    private static void injectMaterials(DataPackGenerator dataPackGenerator, @NotNull YamlConfiguration config) {
+    private static void injectMaterials(@NotNull YamlConfiguration config) {
         ConfigurationSection materialsSection = config.getConfigurationSection("materials");
         if (materialsSection == null)
             return;
@@ -100,7 +101,7 @@ public class ResourceInjector {
             String repairItem = materialSection.getString("repair_item", null);
             TagKey<Item> repairItems = TagKey.create(Registries.ITEM, Identifier.parse(key.toLowerCase() + "_repair_items"));
             if (repairItem != null)
-                dataPackGenerator.addRepairItems(repairItems.location().getPath(), repairItem);
+                LostEngineBootstrap.dataPackGenerator.addRepairItems(repairItems.location().getPath(), repairItem);
 
             ConfigurationSection toolSection = materialSection.getConfigurationSection("tool");
             if (toolSection != null) {
@@ -131,7 +132,7 @@ public class ResourceInjector {
         }
     }
 
-    private static void injectItems(@NotNull BootstrapContext context, DataPackGenerator dataPackGenerator, @NotNull YamlConfiguration config) {
+    private static void injectItems(@NotNull BootstrapContext context, @NotNull YamlConfiguration config) {
         ConfigurationSection itemsSection = config.getConfigurationSection("items");
         if (itemsSection == null)
             return;
@@ -145,85 +146,80 @@ public class ResourceInjector {
             Map<DataComponentType<?>, Object> components = new Object2ObjectOpenHashMap<>();
 
             applyComponents(context, itemSection, components);
+            switch (type) {
+                case "generic" -> ItemInjector.injectItem(key, components);
 
-            try {
-                switch (type) {
-                    case "generic" -> ItemInjector.injectItem(key, components);
+                case "sword" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 3.0F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.4F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    case "sword" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 3.0F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.4F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectSword(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
-                    }
-
-                    case "shovel" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 1.5F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
-                    }
-
-                    case "pickaxe" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 1.0F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.8F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
-                    }
-
-                    case "axe" -> {
-                        float attackDamage = (float) itemSection.getDouble("attack_damage", 5.0F);
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, dataPackGenerator, components);
-                    }
-
-                    case "hoe" -> {
-                        float attackSpeed = (float) itemSection.getDouble("attack_speed", 0.0F);
-                        String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
-                        ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
-
-                        ItemInjector.injectHoe(key, attackSpeed, material, dataPackGenerator, components);
-                    }
-
-                    case "armor" -> {
-                        String materialName = itemSection.getString("material", "IRON").toUpperCase(Locale.ROOT);
-                        ItemInjector.ArmorType armorType = switch (itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT)) {
-                            case "HELMET" -> ItemInjector.ArmorType.HELMET;
-                            case "CHESTPLATE" -> ItemInjector.ArmorType.CHESTPLATE;
-                            case "LEGGINGS" -> ItemInjector.ArmorType.LEGGINGS;
-                            case "BOOTS" -> ItemInjector.ArmorType.BOOTS;
-                            default ->
-                                    throw new IllegalStateException("Invalide armor type: " + itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT) + " for item " + key + " (HELMET, CHESTPLATE, LEGGINGS, or BOOTS)");
-                        };
-                        ArmorMaterial material = getOrThrow(armorMaterials, materialName, "Invalid armor material: " + materialName + " for item " + key);
-                        ItemInjector.injectArmor(key, material, armorType, dataPackGenerator, components);
-                    }
-
-                    case "elytra" -> {
-                        int durability = itemSection.getInt("elytra.durability", 432);
-                        String repairItem = itemSection.getString("elytra.repair_item", null);
-                        ItemInjector.injectElytra(key, repairItem, durability, components);
-                    }
-
-                    case "trident" -> {
-                        int durability = itemSection.getInt("trident.durability", 250);
-                        float attackDamage = (float) itemSection.getDouble("trident.attack_damage", 8.0F);
-                        ItemInjector.injectTrident(key, durability, attackDamage, dataPackGenerator, components);
-                    }
-
-                    default -> context.getLogger().warn("Unknown item type: {} for item: {}", type, key);
+                    ItemInjector.injectSword(key, attackDamage, attackSpeed, material, components);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to inject item: " + key, e);
+
+                case "shovel" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 1.5F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, components);
+                }
+
+                case "pickaxe" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 1.0F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -2.8F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, components);
+                }
+
+                case "axe" -> {
+                    float attackDamage = (float) itemSection.getDouble("attack_damage", 5.0F);
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", -3.0F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, components);
+                }
+
+                case "hoe" -> {
+                    float attackSpeed = (float) itemSection.getDouble("attack_speed", 0.0F);
+                    String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
+                    ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
+
+                    ItemInjector.injectHoe(key, attackSpeed, material, components);
+                }
+
+                case "armor" -> {
+                    String materialName = itemSection.getString("material", "IRON").toUpperCase(Locale.ROOT);
+                    ItemInjector.ArmorType armorType = switch (itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT)) {
+                        case "HELMET" -> ItemInjector.ArmorType.HELMET;
+                        case "CHESTPLATE" -> ItemInjector.ArmorType.CHESTPLATE;
+                        case "LEGGINGS" -> ItemInjector.ArmorType.LEGGINGS;
+                        case "BOOTS" -> ItemInjector.ArmorType.BOOTS;
+                        default ->
+                                throw new IllegalStateException("Invalide armor type: " + itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT) + " for item " + key + " (HELMET, CHESTPLATE, LEGGINGS, or BOOTS)");
+                    };
+                    ArmorMaterial material = getOrThrow(armorMaterials, materialName, "Invalid armor material: " + materialName + " for item " + key);
+                    ItemInjector.injectArmor(key, material, armorType, components);
+                }
+
+                case "elytra" -> {
+                    int durability = itemSection.getInt("elytra.durability", 432);
+                    String repairItem = itemSection.getString("elytra.repair_item", null);
+                    ItemInjector.injectElytra(key, repairItem, durability, components);
+                }
+
+                case "trident" -> {
+                    int durability = itemSection.getInt("trident.durability", 250);
+                    float attackDamage = (float) itemSection.getDouble("trident.attack_damage", 8.0F);
+                    ItemInjector.injectTrident(key, durability, attackDamage, components);
+                }
+
+                default -> context.getLogger().warn("Unknown item type: {} for item: {}", type, key);
             }
         }
     }
@@ -328,7 +324,7 @@ public class ResourceInjector {
         return value;
     }
 
-    private static void injectBlocks(@NotNull BootstrapContext context, @NotNull DataPackGenerator dataPackGenerator, @NotNull YamlConfiguration config) {
+    private static void injectBlocks(@NotNull BootstrapContext context, @NotNull YamlConfiguration config) {
         ConfigurationSection blocksSection = config.getConfigurationSection("blocks");
         if (blocksSection == null) return;
 
@@ -337,11 +333,11 @@ public class ResourceInjector {
             if (blockSection == null) continue;
             String requiredMaterial = blockSection.getString("required_material", "NONE").toUpperCase(Locale.ROOT);
             switch (requiredMaterial) {
-                case "WOOD" -> dataPackGenerator.needsWoodenTool("lost_engine:" + key);
-                case "STONE" -> dataPackGenerator.needsStoneTool("lost_engine:" + key);
-                case "IRON" -> dataPackGenerator.needsIronTool("lost_engine:" + key);
-                case "DIAMOND" -> dataPackGenerator.needsDiamondTool("lost_engine:" + key);
-                case "NETHERITE" -> dataPackGenerator.needsNetheriteTool("lost_engine:" + key);
+                case "WOOD" -> LostEngineBootstrap.dataPackGenerator.needsWoodenTool("lost_engine:" + key);
+                case "STONE" -> LostEngineBootstrap.dataPackGenerator.needsStoneTool("lost_engine:" + key);
+                case "IRON" -> LostEngineBootstrap.dataPackGenerator.needsIronTool("lost_engine:" + key);
+                case "DIAMOND" -> LostEngineBootstrap.dataPackGenerator.needsDiamondTool("lost_engine:" + key);
+                case "NETHERITE" -> LostEngineBootstrap.dataPackGenerator.needsNetheriteTool("lost_engine:" + key);
                 case "NONE" -> {
                     // Nothing to do
                 }
@@ -353,8 +349,8 @@ public class ResourceInjector {
                 String dropType = dropsSection.getString("type", null);
                 if (dropType != null) {
                     switch (dropType.toLowerCase()) {
-                        case "self" -> dataPackGenerator.simpleLootTable(key, "lost_engine:" + key);
-                        case "ore" -> dataPackGenerator.oreLootTable(
+                        case "self" -> LostEngineBootstrap.dataPackGenerator.simpleLootTable(key, "lost_engine:" + key);
+                        case "ore" -> LostEngineBootstrap.dataPackGenerator.oreLootTable(
                                 key,
                                 dropsSection.getString("item", "minecraft:stick"),
                                 "lost_engine:" + key,
@@ -367,9 +363,9 @@ public class ResourceInjector {
             }
             String type = blockSection.getString("type", "regular").toLowerCase();
             String registry = blockSection.getString("registry", "wood");
-            BlockStateProvider.BlockStateType blockStateType = FastEnum.getOrElseGet(
+            dev.lost.engine.customblocks.BlockStateProvider.BlockStateType blockStateType = FastEnum.getOrElseGet(
                     registry,
-                    BlockStateProvider.BlockStateType.class,
+                    dev.lost.engine.customblocks.BlockStateProvider.BlockStateType.class,
                     () -> {
                         throw new IllegalStateException(
                                 "Unknown registry type: " +
@@ -377,7 +373,7 @@ public class ResourceInjector {
                                         " for block: " +
                                         key +
                                         " possible options: " +
-                                        Arrays.stream(BlockStateProvider.BlockStateType.values()).map(Enum::name)
+                                        Arrays.stream(dev.lost.engine.customblocks.BlockStateProvider.BlockStateType.values()).map(Enum::name)
                         );
                     }
             );
@@ -386,7 +382,6 @@ public class ResourceInjector {
                     case "regular" -> BlockInjector.injectRegularBlock(
                             key,
                             BlockStateProvider.getNextBlockState(blockStateType),
-                            dataPackGenerator,
                             (float) blockSection.getDouble("destroy_time", 0F),
                             (float) blockSection.getDouble("explosion_resistance", 0F),
                             BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
