@@ -75,6 +75,7 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.dimension.DimensionType;
 import org.jetbrains.annotations.NotNull;
@@ -377,7 +378,8 @@ public class PacketListener {
             case ClientboundBlockUpdatePacket packet -> {
                 Optional<BlockState> newBlockState = getClientBlockState(packet.blockState);
                 if (newBlockState.isPresent()) {
-                    handler.setCustomBlockState(packet.getPos().asLong(), packet.blockState);
+                    if (packet.blockState.getBlock() instanceof CustomBlock)
+                        handler.setCustomBlockState(packet.getPos().asLong(), packet.blockState);
                     return new ClientboundBlockUpdatePacket(packet.getPos(), newBlockState.get());
                 } else {
                     handler.removeCachedBlockStates(packet.getPos().asLong());
@@ -394,7 +396,8 @@ public class PacketListener {
                     for (int i = 0; i < blockStates.length; i++) {
                         Optional<BlockState> newBlockState = getClientBlockState(blockStates[i]);
                         if (newBlockState.isPresent()) {
-                            handler.setCustomBlockState(sectionPos.relativeToBlockPos(positions[i]).asLong(), blockStates[i]);
+                            if (blockStates[i].getBlock() instanceof CustomBlock)
+                                handler.setCustomBlockState(sectionPos.relativeToBlockPos(positions[i]).asLong(), blockStates[i]);
                             blockStates[i] = newBlockState.get();
                         } else {
                             handler.removeCachedBlockStates(sectionPos.relativeToBlockPos(positions[i]).asLong());
@@ -755,7 +758,8 @@ public class PacketListener {
                                 section.setBlockState(x, y, z, clientBlockState.get());
                                 requiresEdit = true;
                             }
-                            customBlockStateCache.put(blockPosLong, Block.getId(blockState));
+                            if (blockState.getBlock() instanceof CustomBlock)
+                                customBlockStateCache.put(blockPosLong, Block.getId(blockState));
                         } else {
                             customBlockStateCache.remove(blockPosLong);
                         }
@@ -963,12 +967,14 @@ public class PacketListener {
         Block block = blockState.getBlock();
         if (block instanceof CustomBlock customBlock) {
             return Optional.of(customBlock.getClientBlockState());
-        } else if (block == Blocks.BROWN_MUSHROOM_BLOCK) {
-            return Optional.of(BlockStateProvider.BROWN_MUSHROOM_BLOCKSTATE);
-        } else if (block == Blocks.RED_MUSHROOM_BLOCK) {
-            return Optional.of(BlockStateProvider.RED_MUSHROOM_BLOCKSTATE);
-        } else if (block == Blocks.MUSHROOM_STEM) {
-            return Optional.of(BlockStateProvider.MUSHROOM_STEM_BLOCKSTATE);
+        } else if (block == Blocks.BROWN_MUSHROOM_BLOCK || block == Blocks.RED_MUSHROOM_BLOCK || block == Blocks.MUSHROOM_STEM) {
+            return Optional.of(BlockStateProvider.getMushroomBlockState(blockState, 63));
+        } else if (block == Blocks.DROPPER || block == Blocks.DISPENSER) {
+            return Optional.of(blockState.setValue(BlockStateProperties.TRIGGERED, false));
+        } else if (block == Blocks.PALE_OAK_LEAVES) {
+            return Optional.of(BlockStateProvider.getLeavesBlockState(blockState, 13));
+        } else if (block == Blocks.TARGET) {
+            return Optional.of(BlockStateProvider.getTargetBlockState(blockState, 0));
         }
         return Optional.empty();
     }
@@ -977,8 +983,7 @@ public class PacketListener {
      * This is a simplified version of {@link  BlockState#getDestroyProgress}
      */
     public static float getDestroySpeed(@NotNull BlockState state, ItemStack item) {
-        //noinspection DataFlowIssue -- This is just a simple getter lol it doesn't use the parameters
-        float destroySpeed = state.getDestroySpeed(null, null);
+        float destroySpeed = state.destroySpeed;
         if (destroySpeed == -1.0F) {
             return 0.0F;
         } else {
