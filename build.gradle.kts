@@ -76,7 +76,7 @@ val installNpm by tasks.registering(NpmTask::class) {
 }
 
 tasks.processResources {
-    //dependsOn(buildNpm)
+    dependsOn(buildNpm)
     from("webeditor/dist") {
         include("*.html")
         into("generated")
