@@ -34,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @SuppressWarnings("PatternValidation") // Stupid thing I don't even know why it's here
@@ -252,6 +253,9 @@ public class ResourcePackBuilder {
                                 Block block = BuiltInRegistries.BLOCK.getValue(resourceLocation);
                                 if (block instanceof CustomBlock customBlock) {
                                     blockStateGenerator.addBlockState(customBlock.getClientBlockState(), "lost_engine:block/" + key);
+                                    Optional.ofNullable(customBlock.getNotClickableBlockState()).ifPresent(blockState ->
+                                            blockStateGenerator.addBlockState(blockState, "lost_engine:block/" + key)
+                                    );
                                 }
                             }
                         }

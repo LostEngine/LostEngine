@@ -20,12 +20,10 @@ The build will be located in `build/libs/`
     - [X] Elytra
     - [X] Trident
     - [ ] Bows/Crossbows
-- [ ] Custom Blocks
+- [X] Custom Blocks
     - [X] Dynamic block hardness
     - [X] Drops/Required tool
-    - [ ] Custom sounds
-    - [ ] Transparent blocks
-    - [ ] Lights/Redstone
+    - [X] Custom sounds (using blocks that already have it)
 - [ ] Web editor
     - [X] Upload/Download/Create files
     - [X] View/Edit files

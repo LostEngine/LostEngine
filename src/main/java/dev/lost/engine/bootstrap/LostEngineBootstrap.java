@@ -26,6 +26,7 @@ public class LostEngineBootstrap implements PluginBootstrap {
 
     public static DataPackGenerator dataPackGenerator;
     public static MaterialManager materialManager;
+    public static boolean replaceClickableBlocks;
 
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {
@@ -59,12 +60,8 @@ public class LostEngineBootstrap implements PluginBootstrap {
                 File file = context.getDataDirectory().resolve("config.yml").toFile();
                 if (!file.exists()) break readConfig;
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-                if (!config.contains("inject_custom_materials")) {
-                    config.set("inject_custom_materials", true);
-                    customMaterialEnabled = true;
-                    break readConfig;
-                }
-                customMaterialEnabled = config.getBoolean("inject_custom_materials", false);
+                customMaterialEnabled = config.getBoolean("inject_custom_materials", true);
+                replaceClickableBlocks = config.getBoolean("custom_blocks.replace_clickable_blocks", true);
             }
 
             dataPackGenerator = new DataPackGenerator();
