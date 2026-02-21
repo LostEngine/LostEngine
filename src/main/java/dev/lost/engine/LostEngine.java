@@ -6,7 +6,6 @@ import dev.lost.engine.commands.LostEngineCommand;
 import dev.lost.engine.commands.SetBlockCommand;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.listeners.PacketListener;
-import dev.lost.engine.utils.FloodgateUtils;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
@@ -137,12 +136,6 @@ public final class LostEngine extends JavaPlugin {
 
         // Listeners
         PacketListener.inject();
-
-        if (getConfig().getBoolean("geyser_compatibility", false)) {
-            if (!FloodgateUtils.IS_FLOODGATE_ENABLED) {
-                logger().error("Geyser compatibility is enabled but Floodgate was not detected on the server, consider installing Floodgate for it to work.");
-            }
-        }
     }
 
     @Override

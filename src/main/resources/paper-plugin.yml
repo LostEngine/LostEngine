@@ -15,4 +15,4 @@ dependencies:
     Geyser-Spigot:
       load: AFTER
       required: false
-      join-classpath: false
+      join-classpath: true
