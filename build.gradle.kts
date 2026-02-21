@@ -1,4 +1,5 @@
 import com.github.gradle.node.npm.task.NpmTask
+import org.apache.tools.ant.filters.ReplaceTokens
 
 plugins {
     java
@@ -10,7 +11,7 @@ plugins {
 }
 
 group = "dev.misieur"
-version = "0.0.1-mc1.21.11"
+version = "0.0.4-mc1.21.11"
 
 repositories {
     mavenCentral()
@@ -38,7 +39,8 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
     implementation(project(":furnace"))
-    compileOnly("dev.misieur:fast:1.0-SNAPSHOT")
+    implementation("dev.misieur:fast:1.0.1")
+    implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
 
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
 }
@@ -74,24 +76,20 @@ val installNpm by tasks.registering(NpmTask::class) {
 }
 
 tasks.processResources {
-    dependsOn(buildNpm)
+    //dependsOn(buildNpm)
     from("webeditor/dist") {
         include("*.html")
         into("generated")
     }
+    from("LICENSE.MD") {
+        into("META-INF")
+    }
 
-    val props = mapOf("version" to project.version)
-    inputs.properties(props)
-    filteringCharset = "UTF-8"
     filesMatching("paper-plugin.yml") {
-        expand(props)
+        filter<ReplaceTokens>("tokens" to mapOf("version" to project.version.toString()))
     }
 }
 
 tasks.shadowJar {
     archiveClassifier.set("")
-    minimize()
-    from("LICENSE.MD") {
-        into("META-INF")
-    }
 }

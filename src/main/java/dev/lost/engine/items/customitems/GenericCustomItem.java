@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
 import lombok.Getter;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,7 +24,9 @@ public class GenericCustomItem extends Item implements CustomItem {
 
     @Override
     public ItemStack getDynamicMaterial() {
-        return Items.RECOVERY_COMPASS.getDefaultInstance();
+        ItemStack itemStack = Items.RECOVERY_COMPASS.getDefaultInstance();
+        for (TypedDataComponent<?> component : itemStack.getComponents()) itemStack.remove(component.type());
+        return itemStack;
     }
 
     @Override

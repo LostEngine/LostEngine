@@ -31,4 +31,6 @@ public interface Item {
 
     String creativeGroup();
 
+    String equitableSlot();
+
 }

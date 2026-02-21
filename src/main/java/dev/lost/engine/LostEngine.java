@@ -1,14 +1,14 @@
 package dev.lost.engine;
 
 import dev.lost.engine.assetsgenerators.LostEngineMappingGenerator;
-import dev.lost.engine.commands.EditorCommand;
 import dev.lost.engine.commands.GiveCommand;
-import dev.lost.engine.commands.ReloadCommand;
+import dev.lost.engine.commands.LostEngineCommand;
 import dev.lost.engine.commands.SetBlockCommand;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.listeners.PacketListener;
 import dev.lost.engine.utils.FloodgateUtils;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -40,6 +40,8 @@ public final class LostEngine extends JavaPlugin {
     @Setter @Getter private static String resourcePackUrl;
 
     @Getter private static File resourcePackFile;
+
+    @Getter private static List<CustomItem> customItems;
 
     @Override
     public void onLoad() {
@@ -89,13 +91,19 @@ public final class LostEngine extends JavaPlugin {
             resourcePackUrl = getConfig().getString("pack_hosting.external_host.url");
         }
 
+        ObjectArrayList<CustomItem> customItemsList = new ObjectArrayList<>();
+        for (Item item : BuiltInRegistries.ITEM) {
+            if (item instanceof CustomItem customItem) {
+                customItemsList.add(customItem);
+            }
+        }
+        customItems = List.copyOf(customItemsList);
+
         if (mappingGenerator != null) {
             try {
                 logger().info("Geyser compatibility is enabled, generating mapping file...");
-                for (Item item: BuiltInRegistries.ITEM.stream().toList()) {
-                    if (item instanceof CustomItem customItem) {
-                        mappingGenerator.addItem(item, customItem.getId().replaceAll(":", "_"));
-                    }
+                for (CustomItem item: customItems) {
+                    mappingGenerator.addItem(item.asItem(), item.getId().replaceAll(":", "_"));
                 }
                 mappingGenerator.build(getDataFolder());
                 logger().info("Finished generating mapping file!");
@@ -121,11 +129,10 @@ public final class LostEngine extends JavaPlugin {
     @Override
     public void onEnable() {
         // Commands
-        registerCommand("lostenginereload", List.of("lereload","ler") , new ReloadCommand());
-        registerCommand("editor", List.of("webeditor"), new EditorCommand());
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
             commands.registrar().register(GiveCommand.getCommand());
             commands.registrar().register(SetBlockCommand.getCommand());
+            commands.registrar().register(LostEngineCommand.getCommand(), List.of("le"));
         });
 
         // Listeners

@@ -8,48 +8,52 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
-import dev.lost.engine.customblocks.BlockStateProvider;
-import dev.lost.engine.customblocks.customblocks.CustomBlock;
+import dev.lost.engine.blocks.BlockStateProvider;
+import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.entities.CustomThrownTrident;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.FloodgateUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.papermc.paper.network.ChannelInitializeListenerHolder;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.kyori.adventure.key.Key;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
-import net.minecraft.core.SectionPos;
+import net.minecraft.core.*;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.VarInt;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
 import net.minecraft.network.protocol.configuration.ClientboundFinishConfigurationPacket;
+import net.minecraft.network.protocol.configuration.ClientboundRegistryDataPacket;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
@@ -81,6 +85,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 import java.util.*;
+import java.util.function.BiFunction;
 
 public class PacketListener {
 
@@ -106,6 +111,99 @@ public class PacketListener {
                 Key.key("lost_engine", "packet_listener"),
                 channel -> channel.pipeline().addBefore("packet_handler", "lost_engine_packet_listener", new ChannelDupeHandler())
         );
+        ChannelInitializeListenerHolder.addListener(
+                Key.key("lost_engine", "raw_packet_listener"),
+                channel -> channel.pipeline().addBefore("decoder", "lost_engine_raw_packet_listener", new RawChannelDupeHandler())
+        );
+    }
+
+    private static class RawChannelDupeHandler extends ChannelDuplexHandler {
+        private Boolean isNotBedrockClient = null;
+
+        private boolean isNotBedrockClient(@NotNull ChannelHandlerContext ctx) {
+            if (isNotBedrockClient != null) return isNotBedrockClient;
+            Channel channel = ctx.channel();
+            Connection connection = (Connection) channel.pipeline().get("packet_handler");
+            if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
+                return isNotBedrockClient = !FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
+            }
+            return true;
+        }
+
+        private @Nullable ChannelDupeHandler getDupeHandler(@NotNull ChannelHandlerContext ctx) {
+            return (ChannelDupeHandler) ctx.pipeline().get("lost_engine_packet_listener");
+        }
+
+        private boolean isPlay(@NotNull ChannelHandlerContext ctx) {
+            Channel channel = ctx.channel();
+            Connection connection = (Connection) channel.pipeline().get("packet_handler");
+            return connection != null && connection.getPacketListener() instanceof ServerGamePacketListenerImpl;
+        }
+
+        @Override
+        public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (isPlay(ctx) && isNotBedrockClient(ctx) && msg instanceof ByteBuf byteBuf) {
+                byteBuf.markReaderIndex();
+                try {
+                    FriendlyByteBuf friendlyBuf = new FriendlyByteBuf(byteBuf);
+                    int packetId = friendlyBuf.readVarInt();
+
+                    if (packetId == 0x37) { // set_creative_mode_slot
+                        short slot = friendlyBuf.readShort();
+                        int itemCount = friendlyBuf.readVarInt();
+                        if (itemCount > 0) {
+                            int itemId = friendlyBuf.readVarInt();
+                            int componentsToAdd = friendlyBuf.readVarInt();
+                            int componentsToRemove = friendlyBuf.readVarInt();
+                            if (itemId == BuiltInRegistries.ITEM.getId(Items.PAINTING) && componentsToAdd == 1 && componentsToRemove == 0) {
+                                int componentTypeId = friendlyBuf.readVarInt();
+                                if (componentTypeId == BuiltInRegistries.DATA_COMPONENT_TYPE.getId(DataComponents.PAINTING_VARIANT)) {
+                                    /// {@link net.minecraft.network.codec.ByteBufCodecs#lengthPrefixed(int, BiFunction)
+                                    int i = friendlyBuf.readVarInt();
+                                    int i1 = friendlyBuf.readerIndex();
+                                    int paintingId = VarInt.read(friendlyBuf.slice(i1, i));
+                                    ChannelDupeHandler channelDupeHandler = getDupeHandler(ctx);
+                                    if (channelDupeHandler != null) {
+                                        CustomItem customItem = channelDupeHandler.paintingItems.get(paintingId);
+                                        if (customItem != null) {
+                                            int newItemId = BuiltInRegistries.ITEM.getId(customItem.asItem());
+                                            ByteBuf newPacket = ctx.alloc().buffer();
+                                            FriendlyByteBuf out = new FriendlyByteBuf(newPacket);
+                                            out.writeVarInt(0x37);
+                                            out.writeShort(slot);
+                                            out.writeVarInt(itemCount);
+                                            out.writeVarInt(newItemId);
+                                            out.writeVarInt(0);
+                                            out.writeVarInt(0);
+
+                                            ctx.fireChannelRead(newPacket);
+                                            byteBuf.release();
+
+                                            ServerPlayer player = channelDupeHandler.getPlayer(ctx);
+                                            if (player != null) {
+                                                player.getBukkitEntity().getScheduler().runDelayed(
+                                                        LostEngine.getInstance(),
+                                                        scheduledTask -> player.inventoryMenu.sendAllDataToRemote(),
+                                                        null,
+                                                        1
+                                                );
+                                            }
+
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    LostEngine.logger().error("Failed to parse raw packet set_creative_mode_slot (0x37)", e);
+                } finally {
+                    byteBuf.resetReaderIndex();
+                }
+            }
+            super.channelRead(ctx, msg);
+        }
     }
 
     private static class ChannelDupeHandler extends ChannelDuplexHandler {
@@ -117,6 +215,7 @@ public class PacketListener {
         volatile int minY = 0;
         volatile int maxY = 0;
         private final Long2IntOpenHashMap customBlockStateCache = new Long2IntOpenHashMap();
+        private final Int2ObjectOpenHashMap<CustomItem> paintingItems = new Int2ObjectOpenHashMap<>();
 
         /**
          * @return {@code Blocks.AIR.defaultBlockState()} if not in cache
@@ -135,11 +234,12 @@ public class PacketListener {
 
         private boolean isBedrockClient(ChannelHandlerContext ctx) {
             if (isBedrockClient != null) return isBedrockClient;
-            getPlayer(ctx);
-            if (player != null) {
-                isBedrockClient = FloodgateUtils.isBedrockPlayer(player.getUUID());
+            Channel channel = ctx.channel();
+            Connection connection = (Connection) channel.pipeline().get("packet_handler");
+            if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
+                isBedrockClient = FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
                 if (isBedrockClient) {
-                    LostEngine.logger().info("Bedrock client detected: {}", player.getName().getString());
+                    LostEngine.logger().info("Bedrock client detected: {}", serverCommonPacketListener.getOwner().name());
                 }
                 return isBedrockClient;
             }
@@ -202,7 +302,7 @@ public class PacketListener {
                     if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
                         //noinspection DataFlowIssue -- never get used
                         if (blockState.getDestroyProgress(player, null, packet.getPos()) >= 1.0F) {
-                            player.connection.send(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
+                            ctx.channel().writeAndFlush(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
                             break;
                         }
                         float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
@@ -216,7 +316,7 @@ public class PacketListener {
                             // The ratio is between what the client actually knows and what the server thinks
                             float ratio = blockDestroySpeed / clientBlockDestroySpeed;
                             blockBreakSpeed.setBaseValue(ratio * blockBreakSpeed.getBaseValue());
-                            player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                            ctx.channel().writeAndFlush(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
                         }
                     }
                 } else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK ||
@@ -229,7 +329,7 @@ public class PacketListener {
                         if (playerAttribute != null) {
                             blockBreakSpeed.apply(playerAttribute.pack());
                         }
-                        player.connection.send(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
+                        ctx.channel().writeAndFlush(new ClientboundUpdateAttributesPacket(player.getId(), List.of(blockBreakSpeed)));
                     }
                 }
             }
@@ -459,6 +559,7 @@ public class PacketListener {
                         packets.add(newPacketCasted);
                     }
                 }
+                if (packets.isEmpty()) return null;
                 return new ClientboundBundlePacket(packets);
             }
             case ClientboundLevelEventPacket packet -> {
@@ -513,18 +614,8 @@ public class PacketListener {
             }
             case ClientboundAddEntityPacket packet -> {
                 if (packet.getType() != EntityType.TRIDENT) break;
-                ServerPlayer player = handler.getPlayer(ctx);
-                if (player == null) break;
                 ItemStack itemStack = CustomThrownTrident.CUSTOM_TRIDENTS.get(packet.getId());
                 if (itemStack != null) {
-                    MinecraftServer.getServer().execute(() -> {
-                        ChunkMap.TrackedEntity entityTracker = player.level().getChunkSource().chunkMap.entityMap.get(packet.getId());
-                        try {
-                            ReflectionUtils.setUpdateInterval(entityTracker.serverEntity, 1);
-                        } catch (Exception e) {
-                            throw new RuntimeException("Unable to edit the thrown trident ServerEntity's update interval: ", e);
-                        }
-                    });
                     ObjectArrayList<SynchedEntityData.DataValue<?>> packedItems = new ObjectArrayList<>();
                     packedItems.add(new SynchedEntityData.DataValue<>(10, EntityDataSerializers.INT, 1));
                     packedItems.add(new SynchedEntityData.DataValue<>(11, EntityDataSerializers.VECTOR3, new Vector3f(0, -0.03125f, 0.6875f)));
@@ -532,14 +623,17 @@ public class PacketListener {
                     packedItems.add(new SynchedEntityData.DataValue<>(13, EntityDataSerializers.QUATERNION, new Quaternionf().rotateX((float) Math.toRadians(-90)).rotateY((float) Math.toRadians(90))));
                     packedItems.add(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.ITEM_STACK, editItem(itemStack, false).orElse(itemStack)));
                     packedItems.add(new SynchedEntityData.DataValue<>(24, EntityDataSerializers.BYTE, (byte) 8));
-                    player.connection.send(
-                            new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
-                    );
                     float yRot = Mth.wrapDegrees(packet.getYRot() - (packet.getYRot() - 90) * 2);
-                    return new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot());
+                    ctx.channel().writeAndFlush(new ClientboundBundlePacket(List.of(
+                            new ClientboundAddEntityPacket(packet.getId(), packet.getUUID(), packet.getX(), packet.getY(), packet.getZ(), packet.getXRot(), yRot, EntityType.ITEM_DISPLAY, packet.getData(), packet.getMovement(), packet.getYHeadRot()),
+                            new ClientboundSetEntityDataPacket(packet.getId(), packedItems)
+                    )));
+                    return null;
                 }
             }
-            case ClientboundTeleportEntityPacket(int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround) -> {
+            case ClientboundTeleportEntityPacket(
+                    int id, PositionMoveRotation change, Set<Relative> relatives, boolean onGround
+            ) -> {
                 if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(id)) {
                     float yRot = Mth.wrapDegrees(change.yRot() - (change.yRot() - 90) * 2);
                     return new ClientboundTeleportEntityPacket(id, new PositionMoveRotation(change.position(), change.deltaMovement(), yRot, change.xRot()), relatives, onGround);
@@ -563,6 +657,30 @@ public class PacketListener {
                 if (CustomThrownTrident.CUSTOM_TRIDENTS.containsKey(packet.getId())) {
                     // This packet is useless since we replace tridents with item displays, and they don't support it se we send position packets every tick
                     return null;
+                }
+            }
+            case ClientboundRegistryDataPacket(
+                    ResourceKey<? extends Registry<?>> registry,
+                    List<RegistrySynchronization.PackedRegistryEntry> entries
+            ) -> {
+                if (registry.identifier().equals(Registries.PAINTING_VARIANT.identifier())) {
+                    handler.paintingItems.clear();
+                    entries = new ObjectArrayList<>(entries);
+                    for (CustomItem customItem : LostEngine.getCustomItems()) {
+                        CompoundTag compoundTag = new CompoundTag();
+                        compoundTag.putString("asset_id", "minecraft:");
+                        compoundTag.putString("author", "LostEngine");
+                        compoundTag.putInt("height", 1);
+                        compoundTag.putInt("width", 1);
+                        Tag componentTag = ComponentSerialization.CODEC.encodeStart(
+                                NbtOps.INSTANCE,
+                                customItem.asItem().getName()
+                        ).getOrThrow();
+                        compoundTag.put("title", componentTag);
+                        entries.add(new RegistrySynchronization.PackedRegistryEntry(Identifier.parse(customItem.getId() + "_painting"), Optional.of(compoundTag)));
+                        handler.paintingItems.put(entries.size(), customItem);
+                    }
+                    return new ClientboundRegistryDataPacket(registry, entries);
                 }
             }
             default -> {
@@ -646,7 +764,6 @@ public class PacketListener {
             }
 
 
-
             if (values != null) {
                 if (palette instanceof SingleValuePalette<BlockState> singleValuePalette) {
                     Optional<BlockState> blockState = getClientBlockState((BlockState) values[0]);
@@ -692,7 +809,6 @@ public class PacketListener {
         }
         if (item.getItem() instanceof CustomItem customItem) {
             ItemStack newItem = dynamicMaterial ? customItem.getDynamicMaterial() : customItem.getDefaultMaterial();
-            for (TypedDataComponent<?> component : newItem.getComponents()) newItem.remove(component.type());
             newItem.setCount(item.getCount());
             newItem.applyComponents(item.getComponents());
             newItem.remove(DataComponents.REPAIRABLE);

@@ -1,5 +1,5 @@
 name: LostEngine
-version: '1.0-SNAPSHOT'
+version: @version@
 main: dev.lost.engine.LostEngine
 api-version: '1.21.11'
 authors: [Thomas (misieur)]

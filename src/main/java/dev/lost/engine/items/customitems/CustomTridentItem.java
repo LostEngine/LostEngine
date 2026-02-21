@@ -6,6 +6,7 @@ import lombok.Getter;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Position;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -39,7 +40,9 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
 
     @Override
     public ItemStack getDynamicMaterial() {
-        return Items.TRIDENT.getDefaultInstance();
+        ItemStack itemStack = Items.TRIDENT.getDefaultInstance();
+        for (TypedDataComponent<?> component : itemStack.getComponents()) itemStack.remove(component.type());
+        return itemStack;
     }
 
     /**
