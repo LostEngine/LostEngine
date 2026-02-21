@@ -7,25 +7,15 @@ version = "1.0-SNAPSHOT"
 val id = "lostenginegeyserextension"
 val extensionName = "LostEngineGeyserExtension"
 val author = "Misieur"
-val geyserApiVersion = "2.9.2"
+val geyserApiVersion = "2.9.3"
 
 repositories {
     mavenCentral()
-    maven("https://repo.misieur.me/repository")
-    // Tell Gradle to use OpenCollab's repo for some dependencies not provided by https://repo.misieur.me/repository
-    maven("https://repo.opencollab.dev/main/") {
-        content {
-            includeGroup("org.geysermc.api")
-            includeGroup("org.cloudburstmc.math")
-            includeGroup("org.geysermc.cumulus")
-            includeGroup("org.geysermc.event")
-        }
-    }
+    maven("https://repo.opencollab.dev/main/")
 }
 
 dependencies {
-    compileOnly("org.geysermc.geyser:api:2.9.2-SNAPSHOT")
-    // Using the same versions as Geyser for compatibility
+    compileOnly("org.geysermc.geyser:api:2.9.3-SNAPSHOT")
     compileOnly("it.unimi.dsi:fastutil:8.5.15")
     compileOnly("com.google.code.gson:gson:2.3.1")
 
