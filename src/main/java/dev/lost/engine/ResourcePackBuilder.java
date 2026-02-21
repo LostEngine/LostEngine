@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.lost.engine.assetsgenerators.*;
-import dev.lost.engine.customblocks.customblocks.CustomBlock;
+import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.furnace.files.model.Model;
 import dev.lost.furnace.files.texture.Texture;

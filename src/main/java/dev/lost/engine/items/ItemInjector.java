@@ -1,15 +1,15 @@
 package dev.lost.engine.items;
 
 import dev.lost.engine.annotations.CanBreakOnUpdates;
-import dev.lost.engine.assetsgenerators.DataPackGenerator;
-import dev.lost.engine.customblocks.customblocks.CustomBlock;
+import dev.lost.engine.blocks.customblocks.CustomBlock;
+import dev.lost.engine.bootstrap.LostEngineBootstrap;
 import dev.lost.engine.items.customitems.*;
-import dev.lost.engine.utils.ReflectionUtils;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -32,7 +32,6 @@ import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import org.bukkit.Material;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,9 +68,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -85,8 +83,8 @@ public class ItemInjector {
                 properties.sword(material, attackDamage, attackSpeed),
                 "sword"
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.WOODEN_SWORD);
-        dataPackGenerator.addSword(fullName);
+        LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_SWORD");
+        LostEngineBootstrap.dataPackGenerator.addSword(fullName);
         return item;
     }
 
@@ -96,9 +94,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -112,8 +109,8 @@ public class ItemInjector {
                 pr -> new CustomShovelItem(material, attackDamage, attackSpeed, pr, fullName),
                 properties
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.WOODEN_SHOVEL);
-        dataPackGenerator.addShovel(fullName);
+        LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_SHOVEL");
+        LostEngineBootstrap.dataPackGenerator.addShovel(fullName);
         return item;
     }
 
@@ -123,9 +120,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -139,8 +135,8 @@ public class ItemInjector {
                 properties.pickaxe(material, attackDamage, attackSpeed),
                 "pickaxe"
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.WOODEN_PICKAXE);
-        dataPackGenerator.addPickaxe(fullName);
+        LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_PICKAXE");
+        LostEngineBootstrap.dataPackGenerator.addPickaxe(fullName);
         return item;
     }
 
@@ -150,9 +146,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -166,8 +161,8 @@ public class ItemInjector {
                 pr -> new CustomAxeItem(material, attackDamage, attackSpeed, pr, fullName),
                 properties
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.WOODEN_AXE);
-        dataPackGenerator.addAxe(fullName);
+        LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_AXE");
+        LostEngineBootstrap.dataPackGenerator.addAxe(fullName);
         return item;
     }
 
@@ -176,9 +171,8 @@ public class ItemInjector {
             String name,
             float attackSpeed,
             ToolMaterial material,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -192,8 +186,8 @@ public class ItemInjector {
                 pr -> new CustomHoeItem(material, -material.attackDamageBonus(), attackSpeed, pr, fullName),
                 properties
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.WOODEN_HOE);
-        dataPackGenerator.addHoe(fullName);
+        LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_HOE");
+        LostEngineBootstrap.dataPackGenerator.addHoe(fullName);
         return item;
     }
 
@@ -201,7 +195,7 @@ public class ItemInjector {
     public static @NotNull Item injectItem(
             String name,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         Item.Properties properties = new Item.Properties();
         if (components != null) {
             for (Map.Entry<DataComponentType<?>, ?> component : components.entrySet()) {
@@ -213,7 +207,7 @@ public class ItemInjector {
                 "lost_engine:" + name,
                 properties
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.FILLED_MAP);
+        LostEngineBootstrap.materialManager.setMaterial(item, "FILLED_MAP");
         return item;
     }
 
@@ -222,9 +216,8 @@ public class ItemInjector {
             String name,
             ArmorMaterial armorMaterial,
             ArmorType armorType,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -235,27 +228,27 @@ public class ItemInjector {
 
         return switch (armorType) {
             case HELMET -> {
-                dataPackGenerator.addHelmet(fullName);
+                LostEngineBootstrap.dataPackGenerator.addHelmet(fullName);
                 Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.HELMET));
-                ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.IRON_HELMET);
+                LostEngineBootstrap.materialManager.setMaterial(item, "IRON_HELMET");
                 yield item;
             }
             case CHESTPLATE -> {
-                dataPackGenerator.addChestplate(fullName);
+                LostEngineBootstrap.dataPackGenerator.addChestplate(fullName);
                 Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.CHESTPLATE));
-                ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.IRON_CHESTPLATE);
+                LostEngineBootstrap.materialManager.setMaterial(item, "IRON_CHESTPLATE");
                 yield item;
             }
             case LEGGINGS -> {
-                dataPackGenerator.addLeggings(fullName);
+                LostEngineBootstrap.dataPackGenerator.addLeggings(fullName);
                 Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.LEGGINGS));
-                ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.IRON_LEGGINGS);
+                LostEngineBootstrap.materialManager.setMaterial(item, "IRON_LEGGINGS");
                 yield item;
             }
             case BOOTS -> {
-                dataPackGenerator.addBoots(fullName);
+                LostEngineBootstrap.dataPackGenerator.addBoots(fullName);
                 Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.BOOTS));
-                ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.IRON_BOOTS);
+                LostEngineBootstrap.materialManager.setMaterial(item, "IRON_BOOTS");
                 yield item;
             }
         };
@@ -267,7 +260,7 @@ public class ItemInjector {
             @Nullable String repairItem,
             int durability,
             Map<DataComponentType<?>, Object> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -290,7 +283,7 @@ public class ItemInjector {
                         )
                         .durability(durability)
         );
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.ELYTRA);
+        LostEngineBootstrap.materialManager.setMaterial(item, "ELYTRA");
         return item;
     }
 
@@ -299,9 +292,8 @@ public class ItemInjector {
             String name,
             int durability,
             float attackDamage,
-            DataPackGenerator dataPackGenerator,
             @Nullable Map<DataComponentType<?>, ?> components
-    ) throws Exception {
+    ) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -342,8 +334,8 @@ public class ItemInjector {
                         .component(DataComponents.WEAPON, new Weapon(1))
         );
 
-        ReflectionUtils.setItemMaterial(item.getDefaultInstance(), Material.TRIDENT);
-        dataPackGenerator.addTrident(fullName);
+        LostEngineBootstrap.materialManager.setMaterial(item, "TRIDENT");
+        LostEngineBootstrap.dataPackGenerator.addTrident(fullName);
         return item;
     }
 
@@ -372,12 +364,13 @@ public class ItemInjector {
         ItemStack dynamicMaterial;
         if (customBlock instanceof CustomBlock) {
             BlockState clientBlockState = ((CustomBlock) customBlock).getClientBlockState();
-            ItemStack itemStack = clientBlockState.getBlock().asItem().getDefaultInstance().copy();
+            dynamicMaterial = clientBlockState.getBlock().asItem().getDefaultInstance().copy();
+            for (TypedDataComponent<?> component : dynamicMaterial.getComponents()) dynamicMaterial.remove(component.type());
             Map<String, String> properties = blockStateToPropertyMap(clientBlockState);
-            itemStack.set(DataComponents.BLOCK_STATE, new BlockItemStateProperties(properties));
-            dynamicMaterial = itemStack;
+            dynamicMaterial.set(DataComponents.BLOCK_STATE, new BlockItemStateProperties(properties));
         } else {
             dynamicMaterial = Items.BARRIER.getDefaultInstance();
+            for (TypedDataComponent<?> component : dynamicMaterial.getComponents()) dynamicMaterial.remove(component.type());
         }
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();

@@ -1,4 +1,4 @@
-package dev.lost.engine.customblocks;
+package dev.lost.engine.blocks;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.world.level.block.Blocks;

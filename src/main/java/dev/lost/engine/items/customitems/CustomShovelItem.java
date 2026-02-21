@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
 import lombok.Getter;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ShovelItem;
@@ -18,7 +19,9 @@ public class CustomShovelItem extends ShovelItem implements CustomItem {
 
     @Override
     public ItemStack getDynamicMaterial() {
-        return Items.WOODEN_SHOVEL.getDefaultInstance();
+        ItemStack itemStack = Items.WOODEN_SHOVEL.getDefaultInstance();
+        for (TypedDataComponent<?> component : itemStack.getComponents()) itemStack.remove(component.type());
+        return itemStack;
     }
 
     @Override

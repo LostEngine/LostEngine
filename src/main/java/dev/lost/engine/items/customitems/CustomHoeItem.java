@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
 import lombok.Getter;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -18,7 +19,9 @@ public class CustomHoeItem extends HoeItem implements CustomItem {
 
     @Override
     public ItemStack getDynamicMaterial() {
-        return Items.WOODEN_HOE.getDefaultInstance();
+        ItemStack itemStack = Items.WOODEN_HOE.getDefaultInstance();
+        for (TypedDataComponent<?> component : itemStack.getComponents()) itemStack.remove(component.type());
+        return itemStack;
     }
 
     @Override

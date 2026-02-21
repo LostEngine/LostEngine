@@ -8,6 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.arrow.ThrownTrident;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 public class CustomThrownTrident extends ThrownTrident {
 
     public static final ConcurrentMap<Integer, ItemStack> CUSTOM_TRIDENTS = new ConcurrentHashMap<>();
-    private boolean setUpdateIntervalCalled = false;
 
     public CustomThrownTrident(Level level, LivingEntity shooter, ItemStack pickupItemStack) {
         super(level, shooter, pickupItemStack);
@@ -32,20 +32,17 @@ public class CustomThrownTrident extends ThrownTrident {
 
     @Override
     public void tick() {
+        Vec3 oldPos = this.position();
         super.tick();
-        if (!setUpdateIntervalCalled) {
-            ChunkMap.TrackedEntity trackedEntity = moonrise$getTrackedEntity();
-            //noinspection ConstantValue
-            if (trackedEntity != null) {
-                try {
-                    ReflectionUtils.setUpdateInterval(trackedEntity.serverEntity, 1);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    setUpdateIntervalCalled = true;
-                }
-            } else {
-                LostEngine.logger().info("Tracked entity is null for trident with id: {}", this.getId());
+        Vec3 pos = this.position();
+        ChunkMap.TrackedEntity trackedEntity = moonrise$getTrackedEntity();
+        //noinspection ConstantValue -- can sometimes be null
+        if (trackedEntity != null) {
+            try {
+                // Set the entity tracker update interval to 20 ticks if the entity doesn't move and 1 tick if it moves
+                ReflectionUtils.setUpdateInterval(trackedEntity.serverEntity, oldPos.equals(pos) ? 20 : 1);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
     }

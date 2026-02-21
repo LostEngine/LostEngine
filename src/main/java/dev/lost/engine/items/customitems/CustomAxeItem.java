@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
 import lombok.Getter;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -18,7 +19,9 @@ public class CustomAxeItem extends AxeItem implements CustomItem {
 
     @Override
     public ItemStack getDynamicMaterial() {
-        return Items.WOODEN_AXE.getDefaultInstance();
+        ItemStack itemStack = Items.WOODEN_AXE.getDefaultInstance();
+        for (TypedDataComponent<?> component : itemStack.getComponents()) itemStack.remove(component.type());
+        return itemStack;
     }
 
     @Override

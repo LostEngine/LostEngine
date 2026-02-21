@@ -8,8 +8,8 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.annotations.CanBreakOnUpdates;
-import dev.lost.engine.customblocks.BlockStateProvider;
-import dev.lost.engine.customblocks.customblocks.CustomBlock;
+import dev.lost.engine.blocks.BlockStateProvider;
+import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.entities.CustomThrownTrident;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.FloodgateUtils;
@@ -29,7 +29,6 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.kyori.adventure.key.Key;
 import net.minecraft.core.*;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -810,7 +809,6 @@ public class PacketListener {
         }
         if (item.getItem() instanceof CustomItem customItem) {
             ItemStack newItem = dynamicMaterial ? customItem.getDynamicMaterial() : customItem.getDefaultMaterial();
-            for (TypedDataComponent<?> component : newItem.getComponents()) newItem.remove(component.type());
             newItem.setCount(item.getCount());
             newItem.applyComponents(item.getComponents());
             newItem.remove(DataComponents.REPAIRABLE);

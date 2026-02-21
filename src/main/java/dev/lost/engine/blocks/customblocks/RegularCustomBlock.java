@@ -1,4 +1,4 @@
-package dev.lost.engine.customblocks.customblocks;
+package dev.lost.engine.blocks.customblocks;
 
 import lombok.Getter;
 import net.minecraft.world.level.block.Block;

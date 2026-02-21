@@ -161,9 +161,9 @@ public class ReflectionUtils {
         ((Map<Material, Block>) MATERIAL_BLOCK_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, block);
     }
 
-    public static void setItemMaterial(ItemStack itemStack, Material material) throws Exception {
-        ((Map<net.minecraft.world.item.Item, Material>) ITEM_MATERIAL_FIELD.get(CraftMagicNumbers.INSTANCE)).put(itemStack.getItem(), material);
-        ((Map<Material, net.minecraft.world.item.Item>) MATERIAL_ITEM_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, itemStack.getItem());
+    public static void setItemMaterial(Item item, Material material) throws Exception {
+        ((Map<net.minecraft.world.item.Item, Material>) ITEM_MATERIAL_FIELD.get(CraftMagicNumbers.INSTANCE)).put(item, material);
+        ((Map<Material, net.minecraft.world.item.Item>) MATERIAL_ITEM_FIELD.get(CraftMagicNumbers.INSTANCE)).put(material, item);
     }
 
     public static @Nullable Class<?> getTypeArgument(@NotNull Class<?> clazz) {
