@@ -380,6 +380,9 @@ public class ResourceInjector {
                     case "regular" -> BlockInjector.injectRegularBlock(
                             key,
                             BlockStateProvider.getNextBlockState(blockStateType),
+                            LostEngineBootstrap.replaceClickableBlocks && blockStateType == BlockStateProvider.BlockStateType.STONE ?
+                                    BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.WOOD) :
+                                    null,
                             (float) blockSection.getDouble("destroy_time", 0F),
                             (float) blockSection.getDouble("explosion_resistance", 0F),
                             BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))

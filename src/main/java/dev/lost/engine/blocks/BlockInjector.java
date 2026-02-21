@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
 public class BlockInjector {
@@ -26,8 +27,9 @@ public class BlockInjector {
     private static final MappedRegistry<Block> REGISTRY = (MappedRegistry<Block>) BuiltInRegistries.BLOCK;
 
     public static void injectRegularBlock(
-            String id,
-            BlockState clientBlockState,
+            @NotNull String id,
+            @NotNull BlockState clientBlockState,
+            @Nullable BlockState notClickableBlockState,
             float destroyTime,
             float explosionResistance,
             @NotNull Minable minable
@@ -45,7 +47,7 @@ public class BlockInjector {
                 })
                 .setId(key);
 
-        Block custom = new RegularCustomBlock(properties, clientBlockState);
+        Block custom = new RegularCustomBlock(properties, clientBlockState, notClickableBlockState);
 
         REGISTRY.createIntrusiveHolder(custom);
         REGISTRY.register(key, custom, RegistrationInfo.BUILT_IN);
