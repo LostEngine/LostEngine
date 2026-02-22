@@ -13,10 +13,6 @@ plugins {
 group = "dev.misieur"
 version = "0.0.5-mc1.21.11"
 
-configurations {
-    create("proguard")
-}
-
 repositories {
     mavenCentral()
     maven {
@@ -37,14 +33,13 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
+    compileOnly(project(":annotations"))
     implementation(project(":furnace"))
     implementation("dev.misieur:fast:1.0.2")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
 
     compileOnly("org.geysermc.geyser:api:2.9.3-SNAPSHOT")
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
-
-    "proguard"("com.guardsquare:proguard-base:7.8.2")
 }
 
 runPaper.folia.registerTask()
@@ -93,30 +88,12 @@ tasks.processResources {
 }
 
 tasks.build {
-    dependsOn(proguardJar)
+    dependsOn(tasks.shadowJar)
 }
 
 tasks.shadowJar {
-    archiveClassifier.set("unminimized")
-    destinationDirectory.set(layout.buildDirectory.dir("tmp/libs"))
-    finalizedBy(proguardJar)
-}
-
-
-val proguardJar by tasks.registering(JavaExec::class) {
-    group = "build"
-
-    dependsOn(tasks.shadowJar)
-
-    classpath = configurations["proguard"]
-    mainClass.set("proguard.ProGuard")
-
-    val inputJar = tasks.shadowJar.get().archiveFile.get().asFile
-    val outputJar = layout.buildDirectory.file("libs/${project.name}-${project.version}.jar")
-
-    args(
-        "-injars", inputJar.absolutePath,
-        "-outjars", outputJar.get().asFile.absolutePath,
-        "@${project.projectDir}/.config/proguard-rules.pro"
-    )
+    archiveClassifier.set("")
+    minimize {
+        exclude(dependency("dev.misieur:justamaterial"))
+    }
 }

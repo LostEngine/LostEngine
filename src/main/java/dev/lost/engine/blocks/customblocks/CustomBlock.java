@@ -1,7 +1,7 @@
 package dev.lost.engine.blocks.customblocks;
 
+import dev.lost.annotations.Nullable;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.Nullable;
 
 public interface CustomBlock {
 

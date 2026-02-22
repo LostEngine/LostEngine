@@ -19,8 +19,7 @@ dependencies {
     compileOnly("it.unimi.dsi:fastutil:8.5.15")
     compileOnly("com.google.code.gson:gson:2.3.1")
 
-    compileOnly("org.jetbrains:annotations:26.0.2-1")
-
+    compileOnly(project(":annotations"))
 }
 
 tasks {

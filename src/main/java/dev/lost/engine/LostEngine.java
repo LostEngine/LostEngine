@@ -1,5 +1,6 @@
 package dev.lost.engine;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.assetsgenerators.LostEngineMappingGenerator;
 import dev.lost.engine.commands.GiveCommand;
 import dev.lost.engine.commands.LostEngineCommand;
@@ -15,7 +16,6 @@ import net.minecraft.world.item.Item;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.io.File;

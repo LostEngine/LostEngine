@@ -6,8 +6,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.MaybeNull;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.LostEngine;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.entities.CustomThrownTrident;
@@ -78,8 +81,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.dimension.DimensionType;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 import org.joml.Vector3f;
@@ -259,7 +260,7 @@ public class PacketListener {
         }
 
         @Override
-        public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(@NotNull ChannelHandlerContext ctx, @NotNull Object msg) throws Exception {
             Object packet = isBedrockClient(ctx) ? msg : serverbound(msg, ctx, this);
             if (packet != null) {
                 super.channelRead(ctx, packet);
@@ -267,7 +268,7 @@ public class PacketListener {
         }
 
         @Override
-        public void write(@NotNull ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(@NotNull ChannelHandlerContext ctx, @NotNull Object msg, @NotNull ChannelPromise promise) throws Exception {
             Object packet = isBedrockClient(ctx) ? msg : clientbound(msg, ctx, this);
             if (packet != null) {
                 super.write(ctx, packet, promise);
@@ -275,7 +276,7 @@ public class PacketListener {
         }
     }
 
-    private static @Nullable Object serverbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) {
+    private static @MaybeNull Object serverbound(@NotNull Object msg, @NotNull ChannelHandlerContext ctx, @NotNull ChannelDupeHandler handler) {
         switch (msg) {
             case ServerboundSetCreativeModeSlotPacket packet -> {
                 ItemStack item = packet.itemStack();
@@ -372,7 +373,7 @@ public class PacketListener {
         return msg;
     }
 
-    private static @Nullable Object clientbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) throws Exception {
+    private static @MaybeNull Object clientbound(@NotNull Object msg, @NotNull ChannelHandlerContext ctx, @NotNull ChannelDupeHandler handler) throws Exception {
         switch (msg) {
             case ClientboundLoginPacket packet -> processCommonPlayerSpawnInfo(packet.commonPlayerSpawnInfo(), handler);
             case ClientboundRespawnPacket packet ->
@@ -930,7 +931,7 @@ public class PacketListener {
     }
 
     private static void processCommonPlayerSpawnInfo(@NotNull CommonPlayerSpawnInfo commonPlayerSpawnInfo, @NotNull ChannelDupeHandler handler) {
-        @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") /// See {@link net.minecraft.world.level.Level#Level}
+        @CanBreakOnUpdates("1.21.11") /// See {@link net.minecraft.world.level.Level#Level}
                 DimensionType dimType = commonPlayerSpawnInfo.dimensionType().value();
         handler.minY = dimType.minY();
         int height = dimType.height();

@@ -1,14 +1,14 @@
 package dev.lost.engine.assetsgenerators;
 
 import com.google.gson.JsonObject;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.NotNull;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
+@CanBreakOnUpdates("1.21.10")
 public class BlockStateGenerator {
 
     private final Object2ObjectOpenHashMap<String, JsonObject> blockStates = new Object2ObjectOpenHashMap<>();

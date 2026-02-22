@@ -1,11 +1,11 @@
 package dev.lost.engine.items.customitems;
 
+import dev.lost.annotations.Nullable;
 import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.jetbrains.annotations.Nullable;
 
 public interface CustomItem {
 

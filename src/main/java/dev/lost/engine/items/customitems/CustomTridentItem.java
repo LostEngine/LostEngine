@@ -1,6 +1,7 @@
 package dev.lost.engine.items.customitems;
 
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.entities.CustomThrownTrident;
 import lombok.Getter;
 import net.minecraft.core.Direction;
@@ -26,7 +27,6 @@ import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 
 public class CustomTridentItem extends TridentItem implements CustomItem {
 
@@ -49,7 +49,7 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
      * {@link TridentItem#releaseUsing(ItemStack, Level, LivingEntity, int)}
      */
     @SuppressWarnings("UnstableApiUsage")
-    @CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
+    @CanBreakOnUpdates("1.21.11")
     @Override
     public boolean releaseUsing(@NotNull ItemStack stack, @NotNull Level level, @NotNull LivingEntity entity, int timeLeft) {
         if (entity instanceof Player player) {

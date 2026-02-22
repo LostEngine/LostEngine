@@ -1,7 +1,7 @@
 package dev.lost.furnace.resourcepackbuilder;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.furnace.resourcepack.ResourcePack;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 

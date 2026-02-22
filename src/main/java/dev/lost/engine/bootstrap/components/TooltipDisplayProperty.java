@@ -1,6 +1,8 @@
 package dev.lost.engine.bootstrap.components;
 
 import com.google.common.collect.ImmutableSortedSet;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.bootstrap.components.annotations.Parameter;
 import dev.lost.engine.bootstrap.components.annotations.Property;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
@@ -11,8 +13,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.TooltipDisplay;
 import org.bukkit.configuration.ConfigurationSection;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashSet;
 import java.util.List;

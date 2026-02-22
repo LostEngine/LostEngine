@@ -1,8 +1,8 @@
 package dev.lost.furnace.files.manifest;
 
 import com.google.gson.JsonElement;
+import dev.lost.annotations.NotNull;
 import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
 
 public interface Manifest {
 

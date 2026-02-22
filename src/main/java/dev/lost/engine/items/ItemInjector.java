@@ -1,6 +1,8 @@
 package dev.lost.engine.items;
 
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.bootstrap.LostEngineBootstrap;
 import dev.lost.engine.items.customitems.*;
@@ -33,14 +35,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.function.Function;
 
 @SuppressWarnings("UnusedReturnValue")
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
+@CanBreakOnUpdates("1.21.11")
 public class ItemInjector {
 
     @Contract("_, _, _, _, _, _ -> new")

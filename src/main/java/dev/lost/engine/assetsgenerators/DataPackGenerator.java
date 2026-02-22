@@ -3,18 +3,18 @@ package dev.lost.engine.assetsgenerators;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
 import dev.misieur.fast.FastFiles;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.SharedConstants;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 
 import static dev.lost.engine.utils.FileUtils.saveJsonToFile;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
+@CanBreakOnUpdates("1.21.10")
 public class DataPackGenerator {
 
     private final JsonObject swords = new JsonObject();

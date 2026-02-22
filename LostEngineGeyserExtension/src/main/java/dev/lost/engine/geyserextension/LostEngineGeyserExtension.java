@@ -1,6 +1,7 @@
 package dev.lost.engine.geyserextension;
 
 import com.google.gson.JsonElement;
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.geyserextension.lomapping.Mapping;
 import dev.lost.engine.geyserextension.lomapping.MappingReader;
 import dev.lost.engine.geyserextension.utils.FileUtils;
@@ -10,7 +11,6 @@ import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCustomBlocksEvent;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCustomItemsEvent;
 import org.geysermc.geyser.api.event.lifecycle.GeyserPreInitializeEvent;
 import org.geysermc.geyser.api.extension.Extension;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;

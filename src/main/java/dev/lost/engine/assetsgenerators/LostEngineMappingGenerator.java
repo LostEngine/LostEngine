@@ -2,6 +2,8 @@ package dev.lost.engine.assetsgenerators;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ItemUtils;
@@ -15,8 +17,6 @@ import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.enchantment.Enchantable;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.block.Block;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;

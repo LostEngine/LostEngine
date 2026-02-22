@@ -3,6 +3,8 @@ package dev.lost.engine;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.assetsgenerators.*;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.utils.FileUtils;
@@ -21,8 +23,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.intellij.lang.annotations.Pattern;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

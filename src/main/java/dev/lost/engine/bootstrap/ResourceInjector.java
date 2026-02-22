@@ -1,7 +1,9 @@
 package dev.lost.engine.bootstrap;
 
 import com.google.common.collect.Maps;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.blocks.BlockInjector;
 import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.bootstrap.components.*;
@@ -25,8 +27,6 @@ import net.minecraft.world.item.equipment.ArmorMaterials;
 import net.minecraft.world.item.equipment.ArmorType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -38,7 +38,7 @@ import java.util.Map;
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
-    @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // If there is a new Material
+    @CanBreakOnUpdates("1.21.11") // If there is a new Material
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>(Map.of(
             "WOOD", ToolMaterial.WOOD,
             "STONE", ToolMaterial.STONE,

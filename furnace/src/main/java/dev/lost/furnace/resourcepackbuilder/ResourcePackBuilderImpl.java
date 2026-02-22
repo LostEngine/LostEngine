@@ -3,6 +3,7 @@ package dev.lost.furnace.resourcepackbuilder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import dev.lost.annotations.NotNull;
 import dev.lost.furnace.files.ResourcePackFile;
 import dev.lost.furnace.files.model.Model;
 import dev.lost.furnace.files.texture.Texture;
@@ -12,7 +13,6 @@ import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
 import dev.misieur.fast.FastImage;
 import dev.misieur.fast.Native;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileOutputStream;

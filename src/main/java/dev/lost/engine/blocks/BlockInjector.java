@@ -1,6 +1,8 @@
 package dev.lost.engine.blocks;
 
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.blocks.customblocks.RegularCustomBlock;
 import dev.lost.engine.blocks.customblocks.TNTCustomBlock;
 import dev.lost.engine.bootstrap.LostEngineBootstrap;
@@ -17,10 +19,8 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
+@CanBreakOnUpdates("1.21.10")
 public class BlockInjector {
 
     @SuppressWarnings("unchecked")

@@ -1,10 +1,10 @@
 package dev.lost.furnace.resourcepack;
 
 import com.google.gson.JsonElement;
+import dev.lost.annotations.NotNull;
 import dev.lost.furnace.files.texture.Texture;
 import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.Map;
