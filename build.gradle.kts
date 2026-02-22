@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "dev.misieur"
-version = "0.0.5-mc1.21.11"
+version = "0.0.6-mc1.21.11"
 
 repositories {
     mavenCentral()
