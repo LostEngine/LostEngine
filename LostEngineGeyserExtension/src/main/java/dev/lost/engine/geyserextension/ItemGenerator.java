@@ -1,5 +1,6 @@
 package dev.lost.engine.geyserextension;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.geyserextension.lomapping.Mapping;
 import org.geysermc.geyser.api.event.lifecycle.GeyserDefineCustomItemsEvent;
 import org.geysermc.geyser.api.item.custom.v2.CustomItemBedrockOptions;
@@ -8,7 +9,6 @@ import org.geysermc.geyser.api.item.custom.v2.component.java.*;
 import org.geysermc.geyser.api.util.CreativeCategory;
 import org.geysermc.geyser.api.util.Holders;
 import org.geysermc.geyser.api.util.Identifier;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -42,12 +42,12 @@ public class ItemGenerator {
         });
     }
 
-    private static JavaToolProperties getGeyserToolProperties(dev.lost.engine.geyserextension.lomapping.items.toolproperties.@NotNull ToolProperties properties) {
-        JavaToolProperties.Builder builder = JavaToolProperties.builder()
+    private static JavaTool getGeyserToolProperties(dev.lost.engine.geyserextension.lomapping.items.toolproperties.@NotNull ToolProperties properties) {
+        JavaTool.Builder builder = JavaTool.builder()
                 .canDestroyBlocksInCreative(properties.canDestroyBlocksInCreative())
                 .defaultMiningSpeed(properties.defaultMiningSpeed());
         for (dev.lost.engine.geyserextension.lomapping.items.toolproperties.ToolProperties.Rule rule : properties.rules()) {
-            builder.rule(JavaToolProperties.Rule.builder()
+            builder.rule(JavaTool.Rule.builder()
                     .blocks(Holders.of(rule.blocks().stream().map(Identifier::of).toList()))
                     .speed(rule.speed())
                     .build());

@@ -6,10 +6,10 @@ import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import dev.lost.engine.bootstrap.ResourceInjector;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.InetSocketAddress;

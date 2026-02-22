@@ -1,8 +1,8 @@
 package dev.lost.furnace.files.model;
 
 import com.google.gson.JsonObject;
+import dev.lost.annotations.NotNull;
 import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;

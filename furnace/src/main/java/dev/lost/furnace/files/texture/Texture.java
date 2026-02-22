@@ -1,8 +1,8 @@
 package dev.lost.furnace.files.texture;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.furnace.files.ResourcePackFile;
 import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

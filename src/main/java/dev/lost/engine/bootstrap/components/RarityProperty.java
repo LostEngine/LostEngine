@@ -1,12 +1,12 @@
 package dev.lost.engine.bootstrap.components;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.bootstrap.components.annotations.Property;
 import dev.misieur.fast.FastEnum;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.Rarity;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.Locale;

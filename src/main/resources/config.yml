@@ -18,3 +18,7 @@ resource_pack:
 
 inject_custom_materials: true
 geyser_compatibility: false
+
+custom_blocks:
+  # certain blocks that have a right-click effect would be replaced with mushroom blocks until they get left-clicked by a player (only client-side)
+  replace_clickable_blocks: true

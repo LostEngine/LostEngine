@@ -2,7 +2,8 @@ package dev.lost.engine.commands;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
 import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -16,11 +17,10 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10") // Make sure the code from this command has been changed in newer versions
+@CanBreakOnUpdates("1.21.10") // Make sure the code from this command has been changed in newer versions
 public class GiveCommand {
     public static final int MAX_ALLOWED_ITEMSTACKS = 100;
 

@@ -1,5 +1,7 @@
 package dev.lost.engine.bootstrap.components;
 
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.bootstrap.components.annotations.Parameter;
 import dev.lost.engine.bootstrap.components.annotations.Property;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
@@ -10,8 +12,6 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.Consumable;
 import org.bukkit.configuration.ConfigurationSection;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;

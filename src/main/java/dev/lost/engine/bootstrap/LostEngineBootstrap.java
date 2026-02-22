@@ -1,7 +1,8 @@
 package dev.lost.engine.bootstrap;
 
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.LostEngine;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.assetsgenerators.DataPackGenerator;
 import dev.lost.engine.utils.TimeUtils;
 import io.papermc.paper.ServerBuildInfo;
@@ -10,7 +11,6 @@ import io.papermc.paper.plugin.bootstrap.PluginBootstrap;
 import io.papermc.paper.plugin.bootstrap.PluginProviderContext;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,12 +20,13 @@ import java.util.Properties;
 
 import static dev.lost.engine.bootstrap.ResourceInjector.injectResources;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // Have to update this class every new Minecraft version
+@CanBreakOnUpdates("1.21.11") // Have to update this class every new Minecraft version
 @SuppressWarnings("UnstableApiUsage")
 public class LostEngineBootstrap implements PluginBootstrap {
 
     public static DataPackGenerator dataPackGenerator;
     public static MaterialManager materialManager;
+    public static boolean replaceClickableBlocks;
 
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {
@@ -59,12 +60,8 @@ public class LostEngineBootstrap implements PluginBootstrap {
                 File file = context.getDataDirectory().resolve("config.yml").toFile();
                 if (!file.exists()) break readConfig;
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-                if (!config.contains("inject_custom_materials")) {
-                    config.set("inject_custom_materials", true);
-                    customMaterialEnabled = true;
-                    break readConfig;
-                }
-                customMaterialEnabled = config.getBoolean("inject_custom_materials", false);
+                customMaterialEnabled = config.getBoolean("inject_custom_materials", true);
+                replaceClickableBlocks = config.getBoolean("custom_blocks.replace_clickable_blocks", true);
             }
 
             dataPackGenerator = new DataPackGenerator();

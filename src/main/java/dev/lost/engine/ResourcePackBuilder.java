@@ -3,6 +3,8 @@ package dev.lost.engine;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.assetsgenerators.*;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.utils.FileUtils;
@@ -21,8 +23,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.intellij.lang.annotations.Pattern;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -34,6 +34,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @SuppressWarnings("PatternValidation") // Stupid thing I don't even know why it's here
@@ -252,6 +253,9 @@ public class ResourcePackBuilder {
                                 Block block = BuiltInRegistries.BLOCK.getValue(resourceLocation);
                                 if (block instanceof CustomBlock customBlock) {
                                     blockStateGenerator.addBlockState(customBlock.getClientBlockState(), "lost_engine:block/" + key);
+                                    Optional.ofNullable(customBlock.getNotClickableBlockState()).ifPresent(blockState ->
+                                            blockStateGenerator.addBlockState(blockState, "lost_engine:block/" + key)
+                                    );
                                 }
                             }
                         }

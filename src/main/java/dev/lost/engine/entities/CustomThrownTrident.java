@@ -1,5 +1,6 @@
 package dev.lost.engine.entities;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.utils.ReflectionUtils;
 import net.minecraft.server.level.ChunkMap;
@@ -10,7 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

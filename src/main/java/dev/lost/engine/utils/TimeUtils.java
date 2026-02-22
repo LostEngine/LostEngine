@@ -1,6 +1,6 @@
 package dev.lost.engine.utils;
 
-import org.jetbrains.annotations.NotNull;
+import dev.lost.annotations.NotNull;
 
 public class TimeUtils {
     public static @NotNull String formatNanos(long nanos) {

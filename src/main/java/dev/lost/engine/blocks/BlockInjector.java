@@ -1,6 +1,8 @@
 package dev.lost.engine.blocks;
 
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.blocks.customblocks.RegularCustomBlock;
 import dev.lost.engine.blocks.customblocks.TNTCustomBlock;
 import dev.lost.engine.bootstrap.LostEngineBootstrap;
@@ -17,17 +19,17 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
-import org.jetbrains.annotations.NotNull;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10")
+@CanBreakOnUpdates("1.21.10")
 public class BlockInjector {
 
     @SuppressWarnings("unchecked")
     private static final MappedRegistry<Block> REGISTRY = (MappedRegistry<Block>) BuiltInRegistries.BLOCK;
 
     public static void injectRegularBlock(
-            String id,
-            BlockState clientBlockState,
+            @NotNull String id,
+            @NotNull BlockState clientBlockState,
+            @Nullable BlockState notClickableBlockState,
             float destroyTime,
             float explosionResistance,
             @NotNull Minable minable
@@ -45,7 +47,7 @@ public class BlockInjector {
                 })
                 .setId(key);
 
-        Block custom = new RegularCustomBlock(properties, clientBlockState);
+        Block custom = new RegularCustomBlock(properties, clientBlockState, notClickableBlockState);
 
         REGISTRY.createIntrusiveHolder(custom);
         REGISTRY.register(key, custom, RegistrationInfo.BUILT_IN);

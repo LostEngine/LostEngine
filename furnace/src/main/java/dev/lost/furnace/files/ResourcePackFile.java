@@ -1,6 +1,6 @@
 package dev.lost.furnace.files;
 
-import org.jetbrains.annotations.NotNull;
+import dev.lost.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;

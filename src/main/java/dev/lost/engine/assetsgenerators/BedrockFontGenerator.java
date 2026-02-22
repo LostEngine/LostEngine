@@ -1,12 +1,12 @@
 package dev.lost.engine.assetsgenerators;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.LostEngine;
 import dev.lost.furnace.files.texture.Texture;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;

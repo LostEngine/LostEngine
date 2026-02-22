@@ -2,6 +2,7 @@ package dev.lost.engine.commands;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.ResourcePackBuilder;
 import dev.lost.engine.WebServer;
@@ -22,7 +23,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;

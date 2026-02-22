@@ -1,7 +1,7 @@
 package dev.lost.engine.geyserextension.lomapping;
 
 import com.google.gson.Gson;
-import org.jetbrains.annotations.NotNull;
+import dev.lost.annotations.NotNull;
 
 import java.io.BufferedReader;
 import java.io.InputStream;

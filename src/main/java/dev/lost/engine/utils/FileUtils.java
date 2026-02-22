@@ -3,9 +3,9 @@ package dev.lost.engine.utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import dev.lost.annotations.NotNull;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileWriter;

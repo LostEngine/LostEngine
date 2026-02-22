@@ -134,6 +134,7 @@ blocks:
       en_US: "Lost Ore"
       fr_FR: "Minerai Perdu"
     type: regular
+    registry: stone # stone, wood, grass
     tool_type: pickaxe
     texture: block/ore
     destroy_time: 2.0
@@ -149,6 +150,7 @@ blocks:
       en_US: "Lost Block"
       fr_FR: "Bloc Perdu"
     type: regular
+    registry: stone
     tool_type: pickaxe
     texture: block/block
     destroy_time: 2.0
@@ -162,6 +164,7 @@ blocks:
       en_US: "Lost TNT"
       fr_FR: "TNT Perdue"
     type: tnt
+    registry: grass
     texture: block/tnt
     explosion_power: 8
     drops:

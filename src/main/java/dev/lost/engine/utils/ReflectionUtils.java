@@ -1,7 +1,8 @@
 package dev.lost.engine.utils;
 
 import com.mojang.datafixers.util.Pair;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
 import dev.lost.engine.bootstrap.components.SimpleComponentProperty;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
@@ -16,7 +17,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.SingleValuePalette;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Field;
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 @SuppressWarnings("unchecked")
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.11")
+@CanBreakOnUpdates("1.21.11")
 // Make sure the field names are still correct on new Minecraft versions
 public class ReflectionUtils {
 

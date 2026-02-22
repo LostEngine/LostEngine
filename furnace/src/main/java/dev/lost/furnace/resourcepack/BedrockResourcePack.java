@@ -1,7 +1,7 @@
 package dev.lost.furnace.resourcepack;
 
+import dev.lost.annotations.NotNull;
 import dev.lost.furnace.files.manifest.Manifest;
-import org.jetbrains.annotations.NotNull;
 
 public interface BedrockResourcePack extends ResourcePack {
 

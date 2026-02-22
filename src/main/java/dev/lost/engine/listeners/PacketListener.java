@@ -6,13 +6,16 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.MaybeNull;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.LostEngine;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
 import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.entities.CustomThrownTrident;
 import dev.lost.engine.items.customitems.CustomItem;
-import dev.lost.engine.utils.FloodgateUtils;
+import dev.lost.engine.utils.BedrockUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
 import io.netty.buffer.ByteBuf;
@@ -75,10 +78,9 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.dimension.DimensionType;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 import org.joml.Vector3f;
@@ -125,7 +127,7 @@ public class PacketListener {
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
             if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
-                return isNotBedrockClient = !FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
+                return isNotBedrockClient = !BedrockUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
             }
             return true;
         }
@@ -216,6 +218,7 @@ public class PacketListener {
         volatile int maxY = 0;
         private final Long2IntOpenHashMap customBlockStateCache = new Long2IntOpenHashMap();
         private final Int2ObjectOpenHashMap<CustomItem> paintingItems = new Int2ObjectOpenHashMap<>();
+        private Long locToSkip = null;
 
         /**
          * @return {@code Blocks.AIR.defaultBlockState()} if not in cache
@@ -237,7 +240,7 @@ public class PacketListener {
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
             if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
-                isBedrockClient = FloodgateUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
+                isBedrockClient = BedrockUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
                 if (isBedrockClient) {
                     LostEngine.logger().info("Bedrock client detected: {}", serverCommonPacketListener.getOwner().name());
                 }
@@ -257,7 +260,7 @@ public class PacketListener {
         }
 
         @Override
-        public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(@NotNull ChannelHandlerContext ctx, @NotNull Object msg) throws Exception {
             Object packet = isBedrockClient(ctx) ? msg : serverbound(msg, ctx, this);
             if (packet != null) {
                 super.channelRead(ctx, packet);
@@ -265,7 +268,7 @@ public class PacketListener {
         }
 
         @Override
-        public void write(@NotNull ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(@NotNull ChannelHandlerContext ctx, @NotNull Object msg, @NotNull ChannelPromise promise) throws Exception {
             Object packet = isBedrockClient(ctx) ? msg : clientbound(msg, ctx, this);
             if (packet != null) {
                 super.write(ctx, packet, promise);
@@ -273,7 +276,7 @@ public class PacketListener {
         }
     }
 
-    private static @Nullable Object serverbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) {
+    private static @MaybeNull Object serverbound(@NotNull Object msg, @NotNull ChannelHandlerContext ctx, @NotNull ChannelDupeHandler handler) {
         switch (msg) {
             case ServerboundSetCreativeModeSlotPacket packet -> {
                 ItemStack item = packet.itemStack();
@@ -299,13 +302,25 @@ public class PacketListener {
                 if (player.gameMode.getGameModeForPlayer() != GameType.SURVIVAL) break;
                 if (packet.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
                     BlockState blockState = handler.getBlockState(packet.getPos().asLong());
-                    if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
+                    Optional<CustomBlock> customBlock = blockState.getBlock() instanceof CustomBlock obj ? Optional.of(obj) : Optional.empty();
+                    if (customBlock.isPresent() || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
                         //noinspection DataFlowIssue -- never get used
                         if (blockState.getDestroyProgress(player, null, packet.getPos()) >= 1.0F) {
                             ctx.channel().writeAndFlush(new ClientboundLevelEventPacket(2001, packet.getPos(), Block.getId(blockState), false));
                             break;
                         }
-                        float clientBlockDestroySpeed = getDestroySpeed(blockState.getBlock() instanceof CustomBlock customBlock ? customBlock.getClientBlockState() : blockState, editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem()));
+                        customBlock.ifPresent(obj -> {
+                            if (obj.getNotClickableBlockState() != null) {
+                                handler.locToSkip = packet.getPos().asLong();
+                                ctx.channel().writeAndFlush(new ClientboundBlockUpdatePacket(packet.getPos(), obj.getClientBlockState()));
+                            }
+                        });
+                        float clientBlockDestroySpeed = getDestroySpeed(
+                                customBlock.isPresent() ?
+                                        customBlock.get().getClientBlockState() :
+                                        blockState,
+                                editItem(player.getInventory().getSelectedItem(), false).orElse(player.getInventory().getSelectedItem())
+                        );
                         if (clientBlockDestroySpeed == 0) break;
                         float blockDestroySpeed = getDestroySpeed(blockState, player.getInventory().getSelectedItem());
                         if (blockDestroySpeed != clientBlockDestroySpeed) {
@@ -323,6 +338,11 @@ public class PacketListener {
                         packet.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
                     BlockState blockState = handler.getBlockState(packet.getPos().asLong());
                     if (blockState.getBlock() instanceof CustomBlock || blockState.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.RED_MUSHROOM_BLOCK || blockState.getBlock() == Blocks.MUSHROOM_STEM) {
+                        if (blockState.getBlock() instanceof CustomBlock customBlock) {
+                            if (customBlock.getNotClickableBlockState() != null) {
+                                ctx.channel().writeAndFlush(new ClientboundBlockUpdatePacket(packet.getPos(), blockState));
+                            }
+                        }
                         AttributeInstance blockBreakSpeed = new AttributeInstance(Attributes.BLOCK_BREAK_SPEED, attributeInstance -> {
                         });
                         AttributeInstance playerAttribute = player.getAttribute(Attributes.BLOCK_BREAK_SPEED);
@@ -353,7 +373,7 @@ public class PacketListener {
         return msg;
     }
 
-    private static @Nullable Object clientbound(@NotNull Object msg, ChannelHandlerContext ctx, ChannelDupeHandler handler) throws Exception {
+    private static @MaybeNull Object clientbound(@NotNull Object msg, @NotNull ChannelHandlerContext ctx, @NotNull ChannelDupeHandler handler) throws Exception {
         switch (msg) {
             case ClientboundLoginPacket packet -> processCommonPlayerSpawnInfo(packet.commonPlayerSpawnInfo(), handler);
             case ClientboundRespawnPacket packet ->
@@ -375,9 +395,14 @@ public class PacketListener {
                 }
             }
             case ClientboundBlockUpdatePacket packet -> {
-                Optional<BlockState> newBlockState = getClientBlockState(packet.blockState);
+                if (handler.locToSkip != null && handler.locToSkip == packet.getPos().asLong()) {
+                    handler.locToSkip = null;
+                    break;
+                }
+                Optional<BlockState> newBlockState = getClientBlockState(packet.blockState, true);
                 if (newBlockState.isPresent()) {
-                    handler.setCustomBlockState(packet.getPos().asLong(), packet.blockState);
+                    if (packet.blockState.getBlock() instanceof CustomBlock)
+                        handler.setCustomBlockState(packet.getPos().asLong(), packet.blockState);
                     return new ClientboundBlockUpdatePacket(packet.getPos(), newBlockState.get());
                 } else {
                     handler.removeCachedBlockStates(packet.getPos().asLong());
@@ -392,9 +417,10 @@ public class PacketListener {
                         throw new IllegalStateException("BlockStates length does not match Positions length in ClientboundSectionBlocksUpdatePacket");
                     }
                     for (int i = 0; i < blockStates.length; i++) {
-                        Optional<BlockState> newBlockState = getClientBlockState(blockStates[i]);
+                        Optional<BlockState> newBlockState = getClientBlockState(blockStates[i], true);
                         if (newBlockState.isPresent()) {
-                            handler.setCustomBlockState(sectionPos.relativeToBlockPos(positions[i]).asLong(), blockStates[i]);
+                            if (blockStates[i].getBlock() instanceof CustomBlock)
+                                handler.setCustomBlockState(sectionPos.relativeToBlockPos(positions[i]).asLong(), blockStates[i]);
                             blockStates[i] = newBlockState.get();
                         } else {
                             handler.removeCachedBlockStates(sectionPos.relativeToBlockPos(positions[i]).asLong());
@@ -499,7 +525,7 @@ public class PacketListener {
                             newItems.set(i, new SynchedEntityData.DataValue<>(dataValue.id(), EntityDataSerializers.ITEM_STACK, newItem.get()));
                         }
                     } else if (dataValue.value() instanceof BlockState blockState) {
-                        Optional<BlockState> newBlockState = getClientBlockState(blockState);
+                        Optional<BlockState> newBlockState = getClientBlockState(blockState, false);
                         if (newBlockState.isPresent()) {
                             requiresEdit = true;
                             newItems.set(i, new SynchedEntityData.DataValue<>(dataValue.id(), EntityDataSerializers.BLOCK_STATE, newBlockState.get()));
@@ -531,7 +557,7 @@ public class PacketListener {
                     }
                 } else if (packet.getParticle() instanceof BlockParticleOption particle) {
                     BlockState blockState = particle.getState();
-                    Optional<BlockState> newBlockState = getClientBlockState(blockState);
+                    Optional<BlockState> newBlockState = getClientBlockState(blockState, false);
                     if (newBlockState.isPresent()) {
                         return new ClientboundLevelParticlesPacket(
                                 new BlockParticleOption(particle.getType(), newBlockState.get()),
@@ -566,7 +592,7 @@ public class PacketListener {
                 if (packet.getType() == 2001 || packet.getType() == 3008) { // Block break event and Block finished brushing
                     int data = packet.getData();
                     Block block = Block.stateById(data).getBlock();
-                    Optional<BlockState> newBlockState = getClientBlockState(block.defaultBlockState());
+                    Optional<BlockState> newBlockState = getClientBlockState(block.defaultBlockState(), false);
                     if (newBlockState.isPresent()) {
                         return new ClientboundLevelEventPacket(
                                 packet.getType(),
@@ -744,7 +770,7 @@ public class PacketListener {
                 for (int y = 0; y < 16; y++) {
                     for (int z = 0; z < 16; z++) {
                         BlockState blockState = section.getBlockState(x, y, z);
-                        Optional<BlockState> clientBlockState = getClientBlockState(blockState);
+                        Optional<BlockState> clientBlockState = getClientBlockState(blockState, true);
                         long blockPosLong = BlockPos.asLong((chunkX << 4) + x, sectionY + y, (chunkZ << 4) + z);
                         if (clientBlockState.isPresent()) {
                             // If we used section.setBlockState(x, y, z, clientBlockState.get());
@@ -755,7 +781,8 @@ public class PacketListener {
                                 section.setBlockState(x, y, z, clientBlockState.get());
                                 requiresEdit = true;
                             }
-                            customBlockStateCache.put(blockPosLong, Block.getId(blockState));
+                            if (blockState.getBlock() instanceof CustomBlock)
+                                customBlockStateCache.put(blockPosLong, Block.getId(blockState));
                         } else {
                             customBlockStateCache.remove(blockPosLong);
                         }
@@ -766,7 +793,7 @@ public class PacketListener {
 
             if (values != null) {
                 if (palette instanceof SingleValuePalette<BlockState> singleValuePalette) {
-                    Optional<BlockState> blockState = getClientBlockState((BlockState) values[0]);
+                    Optional<BlockState> blockState = getClientBlockState((BlockState) values[0], true);
                     if (blockState.isPresent()) {
                         values[0] = blockState.get();
                         ReflectionUtils.setValue(singleValuePalette, blockState.get());
@@ -776,7 +803,7 @@ public class PacketListener {
                     for (int j = 0; j < values.length; j++) {
                         Object obj = values[j];
                         if (obj instanceof BlockState state) {
-                            Optional<BlockState> clientBlockState = getClientBlockState(state);
+                            Optional<BlockState> clientBlockState = getClientBlockState(state, true);
                             if (clientBlockState.isPresent()) {
                                 values[j] = clientBlockState.get();
                                 requiresEdit = true;
@@ -904,7 +931,7 @@ public class PacketListener {
     }
 
     private static void processCommonPlayerSpawnInfo(@NotNull CommonPlayerSpawnInfo commonPlayerSpawnInfo, @NotNull ChannelDupeHandler handler) {
-        @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") /// See {@link net.minecraft.world.level.Level#Level}
+        @CanBreakOnUpdates("1.21.11") /// See {@link net.minecraft.world.level.Level#Level}
                 DimensionType dimType = commonPlayerSpawnInfo.dimensionType().value();
         handler.minY = dimType.minY();
         int height = dimType.height();
@@ -959,16 +986,24 @@ public class PacketListener {
         return element;
     }
 
-    public static Optional<BlockState> getClientBlockState(@NotNull BlockState blockState) {
+    public static Optional<BlockState> getClientBlockState(@NotNull BlockState blockState, boolean replaceClickableBlocks) {
         Block block = blockState.getBlock();
         if (block instanceof CustomBlock customBlock) {
-            return Optional.of(customBlock.getClientBlockState());
-        } else if (block == Blocks.BROWN_MUSHROOM_BLOCK) {
-            return Optional.of(BlockStateProvider.BROWN_MUSHROOM_BLOCKSTATE);
-        } else if (block == Blocks.RED_MUSHROOM_BLOCK) {
-            return Optional.of(BlockStateProvider.RED_MUSHROOM_BLOCKSTATE);
-        } else if (block == Blocks.MUSHROOM_STEM) {
-            return Optional.of(BlockStateProvider.MUSHROOM_STEM_BLOCKSTATE);
+            // if replaceClickableBlocks is true, we try to replace it with the non-clickable block if it is not null
+            return replaceClickableBlocks ?
+                    Optional.of(
+                            Optional.ofNullable(customBlock.getNotClickableBlockState())
+                                    .orElse(customBlock.getClientBlockState())
+                    ) :
+                    Optional.of(customBlock.getClientBlockState());
+        } else if (block == Blocks.BROWN_MUSHROOM_BLOCK || block == Blocks.RED_MUSHROOM_BLOCK || block == Blocks.MUSHROOM_STEM) {
+            return Optional.of(BlockStateProvider.getMushroomBlockState(blockState, 63));
+        } else if (block == Blocks.DROPPER || block == Blocks.DISPENSER) {
+            return Optional.of(blockState.setValue(BlockStateProperties.TRIGGERED, false));
+        } else if (block == Blocks.PALE_OAK_LEAVES) {
+            return Optional.of(BlockStateProvider.getLeavesBlockState(blockState, 13));
+        } else if (block == Blocks.TARGET) {
+            return Optional.of(BlockStateProvider.getTargetBlockState(blockState, 0));
         }
         return Optional.empty();
     }
@@ -977,8 +1012,7 @@ public class PacketListener {
      * This is a simplified version of {@link  BlockState#getDestroyProgress}
      */
     public static float getDestroySpeed(@NotNull BlockState state, ItemStack item) {
-        //noinspection DataFlowIssue -- This is just a simple getter lol it doesn't use the parameters
-        float destroySpeed = state.getDestroySpeed(null, null);
+        float destroySpeed = state.destroySpeed;
         if (destroySpeed == -1.0F) {
             return 0.0F;
         } else {

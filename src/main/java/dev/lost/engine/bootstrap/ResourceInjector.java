@@ -1,7 +1,9 @@
 package dev.lost.engine.bootstrap;
 
 import com.google.common.collect.Maps;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.NotNull;
+import dev.lost.annotations.Nullable;
 import dev.lost.engine.blocks.BlockInjector;
 import dev.lost.engine.blocks.BlockStateProvider;
 import dev.lost.engine.bootstrap.components.*;
@@ -10,6 +12,7 @@ import dev.lost.engine.bootstrap.components.annotations.Property;
 import dev.lost.engine.items.ItemInjector;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.ReflectionUtils;
+import dev.misieur.fast.FastEnum;
 import dev.misieur.fast.FastFiles;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -25,11 +28,10 @@ import net.minecraft.world.item.equipment.ArmorMaterials;
 import net.minecraft.world.item.equipment.ArmorType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -38,7 +40,7 @@ import java.util.Map;
 public class ResourceInjector {
 
     @Getter
-    @CanBreakOnUpdates(lastCheckedVersion = "1.21.11") // If there is a new Material
+    @CanBreakOnUpdates("1.21.11") // If there is a new Material
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>(Map.of(
             "WOOD", ToolMaterial.WOOD,
             "STONE", ToolMaterial.STONE,
@@ -361,24 +363,46 @@ public class ResourceInjector {
                 }
             }
             String type = blockSection.getString("type", "regular").toLowerCase();
-            switch (type) {
-                case "regular" -> BlockInjector.injectRegularBlock(
-                        key,
-                        BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.REGULAR),
-                        (float) blockSection.getDouble("destroy_time", 0F),
-                        (float) blockSection.getDouble("explosion_resistance", 0F),
-                        BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
-                );
-                case "tnt" -> BlockInjector.injectTNTBlock(
-                        key,
-                        BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.REGULAR),
-                        blockSection.getInt("explosion_power", 4)
-                );
+            String registry = blockSection.getString("registry", "wood");
+            BlockStateProvider.BlockStateType blockStateType = FastEnum.getOrElseGet(
+                    registry,
+                    BlockStateProvider.BlockStateType.class,
+                    () -> {
+                        throw new IllegalStateException(
+                                "Unknown registry type: " +
+                                        registry +
+                                        " for block: " +
+                                        key +
+                                        " possible options: " +
+                                        Arrays.stream(BlockStateProvider.BlockStateType.values()).map(Enum::name)
+                        );
+                    }
+            );
+            try {
+                switch (type) {
+                    case "regular" -> BlockInjector.injectRegularBlock(
+                            key,
+                            BlockStateProvider.getNextBlockState(blockStateType),
+                            LostEngineBootstrap.replaceClickableBlocks && blockStateType == BlockStateProvider.BlockStateType.STONE ?
+                                    BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.WOOD) :
+                                    null,
+                            (float) blockSection.getDouble("destroy_time", 0F),
+                            (float) blockSection.getDouble("explosion_resistance", 0F),
+                            BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
+                    );
+                    case "tnt" -> BlockInjector.injectTNTBlock(
+                            key,
+                            BlockStateProvider.getNextBlockState(blockStateType),
+                            blockSection.getInt("explosion_power", 4)
+                    );
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to inject block: " + key, e);
             }
         }
     }
 
-    public static <K> K getOrThrow(Map<?, K> map, Object key, String message) {
+    public static <K> @NotNull K getOrThrow(@NotNull Map<?, K> map, Object key, String message) {
         K obj = map.get(key);
         if (obj == null)
             throw new IllegalArgumentException(message);

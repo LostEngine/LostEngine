@@ -3,7 +3,7 @@ package dev.lost.engine.commands;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import dev.lost.engine.annotations.CanBreakOnUpdates;
+import dev.lost.annotations.CanBreakOnUpdates;
 import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -21,7 +21,7 @@ import org.bukkit.craftbukkit.block.CraftBlockState;
 import javax.annotation.Nullable;
 import java.util.function.Predicate;
 
-@CanBreakOnUpdates(lastCheckedVersion = "1.21.10") // Make sure the code from this command has been changed in newer versions
+@CanBreakOnUpdates("1.21.10") // Make sure the code from this command has been changed in newer versions
 public class SetBlockCommand {
     private static final SimpleCommandExceptionType ERROR_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.setblock.failed"));
 

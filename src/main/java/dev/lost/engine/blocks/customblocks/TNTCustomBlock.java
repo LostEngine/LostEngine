@@ -1,5 +1,6 @@
 package dev.lost.engine.blocks.customblocks;
 
+import dev.lost.annotations.NotNull;
 import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -32,7 +33,6 @@ import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import org.bukkit.craftbukkit.event.CraftEventFactory;
 import org.bukkit.event.block.TNTPrimeEvent;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.function.BooleanSupplier;

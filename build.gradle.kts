@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "dev.misieur"
-version = "0.0.4-mc1.21.11"
+version = "0.0.6-mc1.21.11"
 
 repositories {
     mavenCentral()
@@ -19,12 +19,7 @@ repositories {
         name = "papermc-repo"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
-    maven {
-        url = uri("https://repo.opencollab.dev/main/")
-        content {
-            includeGroupByRegex("^org\\.geysermc\\..*")
-        }
-    }
+    maven("https://repo.opencollab.dev/main/")
     maven {
         url = uri("https://repo.misieur.me/repository")
         content {
@@ -38,10 +33,12 @@ dependencies {
     compileOnly("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")
 
+    compileOnly(project(":annotations"))
     implementation(project(":furnace"))
-    implementation("dev.misieur:fast:1.0.1")
+    implementation("dev.misieur:fast:1.0.2")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
 
+    compileOnly("org.geysermc.geyser:api:2.9.3-SNAPSHOT")
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
 }
 
@@ -90,6 +87,13 @@ tasks.processResources {
     }
 }
 
+tasks.build {
+    dependsOn(tasks.shadowJar)
+}
+
 tasks.shadowJar {
     archiveClassifier.set("")
+    minimize {
+        exclude(dependency("dev.misieur:justamaterial"))
+    }
 }
