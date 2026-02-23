@@ -89,7 +89,7 @@ export type Material = {
     enchantment_value?: number;
     repair_item?: string;
     tool?: {
-        base?: string; // Ask API for enum
+        base?: string;
         durability?: number;
         speed?: number;
         attack_damage_bonus?: number;

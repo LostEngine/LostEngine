@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/breadcrumb.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import {Skeleton} from "@/components/ui/skeleton.tsx";
-import {deleteFile, isFileInData, uploadFile} from "@/lib/utils.ts";
+import {deleteFile, isFileInData, moveResource, uploadFile} from "@/lib/utils.ts";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -80,7 +80,9 @@ import {
     FileUploadItemPreview,
     FileUploadList,
 } from "@/components/ui/file-upload.tsx";
-import {FileViewer} from "@/fileviewer.tsx";
+import {FileViewer} from "@/fileviewer/fileviewer.tsx";
+import {ScrollArea} from "@/components/ui/scroll-area.tsx";
+import {create} from "zustand/react";
 
 function getPreferredTheme(): "dark" | "light" {
     const stored = localStorage.getItem("theme");
@@ -93,18 +95,28 @@ function getPreferredTheme(): "dark" | "light" {
 type ApiData = {
     items: string[];
     files: TreeItem[];
+    tool_materials: string[];
+    armor_materials: string[];
 };
 
-//export const apiPrefix = "http://localhost:7270/api";
-export const apiPrefix = "/api";
+export const apiPrefix = "http://localhost:7270/api";
+//export const apiPrefix = "/api";
+
+type DataStore = {
+    data: ApiData;
+    setData: (newData: ApiData) => void;
+}
+
+export const useDataStore = create<DataStore>()((set) => ({
+    data: {items: [""], files: ["loading..."], tool_materials: [], armor_materials: []},
+    setData: (newData) => set({ data: newData }),
+}))
 
 export function App() {
     const [theme, setTheme] = useState<"dark" | "light">(getPreferredTheme());
     const [searchOpen, setSearchOpen] = useState(false);
-    const [data, setData] = useState<ApiData>({
-        items: [""],
-        files: ["loading..."],
-    });
+    const setData = useDataStore((state) => state.setData);
+    const data = useDataStore((state) => state.data);
     const [readonly, setReadonly] = useState(false);
     const [token] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
@@ -112,16 +124,16 @@ export function App() {
         if (text?.endsWith("_readonly")) setReadonly(true);
         return text;
     });
-    const [openedFile, setOpenedFile] = useState<string | null>(null);
-    const [fileContent, setFileContent] = useState<string | null>(null);
+    const [openedFile, setOpenedFile] = useState<string>();
+    const [fileContent, setFileContent] = useState<string>();
     const [fileNameDialogOpen, setFileNameDialogOpen] = useState(false);
     const [fileUploadDialogOpen, setFileUploadDialogOpen] = useState(false);
     const [newFilePath, setNewFilePath] = useState("");
     const [newFileDropdownMenuOpen, setNewFileDropdownMenuOpen] = useState(false);
-    const [filesFromFolder, setFilesFromFolder] = useState<FileList | null>(null);
+    const [filesFromFolder, setFilesFromFolder] = useState<FileList>();
     const handleNewTextFile = () => {
         setFileNameDialogOpen(false);
-        if (newFilePath.length > 0) {
+        if (newFilePath?.length > 0) {
             uploadFile(
                 newFilePath,
                 token ?? "",
@@ -144,9 +156,9 @@ export function App() {
             }
             const json = await response.json();
             setData(json);
-            if (openedFile !== null && !isFileInData(json.files, openedFile)) {
-                setOpenedFile(null);
-                setFileContent(null);
+            if (openedFile && !isFileInData(json.files, openedFile)) {
+                setOpenedFile(undefined);
+                setFileContent(undefined);
             }
         };
 
@@ -190,18 +202,18 @@ export function App() {
             if (readonly) return;
             if (e.ctrlKey && e.key === "s") {
                 e.preventDefault();
-                if (openedFile !== null && fileContent !== null && token !== null) {
-                    const lower = openedFile.toLowerCase();
+                if (openedFile && fileContent && token) {
+                    const lower = openedFile?.toLowerCase();
                     if (
-                        !lower.endsWith(".png") &&
-                        !lower.endsWith(".jpg") &&
-                        !lower.endsWith(".jpeg") &&
-                        !lower.endsWith(".gif")
+                        !lower?.endsWith(".png") &&
+                        !lower?.endsWith(".jpg") &&
+                        !lower?.endsWith(".jpeg") &&
+                        !lower?.endsWith(".gif")
                     ) {
                         uploadFile(
-                            openedFile,
+                            openedFile as string,
                             token,
-                            new Blob([fileContent], {type: "text/plain"}),
+                            new Blob([fileContent as string], {type: "text/plain"}),
                             reload,
                         );
                     }
@@ -310,7 +322,7 @@ export function App() {
                                             fileInput.style.display = "none";
                                             fileInput.addEventListener("change", (event) => {
                                                 setNewFilePath((event.target as HTMLInputElement).dirName || "folder");
-                                                setFilesFromFolder((event.target as HTMLInputElement).files);
+                                                setFilesFromFolder((event.target as HTMLInputElement).files as FileList | undefined);
                                             });
                                             document.body.appendChild(fileInput);
                                             fileInput.click();
@@ -334,7 +346,7 @@ export function App() {
                                                 item={item}
                                                 onOpenFile={(path) => {
                                                     setOpenedFile(path);
-                                                    setFileContent(null);
+                                                    setFileContent(undefined);
                                                 }}
                                                 token={token ?? ""}
                                                 reload={reload}
@@ -360,40 +372,33 @@ export function App() {
                                 orientation="vertical"
                                 className="mr-2 data-[orientation=vertical]:h-4"
                             />
-                            <Path file={openedFile}/>
+                            <Path file={openedFile as string}/>
                         </div>
                         <div className="flex items-center gap-4">
                             {(() => {
+                                if (!openedFile || !fileContent || !token) return;
+                                const lower = openedFile?.toLowerCase();
                                 if (
-                                    openedFile === null ||
-                                    fileContent === null ||
-                                    token === null
-                                )
-                                    return null;
-                                const lower = openedFile.toLowerCase();
-                                if (
-                                    lower.endsWith(".png") ||
-                                    lower.endsWith(".jpg") ||
-                                    lower.endsWith(".jpeg") ||
-                                    lower.endsWith(".gif")
-                                )
-                                    return null;
+                                    lower?.endsWith(".png") ||
+                                    lower?.endsWith(".jpg") ||
+                                    lower?.endsWith(".jpeg") ||
+                                    lower?.endsWith(".gif")
+                                ) return;
                                 return (
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className=""
                                         onClick={() =>
                                             uploadFile(
-                                                openedFile,
+                                                openedFile as string,
                                                 token,
-                                                new Blob([fileContent], {type: "text/plain"}),
+                                                new Blob([fileContent as string], {type: "text/plain"}),
                                                 reload,
                                             )
                                         }
                                         disabled={readonly}
                                     >
-                                        <Upload/> Upload File
+                                        <Upload/> Upload Files
                                     </Button>
                                 );
                             })()}
@@ -420,7 +425,7 @@ export function App() {
                             item={item}
                             onOpenFile={(path) => {
                                 setOpenedFile(path);
-                                setFileContent(null);
+                                setFileContent(undefined);
                                 setSearchOpen(false);
                             }}
                         />
@@ -450,9 +455,9 @@ export function App() {
                 </DialogContent>
             </Dialog>
             <Dialog
-                open={filesFromFolder != null}
+                open={filesFromFolder !== undefined}
                 onOpenChange={open => {
-                    if (!open) setFilesFromFolder(null);
+                    if (!open) setFilesFromFolder(undefined);
                 }}
             >
                 <DialogContent>
@@ -472,18 +477,17 @@ export function App() {
                         </DialogClose>
                         <Button type="submit" onClick={() => {
                             if (!filesFromFolder) return;
-                            const files = filesFromFolder;
-                            setFilesFromFolder(null);
+                            setFilesFromFolder(undefined);
 
                             let completed = 0;
-                            const total = files.length;
+                            const total = filesFromFolder.length;
 
                             if (total === 0) {
                                 reload();
                                 return;
                             }
 
-                            for (const file of files) {
+                            for (const file of filesFromFolder) {
                                 uploadFile(newFilePath + "/" + file.name, token ?? "", file, () => {
                                     completed++;
                                     if (completed >= total) {
@@ -593,6 +597,8 @@ function Tree({
     const name: string = typeof rawName === "string" ? rawName : "";
     const fullPath: string = parentPath ? `${parentPath}/${name}` : name;
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const [moveDialogPath, setMoveDialogPath] = useState(fullPath);
 
     const handleNewTextFileClick = () => {
         let folderPath = items.length
@@ -648,6 +654,9 @@ function Tree({
                         <ContextMenuItem onClick={handleNewTextFileClick} disabled={readonly}>
                             New Text File
                         </ContextMenuItem>
+                        <ContextMenuItem onClick={() => setMoveDialogOpen(true)} disabled={readonly}>
+                            Move File
+                        </ContextMenuItem>
                         <ContextMenuItem onClick={handleDeleteClick} disabled={readonly} variant="destructive">
                             Delete File
                         </ContextMenuItem>
@@ -672,6 +681,35 @@ function Tree({
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+                <Dialog open={moveDialogOpen} onOpenChange={open => {
+                    setMoveDialogOpen(open);
+                    if (!open) setMoveDialogPath(fullPath);
+                }}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Move File</DialogTitle>
+                        </DialogHeader>
+                        <Input
+                            value={moveDialogPath}
+                            onInput={(e) =>
+                                setMoveDialogPath((e.target as HTMLInputElement).value)
+                            }
+                        />
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button type="submit" onClick={() => {
+                                if (!moveDialogPath) return;
+                                moveResource(fullPath, moveDialogPath, token, reload);
+                                setMoveDialogPath(fullPath);
+                                setMoveDialogOpen(false);
+                            }}>
+                                Move File
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         );
     }
@@ -696,6 +734,9 @@ function Tree({
                     <ContextMenuContent>
                         <ContextMenuItem onClick={handleNewTextFileClick} disabled={readonly}>
                             New Text File
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => setMoveDialogOpen(true)} disabled={readonly}>
+                            Move Folder
                         </ContextMenuItem>
                         <ContextMenuItem onClick={handleDeleteClick} disabled={readonly} variant="destructive">
                             Delete Folder
@@ -741,6 +782,35 @@ function Tree({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <Dialog open={moveDialogOpen} onOpenChange={open => {
+                setMoveDialogOpen(open);
+                if (!open) setMoveDialogPath(fullPath);
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Move Folder</DialogTitle>
+                    </DialogHeader>
+                    <Input
+                        value={moveDialogPath}
+                        onInput={(e) =>
+                            setMoveDialogPath((e.target as HTMLInputElement).value)
+                        }
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" onClick={() => {
+                            if (!moveDialogPath) return;
+                            moveResource(fullPath, moveDialogPath, token, reload);
+                            setMoveDialogPath(fullPath);
+                            setMoveDialogOpen(false);
+                        }}>
+                            Move Folder
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </SidebarMenuItem>
     );
 }
@@ -886,18 +956,20 @@ function FileUploadDialog({
                         Drag and drop or click here to upload files
                     </FileUploadDropzone>
                     <FileUploadList>
-                        {files.map((file, index) => (
-                            <FileUploadItem key={index} value={file}>
-                                <FileUploadItemPreview/>
-                                <FileUploadItemMetadata/>
-                                <FileUploadItemDelete asChild>
-                                    <Button variant="ghost" size="icon" className="size-7">
-                                        <X/>
-                                        <span className="sr-only">Delete</span>
-                                    </Button>
-                                </FileUploadItemDelete>
-                            </FileUploadItem>
-                        ))}
+                        <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                            {files.map((file, index) => (
+                                <FileUploadItem key={index} value={file}>
+                                    <FileUploadItemPreview/>
+                                    <FileUploadItemMetadata/>
+                                    <FileUploadItemDelete asChild>
+                                        <Button variant="ghost" size="icon" className="size-7">
+                                            <X/>
+                                            <span className="sr-only">Delete</span>
+                                        </Button>
+                                    </FileUploadItemDelete>
+                                </FileUploadItem>
+                            ))}
+                        </ScrollArea>
                     </FileUploadList>
                 </FileUpload>
                 <DialogFooter>

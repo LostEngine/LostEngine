@@ -63,6 +63,28 @@ export function uploadFile(path: string, token: string, file: Blob | File | Arra
     );
 }
 
+export function moveResource(path: string, destination: string, token: string, reload: () => void) {
+    const asyncDeleteFile = async () => {
+        const response = await fetch(`${apiPrefix}/move_resource?path=${encodeURIComponent(path)}&destination=${encodeURIComponent(destination)}&token=${encodeURIComponent(token)}`, {
+            method: "POST",
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        reload();
+    };
+
+    toast.promise<void>(
+        () => asyncDeleteFile(),
+        {
+            loading: "Moving file...",
+            success: "File moved",
+            error: "Error",
+            closeButton: true,
+        }
+    );
+}
+
 export function isFileInData(item: TreeItem, targetPath: string, parentPath = ""): boolean {
     const [rawName, ...items] = Array.isArray(item) ? item : [item];
     const name: string = typeof rawName === "string" ? rawName : "";

@@ -5,13 +5,10 @@ import {Slot} from "@radix-ui/react-slot"
 import {cva, type VariantProps} from "class-variance-authority"
 import {PanelLeftIcon} from "lucide-react"
 
-import {useIsMobile} from "@/hooks/use-mobile"
 import {cn} from "@/lib/utils"
 import {Button} from "@/components/ui/button"
-import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,} from "@/components/ui/sheet"
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,} from "@/components/ui/tooltip"
 
-const SIDEBAR_WIDTH_MOBILE = "18rem"
 const DEFAULT_SIDEBAR_WIDTH = 288
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -24,7 +21,6 @@ type SidebarContextProps = {
     setOpen: (open: boolean) => void
     openMobile: boolean
     setOpenMobile: (open: boolean) => void
-    isMobile: boolean
     toggleSidebar: () => void
     sidebarWidth: number
     setSidebarWidth: (width: number) => void
@@ -56,7 +52,6 @@ function SidebarProvider({
     open?: boolean
     onOpenChange?: (open: boolean) => void
 }) {
-    const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
 
     // This is the internal state of the sidebar.
@@ -80,8 +75,8 @@ function SidebarProvider({
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
-        return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-    }, [isMobile, setOpen, setOpenMobile])
+        return setOpen((open) => !open)
+    }, [setOpen, setOpenMobile])
 
     // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
@@ -110,7 +105,6 @@ function SidebarProvider({
             state,
             open,
             setOpen,
-            isMobile,
             openMobile,
             setOpenMobile,
             toggleSidebar,
@@ -119,7 +113,7 @@ function SidebarProvider({
             isDragging,
             setIsDragging
         }),
-        [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, sidebarWidth, isDragging, setIsDragging]
+        [state, open, setOpen, openMobile, setOpenMobile, toggleSidebar, sidebarWidth, isDragging, setIsDragging]
     )
 
     return (
@@ -148,7 +142,7 @@ function SidebarProvider({
 }
 
 function SidebarResizableHandle({side = "left"}: { side: "left" | "right" }) {
-    const {isMobile, state, setSidebarWidth, isDragging, setIsDragging} = useSidebar()
+    const {state, setSidebarWidth, isDragging, setIsDragging} = useSidebar()
 
     const handleRef = React.useRef<HTMLDivElement>(null)
 
@@ -193,7 +187,7 @@ function SidebarResizableHandle({side = "left"}: { side: "left" | "right" }) {
         }
     }, [isDragging, side, setSidebarWidth])
 
-    if (isMobile || state === "collapsed") return null
+    if (state === "collapsed") return null
 
     return (
         <div
@@ -241,7 +235,7 @@ function Sidebar({
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
 }) {
-    const {isMobile, state, openMobile, setOpenMobile, isDragging} = useSidebar()
+    const {state, isDragging} = useSidebar()
 
     if (collapsible === "none") {
         return (
@@ -255,31 +249,6 @@ function Sidebar({
             >
                 {children}
             </div>
-        )
-    }
-
-    if (isMobile) {
-        return (
-            <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-                <SheetContent
-                    data-sidebar="sidebar"
-                    data-slot="sidebar"
-                    data-mobile="true"
-                    className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
-                    style={
-                        {
-                            "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-                        } as React.CSSProperties
-                    }
-                    side={side}
-                >
-                    <SheetHeader className="sr-only">
-                        <SheetTitle>Sidebar</SheetTitle>
-                        <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-                    </SheetHeader>
-                    <div className="flex h-full w-full flex-col">{children}</div>
-                </SheetContent>
-            </Sheet>
         )
     }
 
@@ -496,7 +465,7 @@ function SidebarMenuButton({
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
     const Comp: React.ElementType = asChild ? Slot : "button"
-    const {isMobile, state} = useSidebar()
+    const {state} = useSidebar()
 
     const button = (
         <Comp
@@ -525,7 +494,7 @@ function SidebarMenuButton({
             <TooltipContent
                 side="right"
                 align="center"
-                hidden={state !== "collapsed" || isMobile}
+                hidden={state !== "collapsed"}
                 {...tooltip}
             />
         </Tooltip>

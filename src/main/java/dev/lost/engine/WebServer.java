@@ -10,14 +10,19 @@ import dev.lost.annotations.NotNull;
 import dev.lost.annotations.Nullable;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class WebServer {
 
@@ -265,6 +270,71 @@ public class WebServer {
             return;
         }
 
+        if (path.equals("/api/move_resource") && method.equals("POST")) {
+            if (isReadOnlyToken) {
+                sendResponse(exchange, 403, "Forbidden", "text/html");
+                return;
+            }
+            String rawPath = extractQueryParam(query, "path");
+            String rawDestination = extractQueryParam(query, "destination");
+
+            if (rawPath == null || rawPath.isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                return;
+            }
+
+            if (rawDestination == null || rawDestination.isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\": \"Missing 'destination' parameter\"}", "application/json");
+                return;
+            }
+
+            String cleanPath = sanitizeResourcePath(rawPath);
+            String cleanDestination = sanitizeResourcePath(rawDestination);
+            if (cleanPath == null || cleanDestination == null) {
+                sendResponse(exchange, 403, "{\"error\": \"Invalid or unsafe path/destination\"}", "application/json");
+                return;
+            }
+
+            File baseDir = new File(LostEngine.getInstance().getDataFolder(), "resources");
+            File file = new File(baseDir, cleanPath);
+            File targetFile = new File(baseDir, cleanDestination);
+
+            if (!file.exists()) {
+                sendResponse(exchange, 404, "{\"error\": \"File or directory not found\"}", "application/json");
+                return;
+            }
+
+            if (cleanDestination.startsWith(cleanPath)) {
+                // if we move `parent/folder` to `parent/folder/child`, we need to first move it to a temp dir and then to the destination dir
+                File tempDir = LostEngine.getInstance()
+                        .getDataPath()
+                        .resolve(".lost_engine/tmp/")
+                        .resolve(cleanPath.replaceAll("/", "_" + ThreadLocalRandom.current().nextInt()))
+                        .toFile();
+                if (!moveRecursive(file, tempDir)) {
+                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (source -> tempDir)\"}", "application/json");
+                    return;
+                }
+
+                if (!moveRecursive(tempDir, targetFile)) {
+                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (tempDir -> destination)\"}", "application/json");
+                    return;
+                }
+            } else {
+                if (!moveRecursive(file, targetFile)) {
+                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (source -> destination)\"}", "application/json");
+                    return;
+                }
+            }
+
+            boolean isDir = file.isDirectory();
+            LostEngine.logger().info("(Web editor) Moved {}: '{}' to '{}'", isDir ? "folder" : "file", cleanPath, cleanDestination);
+            sendResponse(exchange, 200,
+                    "{\"message\":\"Resource moved successfully\",\"destination\":\"" + cleanDestination + "\"}",
+                    "application/json");
+            return;
+        }
+
         sendResponse(exchange, 404, "{\"error\": \"API Endpoint Not Found\"}", "application/json");
     }
 
@@ -484,6 +554,27 @@ public class WebServer {
         }
 
         return file.delete();
+    }
+
+    private static boolean moveRecursive(@NotNull File source, @NotNull File target) {
+        if (source.isDirectory()) {
+            if (!target.exists() && !target.mkdirs()) return false;
+            File[] children = source.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    File targetChild = new File(target, child.getName());
+                    if (!moveRecursive(child, targetChild)) return false;
+                }
+            }
+            return source.delete();
+        } else {
+            if (target.exists() && !target.delete()) return false;
+
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists()) parent.mkdirs();
+
+            return source.renameTo(target);
+        }
     }
 
 }
