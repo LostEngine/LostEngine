@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useState} from "preact/compat";
+import React, {useEffect, useRef, useState} from "preact/compat";
 import githubLogo from "./assets/github-mark.svg";
 import codeLogo from "./assets/code.svg";
 import discordLogo from "./assets/discord.svg";
@@ -36,8 +36,8 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList,} from "@/components/ui/command.tsx";
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger,} from "@/components/ui/context-menu.tsx";
+import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from "@/components/ui/command.tsx";
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from "@/components/ui/context-menu.tsx";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -59,10 +59,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import {Collapsible, CollapsibleContent, CollapsibleTrigger,} from "@/components/ui/collapsible.tsx";
+import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible.tsx";
 import {toast} from "sonner";
 import {Input} from "@/components/ui/input.tsx";
-import {Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle,} from "@/components/ui/dialog.tsx";
+import {Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog.tsx";
 import {TextHoverEffect} from "@/components/ui/text-hover-effect";
 import {
     DropdownMenu,
@@ -87,9 +87,7 @@ import {create} from "zustand/react";
 function getPreferredTheme(): "dark" | "light" {
     const stored = localStorage.getItem("theme");
     if (stored === "dark" || stored === "light") return stored;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 type ApiData = {
@@ -105,12 +103,12 @@ export const apiPrefix = "http://localhost:7270/api";
 type DataStore = {
     data: ApiData;
     setData: (newData: ApiData) => void;
-}
+};
 
 export const useDataStore = create<DataStore>()((set) => ({
     data: {items: [""], files: ["loading..."], tool_materials: [], armor_materials: []},
-    setData: (newData) => set({ data: newData }),
-}))
+    setData: (newData) => set({data: newData}),
+}));
 
 export function App() {
     const [theme, setTheme] = useState<"dark" | "light">(getPreferredTheme());
@@ -131,15 +129,12 @@ export function App() {
     const [newFilePath, setNewFilePath] = useState("");
     const [newFileDropdownMenuOpen, setNewFileDropdownMenuOpen] = useState(false);
     const [filesFromFolder, setFilesFromFolder] = useState<FileList>();
+    const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wasFileContentLoaded = useRef(false);
     const handleNewTextFile = () => {
         setFileNameDialogOpen(false);
         if (newFilePath?.length > 0) {
-            uploadFile(
-                newFilePath,
-                token ?? "",
-                new Blob([""], {type: "text/plain"}),
-                reload,
-            );
+            uploadFile(newFilePath, token ?? "", new Blob([""], {type: "text/plain"}), reload);
         }
     };
 
@@ -148,7 +143,7 @@ export function App() {
         setFileNameDialogOpen(true);
     };
 
-    const reload = () => {
+    const reload = (useToast = false) => {
         const asyncReload = async () => {
             const response = await fetch(`${apiPrefix}/data?token=${token}`);
             if (!response.ok) {
@@ -157,17 +152,19 @@ export function App() {
             const json = await response.json();
             setData(json);
             if (openedFile && !isFileInData(json.files, openedFile)) {
-                setOpenedFile(undefined);
                 setFileContent(undefined);
+                setOpenedFile(undefined);
             }
         };
 
-        toast.promise<void>(() => asyncReload(), {
-            loading: "Reloading...",
-            success: "Data reloaded",
-            error: "Error",
-            closeButton: true,
-        });
+        if (useToast)
+            toast.promise<void>(() => asyncReload(), {
+                loading: "Reloading...",
+                success: "Data reloaded",
+                error: "Error",
+                closeButton: true,
+            });
+        else asyncReload();
     };
 
     /** Can be useful when getting `Uncaught (in promise) TypeError: Window.getComputedStyle: Argument 1 does not implement interface Element.` */
@@ -197,27 +194,56 @@ export function App() {
         reload();
     }, [token]);
 
+    const saveFileNow = () => {
+        if (!openedFile || fileContent === undefined || !token) return;
+
+        const lower = openedFile.toLowerCase();
+        if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif")) {
+            return;
+        }
+
+        uploadFile(openedFile, token, new Blob([fileContent], {type: "text/plain"}), reload);
+    };
+
+    useEffect(() => {
+        if (fileContent === undefined) {
+            wasFileContentLoaded.current = false;
+            return;
+        }
+        if (!openedFile || !token) return;
+        if (/\.(png|jpg|jpeg|gif)$/i.test(openedFile)) return;
+
+        if (!wasFileContentLoaded.current) {
+            wasFileContentLoaded.current = true;
+            return;
+        }
+
+        if (saveTimeout.current) {
+            clearTimeout(saveTimeout.current);
+        }
+
+        saveTimeout.current = setTimeout(() => {
+            saveFileNow();
+            saveTimeout.current = null;
+        }, 3000);
+
+        return () => {
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+            }
+        };
+    }, [fileContent]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (readonly) return;
             if (e.ctrlKey && e.key === "s") {
                 e.preventDefault();
-                if (openedFile && fileContent && token) {
-                    const lower = openedFile?.toLowerCase();
-                    if (
-                        !lower?.endsWith(".png") &&
-                        !lower?.endsWith(".jpg") &&
-                        !lower?.endsWith(".jpeg") &&
-                        !lower?.endsWith(".gif")
-                    ) {
-                        uploadFile(
-                            openedFile as string,
-                            token,
-                            new Blob([fileContent as string], {type: "text/plain"}),
-                            reload,
-                        );
-                    }
+                if (saveTimeout.current) {
+                    clearTimeout(saveTimeout.current);
+                    saveTimeout.current = null;
                 }
+                saveFileNow();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -228,36 +254,21 @@ export function App() {
 
     return (
         <>
-            <header
-                className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between p-4 bg-blue-200 dark:bg-blue-800">
+            <header className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between p-4 bg-blue-200 dark:bg-blue-800">
                 <div className="flex items-center">
                     <div>
-                        <TextHoverEffect text="LostEngine"/>
+                        <TextHoverEffect text="LostEngine" />
                     </div>
                     <div className="-ml-18 pt-2">
-                        {readonly && <span
-                            className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
+                        {readonly && <span className="m-0 text-sm leading-none text-neutral-400 dark:text-neutral-600">Read-only</span>}
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button
-                        variant="outline"
-                        size="icon-lg"
-                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                    >
-                        {theme === "dark" ? <Moon/> : <Sun/>}
+                    <Button variant="outline" size="icon-lg" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                        {theme === "dark" ? <Moon /> : <Sun />}
                     </Button>
-                    <a
-                        href="https://github.com/LostEngine/LostEngine"
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="GitHub"
-                    >
-                        <img
-                            src={githubLogo}
-                            alt="GitHub"
-                            className="w-8 h-8 icon-black icon-white icon-gray-800 icon-gray-200"
-                        />
+                    <a href="https://github.com/LostEngine/LostEngine" target="_blank" rel="noreferrer" aria-label="GitHub">
+                        <img src={githubLogo} alt="GitHub" className="w-8 h-8 icon-black icon-white icon-gray-800 icon-gray-200" />
                     </a>
                 </div>
             </header>
@@ -268,11 +279,8 @@ export function App() {
                             <SidebarGroupContent>
                                 <SidebarMenu>
                                     <SidebarMenuItem key="search">
-                                        <SidebarMenuButton
-                                            onClick={() => setSearchOpen(true)}
-                                            className="flex items-center gap-2"
-                                        >
-                                            <Search/>
+                                        <SidebarMenuButton onClick={() => setSearchOpen(true)} className="flex items-center gap-2">
+                                            <Search />
                                             <span>Search</span>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
@@ -281,32 +289,20 @@ export function App() {
                         </SidebarGroup>
                         <SidebarGroup>
                             <div className="flex justify-between items-center">
-                                <SidebarGroupLabel className="text-neutral-950 dark:text-neutral-50">
-                                    Files
-                                </SidebarGroupLabel>
+                                <SidebarGroupLabel className="text-neutral-950 dark:text-neutral-50">Files</SidebarGroupLabel>
                                 <div>
-                                    <DropdownMenu
-                                        modal={false}
-                                        open={newFileDropdownMenuOpen}
-                                        onOpenChange={setNewFileDropdownMenuOpen}
-                                    >
+                                    <DropdownMenu modal={false} open={newFileDropdownMenuOpen} onOpenChange={setNewFileDropdownMenuOpen}>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon-sm">
-                                                <FilePlusCorner/>
+                                                <FilePlusCorner />
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className="w-40" align="end">
                                             <DropdownMenuGroup>
-                                                <DropdownMenuItem
-                                                    disabled={readonly}
-                                                    onSelect={() => handleNewTextFileClick()}
-                                                >
+                                                <DropdownMenuItem disabled={readonly} onSelect={() => handleNewTextFileClick()}>
                                                     New Text File
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    disabled={readonly}
-                                                    onSelect={() => setFileUploadDialogOpen(true)}
-                                                >
+                                                <DropdownMenuItem disabled={readonly} onSelect={() => setFileUploadDialogOpen(true)}>
                                                     Upload File
                                                 </DropdownMenuItem>
                                             </DropdownMenuGroup>
@@ -330,10 +326,10 @@ export function App() {
                                         }}
                                         disabled={readonly}
                                     >
-                                        <FolderPlus/>
+                                        <FolderPlus />
                                     </Button>
-                                    <Button variant="ghost" size="icon-sm" onClick={reload}>
-                                        <RotateCw/>
+                                    <Button variant="ghost" size="icon-sm" onClick={() => reload(true)}>
+                                        <RotateCw />
                                     </Button>
                                 </div>
                             </div>
@@ -364,15 +360,11 @@ export function App() {
                     </SidebarContent>
                 </Sidebar>
                 <SidebarInset className="pt-18">
-                    <header
-                        className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4 fixed top-18 z-50 bg-white dark:bg-neutral-950">
+                    <header className="flex h-16 shrink-0 w-full items-center justify-between gap-2 border-b px-4 fixed top-18 z-50 bg-white dark:bg-neutral-950">
                         <div className="flex items-center gap-4">
-                            <SidebarTrigger/>
-                            <Separator
-                                orientation="vertical"
-                                className="mr-2 data-[orientation=vertical]:h-4"
-                            />
-                            <Path file={openedFile as string}/>
+                            <SidebarTrigger />
+                            <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+                            <Path file={openedFile as string} />
                         </div>
                         <div className="flex items-center gap-4">
                             {(() => {
@@ -383,7 +375,8 @@ export function App() {
                                     lower?.endsWith(".jpg") ||
                                     lower?.endsWith(".jpeg") ||
                                     lower?.endsWith(".gif")
-                                ) return;
+                                )
+                                    return;
                                 return (
                                     <Button
                                         variant="outline"
@@ -392,13 +385,15 @@ export function App() {
                                             uploadFile(
                                                 openedFile as string,
                                                 token,
-                                                new Blob([fileContent as string], {type: "text/plain"}),
+                                                new Blob([fileContent as string], {
+                                                    type: "text/plain",
+                                                }),
                                                 reload,
                                             )
                                         }
                                         disabled={readonly}
                                     >
-                                        <Upload/> Upload Files
+                                        <Upload /> Upload Files
                                     </Button>
                                 );
                             })()}
@@ -416,7 +411,7 @@ export function App() {
                 </SidebarInset>
             </SidebarProvider>
             <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-                <CommandInput placeholder="Search a file..."/>
+                <CommandInput placeholder="Search a file..." />
                 <CommandList>
                     <CommandEmpty>No results found.</CommandEmpty>
                     {data.files.map((item, index) => (
@@ -440,9 +435,7 @@ export function App() {
                     <Input
                         placeholder="File Path"
                         value={newFilePath}
-                        onInput={(e) =>
-                            setNewFilePath((e.target as HTMLInputElement).value)
-                        }
+                        onInput={(e) => setNewFilePath((e.target as HTMLInputElement).value)}
                     />
                     <DialogFooter>
                         <DialogClose asChild>
@@ -456,7 +449,7 @@ export function App() {
             </Dialog>
             <Dialog
                 open={filesFromFolder !== undefined}
-                onOpenChange={open => {
+                onOpenChange={(open) => {
                     if (!open) setFilesFromFolder(undefined);
                 }}
             >
@@ -467,101 +460,84 @@ export function App() {
                     <Input
                         placeholder="Folder Path"
                         value={newFilePath}
-                        onInput={(e) =>
-                            setNewFilePath((e.target as HTMLInputElement).value)
-                        }
+                        onInput={(e) => setNewFilePath((e.target as HTMLInputElement).value)}
                     />
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit" onClick={() => {
-                            if (!filesFromFolder) return;
-                            setFilesFromFolder(undefined);
+                        <Button
+                            type="submit"
+                            onClick={() => {
+                                if (!filesFromFolder) return;
+                                setFilesFromFolder(undefined);
 
-                            let completed = 0;
-                            const total = filesFromFolder.length;
+                                let completed = 0;
+                                const total = filesFromFolder.length;
 
-                            if (total === 0) {
-                                reload();
-                                return;
-                            }
+                                if (total === 0) {
+                                    reload();
+                                    return;
+                                }
 
-                            for (const file of filesFromFolder) {
-                                uploadFile(newFilePath + "/" + file.name, token ?? "", file, () => {
-                                    completed++;
-                                    if (completed >= total) {
-                                        reload();
-                                    }
-                                });
-                            }
-                        }}>
+                                for (const file of filesFromFolder) {
+                                    uploadFile(newFilePath + "/" + file.name, token ?? "", file, () => {
+                                        completed++;
+                                        if (completed >= total) {
+                                            reload();
+                                        }
+                                    });
+                                }
+                            }}
+                        >
                             Create Folder
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <FileUploadDialog
-                open={fileUploadDialogOpen}
-                onOpenChange={setFileUploadDialogOpen}
-                token={token ?? ""}
-                reload={reload}
-            />
-            <footer
-                className="fixed bottom-0 left-0 w-full py-2 flex justify-center items-center space-x-6 text-sm text-gray-800 dark:text-gray-200">
+            <FileUploadDialog open={fileUploadDialogOpen} onOpenChange={setFileUploadDialogOpen} token={token ?? ""} reload={reload} />
+            <footer className="fixed bottom-0 left-0 w-full py-2 flex justify-center items-center space-x-6 text-sm text-gray-800 dark:text-gray-200">
                 <div className="flex items-center gap-2">
-                    <img
-                        src={codeLogo}
-                        alt="code"
-                        className="w-5 h-5 icon-gray-800 icon-gray-200"
-                    />
+                    <img src={codeLogo} alt="code" className="w-5 h-5 icon-gray-800 icon-gray-200" />
                     <span>
-            Developed by{" "}
+                        Developed by{" "}
                         <a
                             href="https://github.com/misieur"
                             target="_blank"
                             rel="noreferrer"
                             className="underline dark:hover:text-white hover:text-black"
                         >
-              Misieur
-            </a>
-          </span>
+                            Misieur
+                        </a>
+                    </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <img
-                        src={githubLogo}
-                        alt="GitHub"
-                        className="w-5 h-5 icon-gray-800 icon-gray-200"
-                    />
+                    <img src={githubLogo} alt="GitHub" className="w-5 h-5 icon-gray-800 icon-gray-200" />
                     <span>
-            Source code on{" "}
+                        Source code on{" "}
                         <a
                             href="https://github.com/LostEngine/LostEngine"
                             target="_blank"
                             rel="noreferrer"
                             className="underline dark:hover:text-white hover:text-black"
                         >
-              GitHub
-            </a>
-          </span>
+                            GitHub
+                        </a>
+                    </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <img
-                        src={discordLogo}
-                        alt="Discord"
-                        className="w-5 h-5 icon-gray-800 icon-gray-200"
-                    />
+                    <img src={discordLogo} alt="Discord" className="w-5 h-5 icon-gray-800 icon-gray-200" />
                     <span>
-            Join my{" "}
+                        Join my{" "}
                         <a
                             href="https://discord.com/invite/5VSeDcyJt7"
                             target="_blank"
                             rel="noreferrer"
                             className="underline dark:hover:text-white hover:text-black"
                         >
-              Discord server
-            </a>
-          </span>
+                            Discord server
+                        </a>
+                    </span>
                 </div>
             </footer>
         </>
@@ -571,17 +547,17 @@ export function App() {
 export type TreeItem = string | TreeItem[];
 
 function Tree({
-                  item,
-                  parentPath = "",
-                  onOpenFile,
-                  token,
-                  reload,
-                  setNewFilePath,
-                  setFileNameDialogOpen,
-                  newFilePath,
-                  handleNewTextFile,
-                  readonly
-              }: {
+    item,
+    parentPath = "",
+    onOpenFile,
+    token,
+    reload,
+    setNewFilePath,
+    setFileNameDialogOpen,
+    newFilePath,
+    handleNewTextFile,
+    readonly,
+}: {
     item: TreeItem;
     parentPath?: string;
     onOpenFile: (path: string) => void;
@@ -604,10 +580,10 @@ function Tree({
         let folderPath = items.length
             ? fullPath
             : fullPath
-                .split("/")
-                .slice(0, -1)
-                .join("/")
-                .replace(/^\/+|\/+$/g, "");
+                  .split("/")
+                  .slice(0, -1)
+                  .join("/")
+                  .replace(/^\/+|\/+$/g, "");
         if (folderPath) folderPath += "/";
         setNewFilePath(folderPath + "file.txt");
         setFileNameDialogOpen(true);
@@ -639,11 +615,11 @@ function Tree({
                             fullPath.endsWith(".jpg") ||
                             fullPath.endsWith(".jpeg") ||
                             fullPath.endsWith(".gif") ? (
-                                <FileImage/>
+                                <FileImage />
                             ) : fullPath.endsWith(".yml") || fullPath.endsWith(".yaml") ? (
-                                <Settings2/>
+                                <Settings2 />
                             ) : (
-                                <File/>
+                                <File />
                             )}
                             {name}
                         </SidebarMenuButton>
@@ -666,45 +642,40 @@ function Tree({
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             {/* `&#34;` = `"` */}
-                            <AlertDialogTitle>
-                                Delete file &#34;{fullPath}&#34;?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone.
-                            </AlertDialogDescription>
+                            <AlertDialogTitle>Delete file &#34;{fullPath}&#34;?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete}>
-                                Delete
-                            </AlertDialogAction>
+                            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Dialog open={moveDialogOpen} onOpenChange={open => {
-                    setMoveDialogOpen(open);
-                    if (!open) setMoveDialogPath(fullPath);
-                }}>
+                <Dialog
+                    open={moveDialogOpen}
+                    onOpenChange={(open) => {
+                        setMoveDialogOpen(open);
+                        if (!open) setMoveDialogPath(fullPath);
+                    }}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Move File</DialogTitle>
                         </DialogHeader>
-                        <Input
-                            value={moveDialogPath}
-                            onInput={(e) =>
-                                setMoveDialogPath((e.target as HTMLInputElement).value)
-                            }
-                        />
+                        <Input value={moveDialogPath} onInput={(e) => setMoveDialogPath((e.target as HTMLInputElement).value)} />
                         <DialogFooter>
                             <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                             </DialogClose>
-                            <Button type="submit" onClick={() => {
-                                if (!moveDialogPath) return;
-                                moveResource(fullPath, moveDialogPath, token, reload);
-                                setMoveDialogPath(fullPath);
-                                setMoveDialogOpen(false);
-                            }}>
+                            <Button
+                                type="submit"
+                                onClick={() => {
+                                    if (!moveDialogPath) return;
+                                    moveResource(fullPath, moveDialogPath, token, reload);
+                                    setMoveDialogPath(fullPath);
+                                    setMoveDialogOpen(false);
+                                }}
+                            >
                                 Move File
                             </Button>
                         </DialogFooter>
@@ -724,8 +695,8 @@ function Tree({
                     <CollapsibleTrigger asChild>
                         <ContextMenuTrigger asChild>
                             <SidebarMenuButton>
-                                <ChevronRight className="transition-transform"/>
-                                <Folder/>
+                                <ChevronRight className="transition-transform" />
+                                <Folder />
                                 {name}
                             </SidebarMenuButton>
                         </ContextMenuTrigger>
@@ -768,12 +739,9 @@ function Tree({
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         {/* `&#34;` = `"` */}
-                        <AlertDialogTitle>
-                            Delete folder &#34;{fullPath}&#34;?
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Delete folder &#34;{fullPath}&#34;?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. Deleting a folder might delete more
-                            files than you think, be careful.
+                            This action cannot be undone. Deleting a folder might delete more files than you think, be careful.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -782,30 +750,31 @@ function Tree({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            <Dialog open={moveDialogOpen} onOpenChange={open => {
-                setMoveDialogOpen(open);
-                if (!open) setMoveDialogPath(fullPath);
-            }}>
+            <Dialog
+                open={moveDialogOpen}
+                onOpenChange={(open) => {
+                    setMoveDialogOpen(open);
+                    if (!open) setMoveDialogPath(fullPath);
+                }}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Move Folder</DialogTitle>
                     </DialogHeader>
-                    <Input
-                        value={moveDialogPath}
-                        onInput={(e) =>
-                            setMoveDialogPath((e.target as HTMLInputElement).value)
-                        }
-                    />
+                    <Input value={moveDialogPath} onInput={(e) => setMoveDialogPath((e.target as HTMLInputElement).value)} />
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit" onClick={() => {
-                            if (!moveDialogPath) return;
-                            moveResource(fullPath, moveDialogPath, token, reload);
-                            setMoveDialogPath(fullPath);
-                            setMoveDialogOpen(false);
-                        }}>
+                        <Button
+                            type="submit"
+                            onClick={() => {
+                                if (!moveDialogPath) return;
+                                moveResource(fullPath, moveDialogPath, token, reload);
+                                setMoveDialogPath(fullPath);
+                                setMoveDialogOpen(false);
+                            }}
+                        >
                             Move Folder
                         </Button>
                     </DialogFooter>
@@ -815,15 +784,7 @@ function Tree({
     );
 }
 
-function CommandTree({
-                         item,
-                         parentPath = "",
-                         onOpenFile,
-                     }: {
-    item: TreeItem;
-    parentPath?: string;
-    onOpenFile: (path: string) => void;
-}) {
+function CommandTree({item, parentPath = "", onOpenFile}: {item: TreeItem; parentPath?: string; onOpenFile: (path: string) => void}) {
     const [rawName, ...items] = Array.isArray(item) ? item : [item];
     const name: string = typeof rawName === "string" ? rawName : "";
     const fullPath: string = parentPath ? `${parentPath}/${name}` : name;
@@ -839,7 +800,7 @@ function CommandTree({
                     }}
                     className="flex items-center gap-2 w-full text-left"
                 >
-                    <File/>
+                    <File />
                     <span>{fullPath}</span>
                 </button>
             </CommandItem>
@@ -849,22 +810,17 @@ function CommandTree({
     return (
         <>
             {items.map((subItem, index) => (
-                <CommandTree
-                    key={index}
-                    item={subItem}
-                    parentPath={fullPath}
-                    onOpenFile={onOpenFile}
-                />
+                <CommandTree key={index} item={subItem} parentPath={fullPath} onOpenFile={onOpenFile} />
             ))}
         </>
     );
 }
 
-function Path({file}: { file: string | null }) {
+function Path({file}: {file: string | null}) {
     if (!file) {
         return (
             <>
-                <Skeleton className="h-4 w-[250px]"/>
+                <Skeleton className="h-4 w-[250px]" />
             </>
         );
     }
@@ -879,7 +835,7 @@ function Path({file}: { file: string | null }) {
                                 <BreadcrumbItem className="hidden md:block">
                                     <BreadcrumbLink>{value}</BreadcrumbLink>
                                 </BreadcrumbItem>
-                                <BreadcrumbSeparator/>
+                                <BreadcrumbSeparator />
                             </>
                         ) : (
                             <BreadcrumbItem>
@@ -894,11 +850,11 @@ function Path({file}: { file: string | null }) {
 }
 
 function FileUploadDialog({
-                              open,
-                              onOpenChange,
-                              token,
-                              reload,
-                          }: {
+    open,
+    onOpenChange,
+    token,
+    reload,
+}: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     token: string;
@@ -944,26 +900,26 @@ function FileUploadDialog({
                     onFileReject={(file, message) => {
                         toast.error(
                             message +
-                            " (" +
-                            file.name +
-                            ") LostEngine is not made for uploading big files, " +
-                            "uploading your whole computer through LostEngine's integrated web server might not be a good idea.",
+                                " (" +
+                                file.name +
+                                ") LostEngine is not made for uploading big files, " +
+                                "uploading your whole computer through LostEngine's integrated web server might not be a good idea.",
                         );
                     }}
                 >
                     <FileUploadDropzone className="flex-row flex-wrap border-dotted text-center">
-                        <CloudUpload className="size-4"/>
+                        <CloudUpload className="size-4" />
                         Drag and drop or click here to upload files
                     </FileUploadDropzone>
                     <FileUploadList>
                         <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                             {files.map((file, index) => (
                                 <FileUploadItem key={index} value={file}>
-                                    <FileUploadItemPreview/>
-                                    <FileUploadItemMetadata/>
+                                    <FileUploadItemPreview />
+                                    <FileUploadItemMetadata />
                                     <FileUploadItemDelete asChild>
                                         <Button variant="ghost" size="icon" className="size-7">
-                                            <X/>
+                                            <X />
                                             <span className="sr-only">Delete</span>
                                         </Button>
                                     </FileUploadItemDelete>

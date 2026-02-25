@@ -28,8 +28,10 @@ The build will be located in `build/libs/`
     - [X] Upload/Download/Create files
     - [X] View/Edit files
     - [ ] Config editor
-        - [X] View items/materials
-        - [ ] Create/manage items/materials
+        - [X] View items
+        - [X] Create items
+        - [X] Manage items
+        - [ ] Edit items
 - [ ] Furniture
     - [ ] Furniture Entity
     - [ ] Interactable Furniture
@@ -40,6 +42,7 @@ The build will be located in `build/libs/`
 - [ ] GUIs
 - [ ] World generation
 - [ ] Escape menu
+- [ ] Language overrides
 - [ ] Bedrock compatibility
     - [ ] Items
         - [X] Regular items

@@ -71,8 +71,8 @@ items:
 
     # Resource pack generation
     model: string # either model or texture
-    texture: string
-    icon: string # trident only
+    texture: string # trident only
+    icon: string
     name:
       $string: string # locale: display name (ex: en_US:Iron Sword)
 

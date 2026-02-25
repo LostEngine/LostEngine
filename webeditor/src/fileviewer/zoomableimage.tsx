@@ -1,7 +1,7 @@
 /* eslint-disable react/react-in-jsx-scope */
 import {useRef, useState} from "preact/compat";
 
-export function ZoomableImage({src, alt}: { src: string; alt?: string }) {
+export function ZoomableImage({src, alt}: {src: string; alt?: string}) {
     const [scale, setScale] = useState(1);
     const [offset, setOffset] = useState({x: 0, y: 0});
     const containerRef = useRef<HTMLDivElement>(null);
@@ -75,7 +75,7 @@ export function ZoomableImage({src, alt}: { src: string; alt?: string }) {
                             linear-gradient(-45deg, transparent 75%, #80808020 75%)
                         `,
                     backgroundSize: `32px 32px`,
-                    backgroundPosition: `0 0, 0 16px, 16px -16px, -16px 0px`
+                    backgroundPosition: `0 0, 0 16px, 16px -16px, -16px 0px`,
                 }}
             />
         </div>

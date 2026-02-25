@@ -7,15 +7,16 @@ import {apiPrefix} from "@/app.tsx";
 import type {CSSProperties} from "preact";
 import {ZoomableImage} from "@/fileviewer/zoomableimage.tsx";
 import {ConfigEditor} from "@/fileviewer/configeditor/configeditor.tsx";
+import {ScrollArea} from "@/components/ui/scroll-area";
 import missingLogo from "@/assets/missing.svg";
 
 export function FileViewer({
-                               filePath,
-                               token,
-                               content,
-                               onContentChange,
-                               theme,
-                           }: {
+    filePath,
+    token,
+    content,
+    onContentChange,
+    theme,
+}: {
     filePath?: string;
     token: string | null;
     content?: string;
@@ -26,7 +27,7 @@ export function FileViewer({
     const [error, setError] = useState<string>();
 
     useEffect(() => {
-        if (!filePath || !token || content) {
+        if (!filePath || !token || content !== undefined) {
             setLoading(false);
             return;
         }
@@ -45,12 +46,7 @@ export function FileViewer({
                 }
 
                 const lower = filePath.toLowerCase();
-                if (
-                    lower.endsWith(".png") ||
-                    lower.endsWith(".jpg") ||
-                    lower.endsWith(".jpeg") ||
-                    lower.endsWith(".gif")
-                ) {
+                if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif")) {
                     onContentChange(url);
                 } else {
                     const text = await res.text();
@@ -68,7 +64,7 @@ export function FileViewer({
         fetchFile();
     }, [filePath, token, content, onContentChange]);
 
-    if (loading || content === null) return <Skeleton className="h-full w-full"/>;
+    if (loading) return <Skeleton className="h-full w-full" />;
     if (error) return <div className="text-red-500">{error}</div>;
 
     const getLanguage = (filePath: string) => {
@@ -107,48 +103,47 @@ export function FileViewer({
         return languageMap[ext || ""] || "plaintext";
     };
 
-    const lower = filePath?.toLowerCase() || "";
-    if (
-        lower.endsWith(".png") ||
-        lower.endsWith(".jpg") ||
-        lower.endsWith(".jpeg") ||
-        lower.endsWith(".gif")
-    ) {
-        return <ZoomableImage src={content as string}/>;
+    const lower = filePath?.toLowerCase();
+    if (!lower) return;
+    if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif")) {
+        return <ZoomableImage src={content as string} />;
     } else if (lower.endsWith(".yml") || lower.endsWith(".yaml")) {
-        return <ResizablePanelGroup
-            className="h-full w-full"
-        >
-            <ResizablePanel defaultSize={70} className="overflow-y-auto max-h-[calc(100vh-180px)]">
-                <ConfigEditor
-                    text={content as string}
-                    token={token || ""}
-                    folder={filePath?.includes("/") ? filePath.split("/")[0] : ""}
-                    onValueChange={onContentChange}
-                />
-            </ResizablePanel>
-            <ResizablePanel defaultSize={30}>
-                <Editor
-                    height="100%"
-                    defaultLanguage={"yaml"}
-                    value={content}
-                    onChange={(value) => {
-                        onContentChange(value || "");
-                    }}
-                    theme={theme === "dark" ? "vs-dark" : "light"}
-                    options={{
-                        minimap: {enabled: false},
-                        fontSize: 14,
-                        wordWrap: "on",
-                        formatOnPaste: true,
-                        formatOnType: true,
-                        automaticLayout: true,
-                    }}
-                />
-            </ResizablePanel>
-        </ResizablePanelGroup>;
+        return (
+            <div className="h-[calc(100vh-200px)] w-full">
+                <ResizablePanelGroup className="h-full w-full">
+                    <ResizablePanel defaultSize={70} className="h-full flex">
+                        <ScrollArea className="flex-1">
+                            <ConfigEditor
+                                text={content as string}
+                                token={token || ""}
+                                folder={filePath?.includes("/") ? filePath.split("/")[0] : ""}
+                                onValueChange={onContentChange}
+                            />
+                        </ScrollArea>
+                    </ResizablePanel>
+                    <ResizablePanel defaultSize={30} className="h-full">
+                        <Editor
+                            height="100%"
+                            defaultLanguage={"yaml"}
+                            value={content}
+                            onChange={(value) => {
+                                onContentChange(value || "");
+                            }}
+                            theme={theme === "dark" ? "vs-dark" : "light"}
+                            options={{
+                                minimap: {enabled: false},
+                                fontSize: 14,
+                                wordWrap: "on",
+                                formatOnPaste: true,
+                                formatOnType: true,
+                                automaticLayout: true,
+                            }}
+                        />
+                    </ResizablePanel>
+                </ResizablePanelGroup>
+            </div>
+        );
     } else {
-
         return (
             <Editor
                 height="100%"
@@ -171,16 +166,16 @@ export function FileViewer({
     }
 }
 
-export function ImageWithSkeleton({
-                                      src,
-                                      alt,
-                                      style,
-                                      className,
-                                  }: {
-    src?: string
-    alt?: string
-    style?: string | CSSProperties
-    className?: string
+export function ImageWithFallback({
+    src,
+    alt,
+    style,
+    className,
+}: {
+    src?: string;
+    alt?: string;
+    style?: string | CSSProperties;
+    className?: string;
 }) {
     const imgRef = useRef<HTMLImageElement | null>(null);
     const [loaded, setLoaded] = useState(false);
@@ -201,7 +196,11 @@ export function ImageWithSkeleton({
                 <img
                     src={missingLogo}
                     alt={alt}
-                    className="h-full w-full"
+                    className="h-full w-full object-contain"
+                    style={{
+                        imageRendering: "inherit",
+                    }}
+                    draggable={false}
                 />
             )}
 
@@ -210,15 +209,12 @@ export function ImageWithSkeleton({
                 src={src}
                 alt={alt}
                 onLoad={() => setLoaded(true)}
-                className={`h-full w-full ${
-                    loaded ? "opacity-100" : "opacity-0"
-                }`}
+                className={`h-full w-full object-contain ${loaded ? "opacity-100" : "opacity-0"}`}
                 style={{
-                    imageRendering: "inherit"
+                    imageRendering: "inherit",
                 }}
                 draggable={false}
             />
         </div>
     );
 }
-

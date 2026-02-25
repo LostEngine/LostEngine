@@ -28,6 +28,7 @@ import net.minecraft.world.item.equipment.ArmorMaterials;
 import net.minecraft.world.item.equipment.ArmorType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.Contract;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -310,6 +311,7 @@ public class ResourceInjector {
         return true;
     }
 
+    @Contract("null, _ -> null")
     private static @Nullable Object convertNumberType(@Nullable Object value, @Nullable Class<?> targetType) {
         if (!(value instanceof Number number) || targetType == null) {
             return value;
@@ -387,7 +389,10 @@ public class ResourceInjector {
                                     BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.WOOD) :
                                     null,
                             (float) blockSection.getDouble("destroy_time", 0F),
-                            (float) blockSection.getDouble("explosion_resistance", 0F),
+                            (float) blockSection.getDouble(
+                                    "explosion_resistance",
+                                    blockSection.getDouble("destroy_time", 0F) // fall back to destroy_time of explosion_resistance in not found
+                            ),
                             BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
                     );
                     case "tnt" -> BlockInjector.injectTNTBlock(

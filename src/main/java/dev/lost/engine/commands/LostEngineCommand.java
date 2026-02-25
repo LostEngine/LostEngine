@@ -16,12 +16,8 @@ import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
-import net.minecraft.world.item.Item;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.entity.Player;
 
 import java.io.IOException;
@@ -51,21 +47,7 @@ public class LostEngineCommand {
                                 .requires(commandSourceStack -> commandSourceStack.getSender().hasPermission("op"))
                                 .executes(LostEngineCommand::editor)
                 )
-                .then(
-                        Commands.literal("debug")
-                                .requires(commandSourceStack -> commandSourceStack.getSender().hasPermission("op"))
-                                .executes(LostEngineCommand::debug)
-                )
                 .build();
-    }
-
-    private static int debug(@NotNull CommandContext<CommandSourceStack> context) {
-        if (context.getSource().getExecutor() instanceof Player player) {
-            Item item = ((CraftItemStack) player.getInventory().getItemInMainHand()).handle.getItem();
-            Material material = CraftMagicNumbers.getMaterial(item);
-            player.sendMessage(Component.text(String.valueOf(material)));
-        }
-        return 0;
     }
 
     @SuppressWarnings("UnstableApiUsage") // Dialog API

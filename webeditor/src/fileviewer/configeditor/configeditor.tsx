@@ -14,15 +14,11 @@ import {
     AlertDialogContent,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import {ImageWithSkeleton} from "@/fileviewer/fileviewer.tsx";
+import {ImageWithFallback} from "@/fileviewer/fileviewer.tsx";
 import {NewItemDialog} from "@/fileviewer/configeditor/dialog.tsx";
-import {
-    getNewMaterialForm,
-    NEW_BLOCK_FORM, NEW_GLYPH_FORM,
-    NEW_ITEM_FORM,
-} from "@/fileviewer/configeditor/forms.ts";
+import {getNewBlockForm, getNewItemForm, getNewMaterialForm, NEW_GLYPH_FORM} from "@/fileviewer/configeditor/forms.ts";
 import type {
     NewBlockResult,
     NewGlyphResult,
@@ -36,17 +32,23 @@ import {
     handleNewItem,
     handleNewMaterial
 } from "@/fileviewer/configeditor/formsubmits.ts";
+import {ScrollArea} from "@/components/ui/scroll-area.tsx";
 
 type SoundsStore = {
     sounds?: string[];
     setSounds: (newSounds: string[]) => void;
-}
+};
 
 export const useSoundsStore = create<SoundsStore>()((set) => ({
     setSounds: (newSounds) => set({sounds: newSounds}),
-}))
+}));
 
-export function ConfigEditor({text, onValueChange, folder, token}: {
+export function ConfigEditor({
+                                 text,
+                                 onValueChange,
+                                 folder,
+                                 token,
+                             }: {
     text: string;
     onValueChange: (value: string) => void;
     folder: string;
@@ -56,7 +58,7 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
     const [confirmDialogAction, setConfirmDialogAction] = useState<() => void>(() => {
     });
     const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
-    const [newItemDialogTabs, setNewItemDialogTabs] = useState<any>();
+    const [newItemDialogTabs, setNewItemDialogTabs] = useState<FormTab[]>();
     const [newItemDialogSubmit, setNewItemDialogSubmit] = useState<(data: Record<string, any>) => void>();
     const data = useDataStore((state) => state.data);
     const setSounds = useSoundsStore((state) => state.setSounds);
@@ -70,7 +72,7 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
         config = doc.toJS() as Config;
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        return (<div className="text-red-500">{message}</div>);
+        return <div className="text-red-500">{message}</div>;
     }
 
     const onEditConfig = () => {
@@ -88,19 +90,18 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
 
     useEffect(() => {
         if (sounds && sounds.length > 0) {
-            const armorTab = (newItemDialogTabs as FormTab[])?.find(tab => tab.id === "armor");
+            const armorTab = newItemDialogTabs?.find((tab) => tab.id === "armor");
 
             if (armorTab) {
                 // update equip_sound in getNewMaterialForm to add the sounds to the autocomplete
-                const updatedTabs = (newItemDialogTabs as FormTab[])?.map(tab => {
+                const updatedTabs = newItemDialogTabs?.map((tab) => {
                     if (tab.id === "armor") {
                         return {
                             ...tab,
-                            fields: tab.fields.map(field =>
-                                field.name === "equip_sound"
-                                    ? {...field, options: sounds}
-                                    : field
-                            )
+                            fields: tab.fields.map((field) => (field.name === "equip_sound" ? {
+                                ...field,
+                                options: sounds
+                            } : field)),
                         };
                     }
                     return tab;
@@ -113,24 +114,26 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
 
     return (
         <>
-            <Accordion
-                type="single"
-                collapsible
-                className="w-full"
-            >
+            <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="items">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            Items
-                            <Button variant="ghost" size="icon-sm" onClick={event => {
-                                event.stopPropagation();
-                                setNewItemDialogTabs(NEW_ITEM_FORM);
-                                setNewItemDialogSubmit(() => (data: NewItemResult) => {
-                                    handleNewItem(data, doc, onEditConfig);
-                                    setNewItemDialogTabs(undefined);
-                                    setNewItemDialogSubmit(undefined);
-                                });
-                            }}>
+                            <div
+                                className={config?.items && Object.entries(config.items).length > 0 ? "" : "text-gray-500"}>Items
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setNewItemDialogTabs(getNewItemForm(data.tool_materials, data.armor_materials, data.items));
+                                    setNewItemDialogSubmit(() => (data: NewItemResult) => {
+                                        handleNewItem(data, doc, onEditConfig);
+                                        setNewItemDialogTabs(undefined);
+                                        setNewItemDialogSubmit(undefined);
+                                    });
+                                }}
+                            >
                                 <Plus/>
                             </Button>
                         </div>
@@ -138,64 +141,62 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                     <AccordionContent className="h-full w-full flex flex-wrap gap-4 text-balance">
                         {(() => {
                             if (!config?.items) return;
-                            return Array.from(Object.entries(config.items)).map(value => {
-                                return (<>
-                                    <CardContainer>
-                                        <CardBody
-                                            className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                            <CardItem
-                                                translateZ="50"
-                                                className="text-xl font-bold text-neutral-600 dark:text-white"
-                                            >
-                                                {value[0]}
-                                            </CardItem>
-                                            <CardItem translateZ="50" className="w-full mt-4">
-                                                <ImageWithSkeleton
-                                                    src={
-                                                        (() => {
+                            return Object.entries(config.items).map((value) => {
+                                return (
+                                    <>
+                                        <CardContainer>
+                                            <CardBody
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardItem translateZ="50"
+                                                          className="text-xl font-bold text-neutral-600 dark:text-white">
+                                                    {value[0]}
+                                                </CardItem>
+                                                <CardItem translateZ="50" className="w-full mt-4">
+                                                    <ImageWithFallback
+                                                        src={(() => {
                                                             let textureName;
                                                             if (value[1]?.icon) textureName = value[1]?.icon;
                                                             else if (value[1]?.texture) textureName = value[1]?.texture;
                                                             else return;
                                                             if (!textureName.endsWith(".png")) textureName += ".png";
                                                             return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
-                                                        })()
-                                                    }
-                                                    style={{
-                                                        imageRendering: "pixelated",
-                                                    }}
-                                                    className="w-full object-cover group-hover/card:shadow-xl"
-                                                />
-                                            </CardItem>
-                                            <div className="flex justify-between items-center mt-20">
-                                                <CardItem translateZ={20}>
-                                                    <Button variant="outline" size="sm">
-                                                        <Pencil/> Edit
-                                                    </Button>
-                                                </CardItem>
-                                                <CardItem translateZ={20}>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setConfirmDialogAction(() => () => {
-                                                                const itemsNode = doc.get("items", true) as yaml.YAMLMap | null;
-
-                                                                itemsNode?.delete(value[0]);
-                                                                onEditConfig();
-                                                            });
-                                                            setConfirmDialogMessage(`Delete item "${value[0]}"?`);
-                                                            setConfirmDialogOpen(true);
+                                                        })()}
+                                                        style={{
+                                                            imageRendering: "pixelated",
                                                         }}
-                                                    >
-                                                        <Trash2/>
-                                                        Delete
-                                                    </Button>
+                                                        className="w-full object-cover group-hover/card:shadow-xl"
+                                                    />
                                                 </CardItem>
-                                            </div>
-                                        </CardBody>
-                                    </CardContainer>
-                                </>);
+                                                <div className="flex justify-between items-center mt-20">
+                                                    <CardItem translateZ={20}>
+                                                        <Button variant="outline" size="sm">
+                                                            <Pencil/> Edit
+                                                        </Button>
+                                                    </CardItem>
+                                                    <CardItem translateZ={20}>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setConfirmDialogAction(() => () => {
+                                                                    const itemsNode = doc.get("items", true) as yaml.YAMLMap | null;
+
+                                                                    itemsNode?.delete(value[0]);
+                                                                    onEditConfig();
+                                                                });
+                                                                setConfirmDialogMessage(`Delete item "${value[0]}"?`);
+                                                                setConfirmDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2/>
+                                                            Delete
+                                                        </Button>
+                                                    </CardItem>
+                                                </div>
+                                            </CardBody>
+                                        </CardContainer>
+                                    </>
+                                );
                             });
                         })()}
                     </AccordionContent>
@@ -203,16 +204,22 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                 <AccordionItem value="blocks">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            Blocks
-                            <Button variant="ghost" size="icon-sm" onClick={event => {
-                                event.stopPropagation();
-                                setNewItemDialogTabs(NEW_BLOCK_FORM);
-                                setNewItemDialogSubmit(() => (data: NewBlockResult) => {
-                                    handleNewBlock(data, doc, onEditConfig);
-                                    setNewItemDialogTabs(undefined);
-                                    setNewItemDialogSubmit(undefined);
-                                });
-                            }}>
+                            <div
+                                className={config?.blocks && Object.entries(config.blocks).length > 0 ? "" : "text-gray-500"}>Blocks
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setNewItemDialogTabs(getNewBlockForm(data.items));
+                                    setNewItemDialogSubmit(() => (data: NewBlockResult) => {
+                                        handleNewBlock(data, doc, onEditConfig);
+                                        setNewItemDialogTabs(undefined);
+                                        setNewItemDialogSubmit(undefined);
+                                    });
+                                }}
+                            >
                                 <Plus/>
                             </Button>
                         </div>
@@ -220,63 +227,61 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                     <AccordionContent className="h-full w-full flex flex-wrap gap-4 text-balance">
                         {(() => {
                             if (!config?.blocks) return;
-                            return Array.from(Object.entries(config.blocks)).map(value => {
-                                return (<>
-                                    <CardContainer>
-                                        <CardBody
-                                            className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                            <CardItem
-                                                translateZ="50"
-                                                className="text-xl font-bold text-neutral-600 dark:text-white"
-                                            >
-                                                {value[0]}
-                                            </CardItem>
-                                            <CardItem translateZ="50" className="w-full mt-4">
-                                                <ImageWithSkeleton
-                                                    src={
-                                                        (() => {
+                            return Object.entries(config.blocks).map((value) => {
+                                return (
+                                    <>
+                                        <CardContainer>
+                                            <CardBody
+                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardItem translateZ="50"
+                                                          className="text-xl font-bold text-neutral-600 dark:text-white">
+                                                    {value[0]}
+                                                </CardItem>
+                                                <CardItem translateZ="50" className="w-full mt-4">
+                                                    <ImageWithFallback
+                                                        src={(() => {
                                                             let textureName = value[1].texture;
                                                             if (textureName) {
                                                                 if (!textureName.endsWith(".png")) textureName += ".png";
                                                                 return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
                                                             }
-                                                        })()
-                                                    }
-                                                    style={{
-                                                        imageRendering: "pixelated",
-                                                    }}
-                                                    className="w-full object-cover group-hover/card:shadow-xl"
-                                                />
-                                            </CardItem>
-                                            <div className="flex justify-between items-center mt-20">
-                                                <CardItem translateZ={20}>
-                                                    <Button variant="outline" size="sm">
-                                                        <Pencil/> Edit
-                                                    </Button>
-                                                </CardItem>
-                                                <CardItem translateZ={20}>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setConfirmDialogAction(() => () => {
-                                                                const blocksNode = doc.get("blocks", true) as yaml.YAMLMap | null;
-
-                                                                blocksNode?.delete(value[0]);
-                                                                onEditConfig();
-                                                            });
-                                                            setConfirmDialogMessage(`Delete block "${value[0]}"?`);
-                                                            setConfirmDialogOpen(true);
+                                                        })()}
+                                                        style={{
+                                                            imageRendering: "pixelated",
                                                         }}
-                                                    >
-                                                        <Trash2/>
-                                                        Delete
-                                                    </Button>
+                                                        className="w-full object-cover group-hover/card:shadow-xl"
+                                                    />
                                                 </CardItem>
-                                            </div>
-                                        </CardBody>
-                                    </CardContainer>
-                                </>);
+                                                <div className="flex justify-between items-center mt-20">
+                                                    <CardItem translateZ={20}>
+                                                        <Button variant="outline" size="sm">
+                                                            <Pencil/> Edit
+                                                        </Button>
+                                                    </CardItem>
+                                                    <CardItem translateZ={20}>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setConfirmDialogAction(() => () => {
+                                                                    const blocksNode = doc.get("blocks", true) as yaml.YAMLMap | null;
+
+                                                                    blocksNode?.delete(value[0]);
+                                                                    onEditConfig();
+                                                                });
+                                                                setConfirmDialogMessage(`Delete block "${value[0]}"?`);
+                                                                setConfirmDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2/>
+                                                            Delete
+                                                        </Button>
+                                                    </CardItem>
+                                                </div>
+                                            </CardBody>
+                                        </CardContainer>
+                                    </>
+                                );
                             });
                         })()}
                     </AccordionContent>
@@ -284,17 +289,24 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                 <AccordionItem value="materials">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            Materials
-                            <Button variant="ghost" size="icon-sm" onClick={event => {
-                                event.stopPropagation();
-                                setNewItemDialogTabs(getNewMaterialForm(data.items, sounds));
-                                setNewItemDialogSubmit(() => (data: NewMaterialResult) => {
-                                    handleNewMaterial(data, doc, onEditConfig);
-                                    setNewItemDialogTabs(undefined);
-                                    setNewItemDialogSubmit(undefined);
-                                });
-                                if (!sounds) fetchSounds();
-                            }}>
+                            <div
+                                className={config?.materials && Object.entries(config.materials).length > 0 ? "" : "text-gray-500"}>
+                                Materials
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setNewItemDialogTabs(getNewMaterialForm(data.items, sounds));
+                                    setNewItemDialogSubmit(() => (data: NewMaterialResult) => {
+                                        handleNewMaterial(data, doc, onEditConfig);
+                                        setNewItemDialogTabs(undefined);
+                                        setNewItemDialogSubmit(undefined);
+                                    });
+                                    if (!sounds) fetchSounds();
+                                }}
+                            >
                                 <Plus/>
                             </Button>
                         </div>
@@ -303,69 +315,73 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                         <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
                             {(() => {
                                 if (!config?.materials) return;
-                                return Array.from(Object.entries(config.materials)).map(value => {
-                                    return (<>
-                                        <CardContainer>
-                                            <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                                <CardItem
-                                                    translateZ="50"
-                                                    className="text-xl font-bold text-neutral-600 dark:text-white"
-                                                >
-                                                    {value[0]}
-                                                </CardItem>
-                                                <CardItem translateZ="50" className="w-full mt-4">
-                                                    <ImageWithSkeleton
-                                                        src={
-                                                            (() => {
+                                return Object.entries(config.materials).map((value) => {
+                                    return (
+                                        <>
+                                            <CardContainer>
+                                                <CardBody
+                                                    className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                    <CardItem
+                                                        translateZ="50"
+                                                        className="text-xl font-bold text-neutral-600 dark:text-white"
+                                                    >
+                                                        {value[0]}
+                                                    </CardItem>
+                                                    <CardItem translateZ="50" className="w-full mt-4">
+                                                        <ImageWithFallback
+                                                            src={(() => {
                                                                 const repairItem = value[1]?.repair_item;
                                                                 if (repairItem) {
                                                                     const repairItemValue = config.items?.[repairItem];
                                                                     let textureName;
                                                                     if (repairItemValue?.icon) textureName = repairItemValue.icon;
-                                                                    else if (repairItemValue?.texture) textureName = repairItemValue.texture;
+                                                                    else if (repairItemValue?.texture)
+                                                                        textureName = repairItemValue.texture;
                                                                     else return;
                                                                     if (!textureName.endsWith(".png")) textureName += ".png";
                                                                     return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
                                                                 }
-                                                            })()
-                                                        }
-                                                        style={{
-                                                            imageRendering: "pixelated",
-                                                        }}
-                                                        className="w-full object-cover group-hover/card:shadow-xl"
-                                                        alt="thumbnail"
-                                                    />
-                                                </CardItem>
-                                                <div className="flex justify-between items-center mt-20">
-                                                    <CardItem translateZ={20}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Pencil/> Edit
-                                                        </Button>
-                                                    </CardItem>
-                                                    <CardItem translateZ={20}>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setConfirmDialogAction(() => () => {
-                                                                    const materialsNode = doc.get("materials", true) as yaml.YAMLMap | null;
-
-                                                                    materialsNode?.delete(value[0]);
-                                                                    onEditConfig();
-                                                                });
-                                                                setConfirmDialogMessage(`Delete material "${value[0]}"?`);
-                                                                setConfirmDialogOpen(true);
+                                                            })()}
+                                                            style={{
+                                                                imageRendering: "pixelated",
                                                             }}
-                                                        >
-                                                            <Trash2/>
-                                                            Delete
-                                                        </Button>
+                                                            className="w-full object-cover group-hover/card:shadow-xl"
+                                                            alt="thumbnail"
+                                                        />
                                                     </CardItem>
-                                                </div>
-                                            </CardBody>
-                                        </CardContainer>
-                                    </>);
+                                                    <div className="flex justify-between items-center mt-20">
+                                                        <CardItem translateZ={20}>
+                                                            <Button variant="outline" size="sm">
+                                                                <Pencil/> Edit
+                                                            </Button>
+                                                        </CardItem>
+                                                        <CardItem translateZ={20}>
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setConfirmDialogAction(() => () => {
+                                                                        const materialsNode = doc.get(
+                                                                            "materials",
+                                                                            true,
+                                                                        ) as yaml.YAMLMap | null;
+
+                                                                        materialsNode?.delete(value[0]);
+                                                                        onEditConfig();
+                                                                    });
+                                                                    setConfirmDialogMessage(`Delete material "${value[0]}"?`);
+                                                                    setConfirmDialogOpen(true);
+                                                                }}
+                                                            >
+                                                                <Trash2/>
+                                                                Delete
+                                                            </Button>
+                                                        </CardItem>
+                                                    </div>
+                                                </CardBody>
+                                            </CardContainer>
+                                        </>
+                                    );
                                 });
                             })()}
                         </div>
@@ -374,16 +390,22 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                 <AccordionItem value="glyphs">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            Glyphs
-                            <Button variant="ghost" size="icon-sm" onClick={event => {
-                                event.stopPropagation();
-                                setNewItemDialogTabs(NEW_GLYPH_FORM);
-                                setNewItemDialogSubmit(() => (data: NewGlyphResult) => {
-                                    handleNewGlyph(data, doc, onEditConfig);
-                                    setNewItemDialogTabs(undefined);
-                                    setNewItemDialogSubmit(undefined);
-                                });
-                            }}>
+                            <div
+                                className={config?.glyphs && Object.entries(config.glyphs).length > 0 ? "" : "text-gray-500"}>Glyphs
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setNewItemDialogTabs(NEW_GLYPH_FORM);
+                                    setNewItemDialogSubmit(() => (data: NewGlyphResult) => {
+                                        handleNewGlyph(data, doc, onEditConfig);
+                                        setNewItemDialogTabs(undefined);
+                                        setNewItemDialogSubmit(undefined);
+                                    });
+                                }}
+                            >
                                 <Plus/>
                             </Button>
                         </div>
@@ -392,62 +414,65 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                         <div className="h-full w-full overflow-auto flex flex-wrap gap-4">
                             {(() => {
                                 if (!config?.glyphs) return;
-                                return Array.from(Object.entries(config.glyphs)).map(value => {
-                                    return (<>
-                                        <CardContainer>
-                                            <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                                <CardItem
-                                                    translateZ="50"
-                                                    className="text-xl font-bold text-neutral-600 dark:text-white"
-                                                >
-                                                    {value[0]}
-                                                </CardItem>
-                                                <CardItem translateZ="50" className="w-full mt-4">
-                                                    <ImageWithSkeleton
-                                                        src={(() => {
-                                                            let textureName = value[1].image_path;
-                                                            if (textureName) {
-                                                                if (!textureName.endsWith(".png")) textureName += ".png";
-                                                                return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
-                                                            }
-                                                        })()}
-                                                        className="w-full object-cover group-hover/card:shadow-xl"
-                                                        style={{
-                                                            imageRendering: "pixelated",
-                                                        }}
-                                                        alt="thumbnail"
-                                                    />
-                                                </CardItem>
-                                                <div className="flex justify-between items-center mt-20">
-                                                    <CardItem translateZ={20}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Pencil/> Edit
-                                                        </Button>
+                                return Object.entries(config.glyphs).map((value) => {
+                                    return (
+                                        <>
+                                            <CardContainer>
+                                                <CardBody
+                                                    className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                    <CardItem translateZ="50">
+                                                        <ScrollArea className="w-[200px] whitespace-nowrap">
+                                                            <div className="text-xl font-bold text-neutral-600 dark:text-white">
+                                                                {value[0]}
+                                                            </div>
+                                                        </ScrollArea>
                                                     </CardItem>
-                                                    <CardItem translateZ={20}>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setConfirmDialogAction(() => () => {
-                                                                    const glyphsNode = doc.get("glyphs", true) as yaml.YAMLMap | null;
-
-                                                                    glyphsNode?.delete(value[0]);
-                                                                    onEditConfig();
-                                                                });
-                                                                setConfirmDialogMessage(`Delete glyph "${value[0]}"?`);
-                                                                setConfirmDialogOpen(true);
+                                                    <CardItem translateZ="50" className="w-full mt-4">
+                                                        <ImageWithFallback
+                                                            src={(() => {
+                                                                let textureName = value[1]?.image_path;
+                                                                if (textureName) {
+                                                                    if (!textureName.endsWith(".png")) textureName += ".png";
+                                                                    return `${apiPrefix}/download_resource?path=${encodeURIComponent(folder + "/assets/textures/" + textureName)}&token=${encodeURIComponent(token)}`;
+                                                                }
+                                                            })()}
+                                                            className="w-full object-cover group-hover/card:shadow-xl"
+                                                            style={{
+                                                                imageRendering: "pixelated",
                                                             }}
-                                                        >
-                                                            <Trash2/>
-                                                            Delete
-                                                        </Button>
+                                                            alt="thumbnail"
+                                                        />
                                                     </CardItem>
-                                                </div>
-                                            </CardBody>
-                                        </CardContainer>
-                                    </>);
+                                                    <div className="flex justify-between items-center mt-20">
+                                                        <CardItem translateZ={20}>
+                                                            <Button variant="outline" size="sm">
+                                                                <Pencil/> Edit
+                                                            </Button>
+                                                        </CardItem>
+                                                        <CardItem translateZ={20}>
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setConfirmDialogAction(() => () => {
+                                                                        const glyphsNode = doc.get("glyphs", true) as yaml.YAMLMap | null;
+
+                                                                        glyphsNode?.delete(value[0]);
+                                                                        onEditConfig();
+                                                                    });
+                                                                    setConfirmDialogMessage(`Delete glyph "${value[0]}"?`);
+                                                                    setConfirmDialogOpen(true);
+                                                                }}
+                                                            >
+                                                                <Trash2/>
+                                                                Delete
+                                                            </Button>
+                                                        </CardItem>
+                                                    </div>
+                                                </CardBody>
+                                            </CardContainer>
+                                        </>
+                                    );
                                 });
                             })()}
                         </div>
@@ -457,9 +482,7 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
             <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {confirmDialogMessage}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>{confirmDialogMessage}</AlertDialogTitle>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -467,22 +490,24 @@ export function ConfigEditor({text, onValueChange, folder, token}: {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            {newItemDialogTabs !== undefined && newItemDialogSubmit !== undefined && <NewItemDialog
-                onOpenChange={open => {
-                    if (!open) {
-                        setNewItemDialogTabs(undefined);
-                        setNewItemDialogSubmit(undefined);
-                    }
-                }}
-                tabs={newItemDialogTabs as FormTab[]}
-                onSubmit={newItemDialogSubmit as (data: Record<string, any>) => void}
-            />}
+            {newItemDialogTabs !== undefined && newItemDialogSubmit !== undefined && (
+                <NewItemDialog
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setNewItemDialogTabs(undefined);
+                            setNewItemDialogSubmit(undefined);
+                        }
+                    }}
+                    tabs={newItemDialogTabs as FormTab[]}
+                    onSubmit={newItemDialogSubmit as (data: Record<string, any>) => void}
+                    namespace={folder?.split("/")[0]}
+                />
+            )}
         </>
     );
 }
 
-
-export type FieldType = "text" | "combobox" | "name" | "int" | "float" | "texture";
+export type FieldType = "text" | "combobox" | "name" | "int" | "float" | "texture" | "boolean";
 
 export interface FormField {
     name: string;
@@ -490,7 +515,8 @@ export interface FormField {
     type: FieldType;
     required?: boolean;
     options?: string[]; // for combobox
-    placeholder?: string;
+    placeholder?: string; // for text/int/float/texture
+    textureFolders?: string[]; // for texture
 }
 
 export interface FormTab {
@@ -498,4 +524,5 @@ export interface FormTab {
     tabLabel: string;
     title: string;
     fields: FormField[];
+    condition?: string;
 }
