@@ -43,6 +43,17 @@ The build will be located in `build/libs/`
 - [ ] World generation
 - [ ] Escape menu
 - [ ] Language overrides
+- [ ] Components
+  - [X] Enchantment Glint Override
+  - [X] Fire Resistant
+  - [X] Food
+  - [X] Max Damage/Durability
+  - [X] Max Stack Size
+  - [X] Rarity
+  - [ ] Toottip Display (only hide components)
+  - [X] Unbreakable
+  - [X] Use Cooldown
+  - [ ] Blocked Enchantments
 - [ ] Bedrock compatibility
     - [ ] Items
         - [X] Regular items
