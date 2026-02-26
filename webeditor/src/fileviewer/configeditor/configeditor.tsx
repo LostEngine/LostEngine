@@ -33,6 +33,7 @@ import {
     handleNewMaterial
 } from "@/fileviewer/configeditor/formsubmits.ts";
 import {ScrollArea} from "@/components/ui/scroll-area.tsx";
+import {toast} from "sonner";
 
 type SoundsStore = {
     sounds?: string[];
@@ -44,19 +45,18 @@ export const useSoundsStore = create<SoundsStore>()((set) => ({
 }));
 
 export function ConfigEditor({
-                                 text,
-                                 onValueChange,
-                                 folder,
-                                 token,
-                             }: {
+    text,
+    onValueChange,
+    folder,
+    token,
+}: {
     text: string;
     onValueChange: (value: string) => void;
     folder: string;
     token: string;
 }) {
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-    const [confirmDialogAction, setConfirmDialogAction] = useState<() => void>(() => {
-    });
+    const [confirmDialogAction, setConfirmDialogAction] = useState<() => void>(() => {});
     const [confirmDialogMessage, setConfirmDialogMessage] = useState("");
     const [newItemDialogTabs, setNewItemDialogTabs] = useState<FormTab[]>();
     const [newItemDialogSubmit, setNewItemDialogSubmit] = useState<(data: Record<string, any>) => void>();
@@ -98,10 +98,14 @@ export function ConfigEditor({
                     if (tab.id === "armor") {
                         return {
                             ...tab,
-                            fields: tab.fields.map((field) => (field.name === "equip_sound" ? {
-                                ...field,
-                                options: sounds
-                            } : field)),
+                            fields: tab.fields.map((field) =>
+                                field.name === "equip_sound"
+                                    ? {
+                                          ...field,
+                                          options: sounds,
+                                      }
+                                    : field,
+                            ),
                         };
                     }
                     return tab;
@@ -118,9 +122,7 @@ export function ConfigEditor({
                 <AccordionItem value="items">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            <div
-                                className={config?.items && Object.entries(config.items).length > 0 ? "" : "text-gray-500"}>Items
-                            </div>
+                            <div className={config?.items && Object.entries(config.items).length > 0 ? "" : "text-gray-500"}>Items</div>
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -134,7 +136,7 @@ export function ConfigEditor({
                                     });
                                 }}
                             >
-                                <Plus/>
+                                <Plus />
                             </Button>
                         </div>
                     </AccordionTrigger>
@@ -145,10 +147,8 @@ export function ConfigEditor({
                                 return (
                                     <>
                                         <CardContainer>
-                                            <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                                <CardItem translateZ="50"
-                                                          className="text-xl font-bold text-neutral-600 dark:text-white">
+                                            <CardBody className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardItem translateZ="50" className="text-xl font-bold text-neutral-600 dark:text-white">
                                                     {value[0]}
                                                 </CardItem>
                                                 <CardItem translateZ="50" className="w-full mt-4">
@@ -169,8 +169,14 @@ export function ConfigEditor({
                                                 </CardItem>
                                                 <div className="flex justify-between items-center mt-20">
                                                     <CardItem translateZ={20}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Pencil/> Edit
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                toast("Feature not implemented yet.");
+                                                            }}
+                                                        >
+                                                            <Pencil /> Edit
                                                         </Button>
                                                     </CardItem>
                                                     <CardItem translateZ={20}>
@@ -188,7 +194,7 @@ export function ConfigEditor({
                                                                 setConfirmDialogOpen(true);
                                                             }}
                                                         >
-                                                            <Trash2/>
+                                                            <Trash2 />
                                                             Delete
                                                         </Button>
                                                     </CardItem>
@@ -204,9 +210,7 @@ export function ConfigEditor({
                 <AccordionItem value="blocks">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            <div
-                                className={config?.blocks && Object.entries(config.blocks).length > 0 ? "" : "text-gray-500"}>Blocks
-                            </div>
+                            <div className={config?.blocks && Object.entries(config.blocks).length > 0 ? "" : "text-gray-500"}>Blocks</div>
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -220,7 +224,7 @@ export function ConfigEditor({
                                     });
                                 }}
                             >
-                                <Plus/>
+                                <Plus />
                             </Button>
                         </div>
                     </AccordionTrigger>
@@ -231,10 +235,8 @@ export function ConfigEditor({
                                 return (
                                     <>
                                         <CardContainer>
-                                            <CardBody
-                                                className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
-                                                <CardItem translateZ="50"
-                                                          className="text-xl font-bold text-neutral-600 dark:text-white">
+                                            <CardBody className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardItem translateZ="50" className="text-xl font-bold text-neutral-600 dark:text-white">
                                                     {value[0]}
                                                 </CardItem>
                                                 <CardItem translateZ="50" className="w-full mt-4">
@@ -254,8 +256,14 @@ export function ConfigEditor({
                                                 </CardItem>
                                                 <div className="flex justify-between items-center mt-20">
                                                     <CardItem translateZ={20}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Pencil/> Edit
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                toast("Feature not implemented yet.");
+                                                            }}
+                                                        >
+                                                            <Pencil /> Edit
                                                         </Button>
                                                     </CardItem>
                                                     <CardItem translateZ={20}>
@@ -273,7 +281,7 @@ export function ConfigEditor({
                                                                 setConfirmDialogOpen(true);
                                                             }}
                                                         >
-                                                            <Trash2/>
+                                                            <Trash2 />
                                                             Delete
                                                         </Button>
                                                     </CardItem>
@@ -289,8 +297,7 @@ export function ConfigEditor({
                 <AccordionItem value="materials">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            <div
-                                className={config?.materials && Object.entries(config.materials).length > 0 ? "" : "text-gray-500"}>
+                            <div className={config?.materials && Object.entries(config.materials).length > 0 ? "" : "text-gray-500"}>
                                 Materials
                             </div>
                             <Button
@@ -307,7 +314,7 @@ export function ConfigEditor({
                                     if (!sounds) fetchSounds();
                                 }}
                             >
-                                <Plus/>
+                                <Plus />
                             </Button>
                         </div>
                     </AccordionTrigger>
@@ -319,8 +326,7 @@ export function ConfigEditor({
                                     return (
                                         <>
                                             <CardContainer>
-                                                <CardBody
-                                                    className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardBody className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
                                                     <CardItem
                                                         translateZ="50"
                                                         className="text-xl font-bold text-neutral-600 dark:text-white"
@@ -351,8 +357,14 @@ export function ConfigEditor({
                                                     </CardItem>
                                                     <div className="flex justify-between items-center mt-20">
                                                         <CardItem translateZ={20}>
-                                                            <Button variant="outline" size="sm">
-                                                                <Pencil/> Edit
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    toast("Feature not implemented yet.");
+                                                                }}
+                                                            >
+                                                                <Pencil /> Edit
                                                             </Button>
                                                         </CardItem>
                                                         <CardItem translateZ={20}>
@@ -373,7 +385,7 @@ export function ConfigEditor({
                                                                     setConfirmDialogOpen(true);
                                                                 }}
                                                             >
-                                                                <Trash2/>
+                                                                <Trash2 />
                                                                 Delete
                                                             </Button>
                                                         </CardItem>
@@ -390,9 +402,7 @@ export function ConfigEditor({
                 <AccordionItem value="glyphs">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
-                            <div
-                                className={config?.glyphs && Object.entries(config.glyphs).length > 0 ? "" : "text-gray-500"}>Glyphs
-                            </div>
+                            <div className={config?.glyphs && Object.entries(config.glyphs).length > 0 ? "" : "text-gray-500"}>Glyphs</div>
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -406,7 +416,7 @@ export function ConfigEditor({
                                     });
                                 }}
                             >
-                                <Plus/>
+                                <Plus />
                             </Button>
                         </div>
                     </AccordionTrigger>
@@ -418,8 +428,7 @@ export function ConfigEditor({
                                     return (
                                         <>
                                             <CardContainer>
-                                                <CardBody
-                                                    className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
+                                                <CardBody className="bg-gray-50 relative group/card  dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 dark:bg-neutral-950 dark:border-white/20 border-black/10 w-auto sm:w-60 h-auto rounded-xl p-6 border">
                                                     <CardItem translateZ="50">
                                                         <ScrollArea className="w-[200px] whitespace-nowrap">
                                                             <div className="text-xl font-bold text-neutral-600 dark:text-white">
@@ -445,8 +454,14 @@ export function ConfigEditor({
                                                     </CardItem>
                                                     <div className="flex justify-between items-center mt-20">
                                                         <CardItem translateZ={20}>
-                                                            <Button variant="outline" size="sm">
-                                                                <Pencil/> Edit
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    toast("Feature not implemented yet.");
+                                                                }}
+                                                            >
+                                                                <Pencil /> Edit
                                                             </Button>
                                                         </CardItem>
                                                         <CardItem translateZ={20}>
@@ -464,7 +479,7 @@ export function ConfigEditor({
                                                                     setConfirmDialogOpen(true);
                                                                 }}
                                                             >
-                                                                <Trash2/>
+                                                                <Trash2 />
                                                                 Delete
                                                             </Button>
                                                         </CardItem>

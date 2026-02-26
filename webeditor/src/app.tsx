@@ -317,8 +317,13 @@ export function App() {
                                             fileInput.webkitdirectory = true;
                                             fileInput.style.display = "none";
                                             fileInput.addEventListener("change", (event) => {
-                                                setNewFilePath((event.target as HTMLInputElement).dirName || "folder");
-                                                setFilesFromFolder((event.target as HTMLInputElement).files as FileList | undefined);
+                                                console.log(event);
+                                                const files = (event.target as HTMLInputElement).files as FileList | undefined;
+                                                setFilesFromFolder(files);
+                                                // We want to get the folder using the first file
+                                                const firstFilePath = files ? files[0]?.webkitRelativePath : undefined;
+                                                const match = firstFilePath?.match(/^[^/]+/);
+                                                setNewFilePath(match ? match[0] : "folder");
                                             });
                                             document.body.appendChild(fileInput);
                                             fileInput.click();
@@ -399,7 +404,7 @@ export function App() {
                             })()}
                         </div>
                     </header>
-                    <div className="p-[15px] pb-10 h-full w-full pt-18">
+                    <div className="p-3.75 pb-10 h-full w-full pt-18">
                         <FileViewer
                             filePath={openedFile}
                             token={token}
@@ -481,12 +486,17 @@ export function App() {
                                 }
 
                                 for (const file of filesFromFolder) {
-                                    uploadFile(newFilePath + "/" + file.name, token ?? "", file, () => {
-                                        completed++;
-                                        if (completed >= total) {
-                                            reload();
-                                        }
-                                    });
+                                    uploadFile(
+                                        newFilePath + "/" + file.webkitRelativePath.replace(/^[^/]+\//, ""),
+                                        token ?? "",
+                                        file,
+                                        () => {
+                                            completed++;
+                                            if (completed >= total) {
+                                                reload();
+                                            }
+                                        },
+                                    );
                                 }
                             }}
                         >
@@ -820,7 +830,7 @@ function Path({file}: {file: string | null}) {
     if (!file) {
         return (
             <>
-                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-62.5" />
             </>
         );
     }
@@ -912,7 +922,7 @@ function FileUploadDialog({
                         Drag and drop or click here to upload files
                     </FileUploadDropzone>
                     <FileUploadList>
-                        <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                        <ScrollArea className="h-50 w-full rounded-md border p-4">
                             {files.map((file, index) => (
                                 <FileUploadItem key={index} value={file}>
                                     <FileUploadItemPreview />
