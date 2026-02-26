@@ -174,3 +174,6 @@ glyphs:
     image_path: "font/larry_emoji"
     height: 8
     ascent: 7
+guis:
+  lost_chest:
+    image_path: "gui/lost_chest"
