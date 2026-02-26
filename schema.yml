@@ -1,0 +1,107 @@
+# This file helps to know what the valid values for each field are.
+# Please update it if you add new features.
+
+materials:
+  $string:
+    enchantment_value: integer
+    repair_item: identifier # namespace:id (ex: lost_engine:ingot)
+    tool:
+      base: STRING # WOOD, STONE, IRON, DIAMOND, GOLD, NETHERITE, etc.
+      durability: integer
+      speed: float
+      attack_damage_bonus: float
+    armor:
+      durability: integer
+      defense:
+        boots: integer
+        leggings: integer
+        chestplate: integer
+        helmet: integer
+      equip_sound: string
+      toughness: float
+      knockback_resistance: float
+      texture: string
+
+items:
+  $string: # item id (generated identifier would be lost_engine:id)
+    type: STRING # generic, sword, shovel, pickaxe, axe, hoe, armor, elytra, trident
+
+    # Only for sword, shovel, pickaxe, axe, hoe, armor
+    material: STRING
+
+    # Only for sword, shovel, pickaxe, axe, hoe
+    attack_damage: float
+    attack_speed: float
+
+    # Only for armor
+    armor_type: STRING # helmet, chestplate, leggings, boots
+
+    # Only for elytra
+    elytra:
+      durability: integer
+      texture: string
+      use_player_skin: boolean
+      repair_item: identifier
+
+    # Only for trident
+    trident:
+      durability: integer
+      attack_damage: float
+
+    # Components
+    components:
+      enchantment_glint_override: boolean
+      fire_resistant: boolean
+      food:
+        nutrition: integer
+        saturation_modifier: float
+        can_always_eat: boolean
+        consumeSeconds: float
+      max_damage: integer
+      max_stack_size: integer # (1-99)
+      rarity: STRING # COMMON, UNCOMMON, RARE, EPIC
+      tooltip_display:
+        hide_tooltip: boolean
+        hidden_components:
+          - STRING # Minecraft component (ex: enchantments, attribute_modifiers)
+      unbreakable: boolean
+      use_cooldown:
+        cooldown_seconds: float
+        group: string # You most likely don't need this, it will be generated automatically
+
+    # Resource pack generation
+    model: string # either model or texture
+    texture: string # trident only
+    icon: string
+    name:
+      $string: string # locale: display name (ex: en_US:Iron Sword)
+
+blocks:
+  $string: # block id (generated identifier would be lost_engine:id)
+    type: STRING # regular, tnt
+    drops:
+      type: STRING # self, ore
+      # Only for ore
+      item: identifier
+      max: integer
+      min: integer
+
+    # Only for regular
+    required_material: STRING # WOOD, STONE, IRON, DIAMOND, NETHERITE, NONE
+    destroy_time: float
+    explosion_resistance: float
+    tool_type: STRING # AXE, HOE, PICKAXE, SHOVEL, NONE
+
+    # Only for tnt
+    explosion_power: integer
+
+    # Resource pack generation
+    texture: string
+    name:
+      $string: string # locale: display name (ex: en_US:Note Block)
+
+glyphs:
+  $string: # glyph id (generated translation key: glyph.id)
+    image_path: string
+    height: integer # at most 64 for bedrock support
+    ascent: integer # smaller than height, between (height / 2 + 3 - (64 - height) / 2) and (height / 2 + 3 + (64 - height) / 2) (inclusive) for bedrock support

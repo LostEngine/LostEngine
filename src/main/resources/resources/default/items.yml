@@ -29,47 +29,47 @@ items:
       en_US: "Lost Ingot"
       fr_FR: "Lingot Perdu"
     type: generic
-    texture: item/ingot
+    icon: item/ingot
   sword:
     name:
       en_US: "Lost Sword"
       fr_FR: "Épée Perdue"
     type: sword
-    texture: item/sword
+    icon: item/sword
     material: LOST
   shovel:
     name:
       en_US: "Lost Shovel"
       fr_FR: "Pelle Perdue"
     type: shovel
-    texture: item/shovel
+    icon: item/shovel
     material: LOST
   pickaxe:
     name:
       en_US: "Lost Pickaxe"
       fr_FR: "Pioche Perdue"
     type: pickaxe
-    texture: item/pickaxe
+    icon: item/pickaxe
     material: LOST
   axe:
     name:
       en_US: "Lost Axe"
       fr_FR: "Hache Perdue"
     type: axe
-    texture: item/axe
+    icon: item/axe
     material: LOST
   hoe:
     name:
       en_US: "Lost Hoe"
       fr_FR: "Houe Perdue"
     type: hoe
-    texture: item/hoe
+    icon: item/hoe
     material: LOST
   baguette:
     name:
       en_US: "Baguette"
     type: generic
-    texture: item/baguette
+    icon: item/baguette
     components:
       food:
         nutrition: 10
@@ -82,7 +82,7 @@ items:
     type: armor
     armor_type: helmet
     material: LOST
-    texture: item/helmet
+    icon: item/helmet
   chestplate:
     name:
       en_US: "Lost Chestplate"
@@ -90,7 +90,7 @@ items:
     type: armor
     armor_type: chestplate
     material: LOST
-    texture: item/chestplate
+    icon: item/chestplate
   leggings:
     name:
       en_US: "Lost Leggings"
@@ -98,7 +98,7 @@ items:
     type: armor
     armor_type: leggings
     material: LOST
-    texture: item/leggings
+    icon: item/leggings
   boots:
     name:
       en_US: "Lost Boots"
@@ -106,7 +106,7 @@ items:
     type: armor
     armor_type: boots
     material: LOST
-    texture: item/boots
+    icon: item/boots
   elytra:
     name:
       en_US: "Lost Elytra"
@@ -117,7 +117,7 @@ items:
       texture: elytra
       use_player_skin: false
       repair_item: lost_engine:ingot
-    texture: item/elytra
+    icon: item/elytra
   trident:
     name:
       en_US: "Lost Trident"

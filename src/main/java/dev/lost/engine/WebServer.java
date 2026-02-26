@@ -5,18 +5,24 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import dev.lost.engine.bootstrap.ResourceInjector;
 import dev.lost.annotations.NotNull;
 import dev.lost.annotations.Nullable;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class WebServer {
 
@@ -50,6 +56,14 @@ public class WebServer {
         server.createContext("/", exchange -> {
             String path = exchange.getRequestURI().getPath();
             String method = exchange.getRequestMethod();
+
+            if (method.equalsIgnoreCase("OPTIONS")) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
 
             try {
                 if (path.startsWith("/api/")) {
@@ -107,6 +121,12 @@ public class WebServer {
             BuiltInRegistries.ITEM.forEach(item -> items.add(BuiltInRegistries.ITEM.getKey(item).toString()));
             json.add("items", items);
             json.add("files", buildFileTree(new File(LostEngine.getInstance().getDataFolder(), "resources")));
+            JsonArray toolMaterials = new JsonArray();
+            ResourceInjector.getToolMaterials().forEach((id, toolMaterial) -> toolMaterials.add(id));
+            json.add("tool_materials", toolMaterials);
+            JsonArray armorMaterials = new JsonArray();
+            ResourceInjector.getArmorMaterials().forEach((id, toolMaterial) -> armorMaterials.add(id));
+            json.add("armor_materials", toolMaterials);
             sendResponse(exchange, 200, json.toString(), "application/json");
             return;
         }
@@ -136,6 +156,7 @@ public class WebServer {
             String mime = getMimeType(target.getName());
             try (FileInputStream fis = new FileInputStream(target)) {
                 byte[] bytes = fis.readAllBytes();
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
                 exchange.getResponseHeaders().set("Content-Type", mime);
                 exchange.sendResponseHeaders(200, bytes.length);
 
@@ -249,6 +270,71 @@ public class WebServer {
             return;
         }
 
+        if (path.equals("/api/move_resource") && method.equals("POST")) {
+            if (isReadOnlyToken) {
+                sendResponse(exchange, 403, "Forbidden", "text/html");
+                return;
+            }
+            String rawPath = extractQueryParam(query, "path");
+            String rawDestination = extractQueryParam(query, "destination");
+
+            if (rawPath == null || rawPath.isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                return;
+            }
+
+            if (rawDestination == null || rawDestination.isEmpty()) {
+                sendResponse(exchange, 400, "{\"error\": \"Missing 'destination' parameter\"}", "application/json");
+                return;
+            }
+
+            String cleanPath = sanitizeResourcePath(rawPath);
+            String cleanDestination = sanitizeResourcePath(rawDestination);
+            if (cleanPath == null || cleanDestination == null) {
+                sendResponse(exchange, 403, "{\"error\": \"Invalid or unsafe path/destination\"}", "application/json");
+                return;
+            }
+
+            File baseDir = new File(LostEngine.getInstance().getDataFolder(), "resources");
+            File file = new File(baseDir, cleanPath);
+            File targetFile = new File(baseDir, cleanDestination);
+
+            if (!file.exists()) {
+                sendResponse(exchange, 404, "{\"error\": \"File or directory not found\"}", "application/json");
+                return;
+            }
+
+            if (cleanDestination.startsWith(cleanPath)) {
+                // if we move `parent/folder` to `parent/folder/child`, we need to first move it to a temp dir and then to the destination dir
+                File tempDir = LostEngine.getInstance()
+                        .getDataPath()
+                        .resolve(".lost_engine/tmp/")
+                        .resolve(cleanPath.replaceAll("/", "_" + ThreadLocalRandom.current().nextInt()))
+                        .toFile();
+                if (!moveRecursive(file, tempDir)) {
+                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (source -> tempDir)\"}", "application/json");
+                    return;
+                }
+
+                if (!moveRecursive(tempDir, targetFile)) {
+                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (tempDir -> destination)\"}", "application/json");
+                    return;
+                }
+            } else {
+                if (!moveRecursive(file, targetFile)) {
+                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (source -> destination)\"}", "application/json");
+                    return;
+                }
+            }
+
+            boolean isDir = file.isDirectory();
+            LostEngine.logger().info("(Web editor) Moved {}: '{}' to '{}'", isDir ? "folder" : "file", cleanPath, cleanDestination);
+            sendResponse(exchange, 200,
+                    "{\"message\":\"Resource moved successfully\",\"destination\":\"" + cleanDestination + "\"}",
+                    "application/json");
+            return;
+        }
+
         sendResponse(exchange, 404, "{\"error\": \"API Endpoint Not Found\"}", "application/json");
     }
 
@@ -304,6 +390,7 @@ public class WebServer {
             return;
         }
 
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", mimeType);
         exchange.sendResponseHeaders(200, file.length());
 
@@ -321,6 +408,7 @@ public class WebServer {
             }
 
             byte[] content = is.readAllBytes();
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().set("Content-Type", mimeType);
             exchange.sendResponseHeaders(200, content.length);
 
@@ -333,6 +421,7 @@ public class WebServer {
 
     private static void sendResponse(@NotNull HttpExchange exchange, int statusCode, @NotNull String response, String contentType) throws IOException {
         byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
@@ -465,6 +554,27 @@ public class WebServer {
         }
 
         return file.delete();
+    }
+
+    private static boolean moveRecursive(@NotNull File source, @NotNull File target) {
+        if (source.isDirectory()) {
+            if (!target.exists() && !target.mkdirs()) return false;
+            File[] children = source.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    File targetChild = new File(target, child.getName());
+                    if (!moveRecursive(child, targetChild)) return false;
+                }
+            }
+            return source.delete();
+        } else {
+            if (target.exists() && !target.delete()) return false;
+
+            File parent = target.getParentFile();
+            if (parent != null && !parent.exists()) parent.mkdirs();
+
+            return source.renameTo(target);
+        }
     }
 
 }

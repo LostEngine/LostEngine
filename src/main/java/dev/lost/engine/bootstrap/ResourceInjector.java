@@ -16,6 +16,7 @@ import dev.misieur.fast.FastEnum;
 import dev.misieur.fast.FastFiles;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import lombok.Getter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -27,6 +28,7 @@ import net.minecraft.world.item.equipment.ArmorMaterials;
 import net.minecraft.world.item.equipment.ArmorType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.Contract;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -38,6 +40,7 @@ import java.util.Map;
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
+    @Getter
     @CanBreakOnUpdates("1.21.11") // If there is a new Material
     static Map<String, ToolMaterial> toolMaterials = new Object2ObjectOpenHashMap<>(Map.of(
             "WOOD", ToolMaterial.WOOD,
@@ -48,6 +51,7 @@ public class ResourceInjector {
             "GOLD", ToolMaterial.GOLD,
             "NETHERITE", ToolMaterial.NETHERITE
     ));
+    @Getter
     static Map<String, ArmorMaterial> armorMaterials = new Object2ObjectOpenHashMap<>(Map.of(
             "LEATHER", ArmorMaterials.LEATHER,
             "COPPER", ArmorMaterials.COPPER,
@@ -307,6 +311,7 @@ public class ResourceInjector {
         return true;
     }
 
+    @Contract("null, _ -> null")
     private static @Nullable Object convertNumberType(@Nullable Object value, @Nullable Class<?> targetType) {
         if (!(value instanceof Number number) || targetType == null) {
             return value;
@@ -384,7 +389,10 @@ public class ResourceInjector {
                                     BlockStateProvider.getNextBlockState(BlockStateProvider.BlockStateType.WOOD) :
                                     null,
                             (float) blockSection.getDouble("destroy_time", 0F),
-                            (float) blockSection.getDouble("explosion_resistance", 0F),
+                            (float) blockSection.getDouble(
+                                    "explosion_resistance",
+                                    blockSection.getDouble("destroy_time", 0F) // fall back to destroy_time of explosion_resistance in not found
+                            ),
                             BlockInjector.Minable.valueOf(blockSection.getString("tool_type", "none").toUpperCase(Locale.ROOT))
                     );
                     case "tnt" -> BlockInjector.injectTNTBlock(

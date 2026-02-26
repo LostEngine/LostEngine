@@ -1,15 +1,15 @@
-import {type ClassValue, clsx} from "clsx"
-import {twMerge} from "tailwind-merge"
-import type {TreeItem} from "@/app.tsx";
+import {type ClassValue, clsx} from "clsx";
+import {twMerge} from "tailwind-merge";
+import {apiPrefix, type TreeItem} from "@/app.tsx";
 import {toast} from "sonner";
 
 export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs))
+    return twMerge(clsx(inputs));
 }
 
 export function deleteFile(path: string, token: string, reload: () => void) {
     const asyncDeleteFile = async () => {
-        const response = await fetch(`/api/delete_resource?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`${apiPrefix}/delete_resource?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`, {
             method: "DELETE",
         });
         if (!response.ok) {
@@ -18,17 +18,13 @@ export function deleteFile(path: string, token: string, reload: () => void) {
         reload();
     };
 
-    toast.promise<void>(
-        () => asyncDeleteFile(),
-        {
-            loading: "Deleting file...",
-            success: "File deleted",
-            error: "Error",
-            closeButton: true,
-        }
-    )
+    toast.promise<void>(() => asyncDeleteFile(), {
+        loading: "Deleting file...",
+        success: "File deleted",
+        error: "Error",
+        closeButton: true,
+    });
 }
-
 
 export function uploadFile(path: string, token: string, file: Blob | File | ArrayBuffer, reload: () => void) {
     const asyncUploadFile = async () => {
@@ -41,7 +37,7 @@ export function uploadFile(path: string, token: string, file: Blob | File | Arra
             form.append("file", new Blob([file]));
         }
 
-        const response = await fetch(`/api/upload_resource?token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`${apiPrefix}/upload_resource?token=${encodeURIComponent(token)}`, {
             method: "POST",
             body: form,
         });
@@ -52,31 +48,56 @@ export function uploadFile(path: string, token: string, file: Blob | File | Arra
         reload();
     };
 
-    toast.promise<void>(
-        () => asyncUploadFile(),
-        {
-            loading: "Uploading file...",
-            success: "File uploaded",
-            error: "Error",
-            closeButton: true,
-        }
-    )
+    toast.promise<void>(() => asyncUploadFile(), {
+        loading: "Uploading file...",
+        success: "File uploaded",
+        error: "Error",
+        closeButton: true,
+    });
 }
 
-export function isFileInData(item: TreeItem, targetPath: string, parentPath = ""): boolean {
-    const [rawName, ...items] = Array.isArray(item) ? item : [item];
-    const name: string = typeof rawName === "string" ? rawName : "";
-    const fullPath: string = parentPath ? `${parentPath}/${name}` : name;
+export function moveResource(path: string, destination: string, token: string, reload: () => void) {
+    const asyncDeleteFile = async () => {
+        const response = await fetch(
+            `${apiPrefix}/move_resource?path=${encodeURIComponent(path)}&destination=${encodeURIComponent(destination)}&token=${encodeURIComponent(token)}`,
+            {
+                method: "POST",
+            },
+        );
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        reload();
+    };
 
-    if (!items.length) {
-        return fullPath === targetPath;
-    }
+    toast.promise<void>(() => asyncDeleteFile(), {
+        loading: "Moving file...",
+        success: "File moved",
+        error: "Error",
+        closeButton: true,
+    });
+}
 
-    for (const subItem of items) {
-        if (isFileInData(subItem, targetPath, fullPath)) {
-            return true;
+export function getFiles(files: TreeItem[], prefix: string): string[] {
+    const result: string[] = [];
+
+    function walk(items: TreeItem[], currentPath: string[]) {
+        for (const item of items) {
+            if (typeof item === "string") {
+                const path = [...currentPath, item].join("/");
+                if (path.startsWith(prefix)) result.push(path);
+            } else if (Array.isArray(item)) {
+                const [folderName, ...children] = item as [string, ...TreeItem[]];
+                walk(children, [...currentPath, folderName]);
+            }
         }
     }
+    walk(files, []);
+    return result;
+}
 
-    return false;
+export function isFileInData(files: TreeItem[], targetPath: string): boolean {
+    const lastSlashIndex = targetPath.lastIndexOf("/");
+    const prefix = targetPath.substring(0, lastSlashIndex + 1);
+    return getFiles(files, prefix).filter((value) => value === targetPath).length > 0;
 }

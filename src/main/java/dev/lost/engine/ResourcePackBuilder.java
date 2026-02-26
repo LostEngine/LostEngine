@@ -122,7 +122,7 @@ public class ResourcePackBuilder {
                                     plugin.getSLF4JLogger().error("Model file for item model not found: {}", modelFile.getAbsolutePath());
                                 }
                             } else {
-                                String textureName = itemSection.getString("texture");
+                                String textureName = itemSection.getString("icon");
                                 if (textureName != null) {
                                     createItemModel(
                                             resourcePack,
@@ -212,19 +212,20 @@ public class ResourcePackBuilder {
                         }
                         ConfigurationSection elytraSection = itemSection.getConfigurationSection("elytra");
                         if (elytraSection != null) {
-                            String texture = elytraSection.getString("texture", null);
-                            resourcePack.jsonFile("assets/lost_engine/equipment/%s.json".formatted(key.toLowerCase(Locale.ROOT)), JsonParser.parseString("""
-                                    {
-                                      "layers": {
-                                        "wings": [
-                                          {
-                                            "texture": "lost_engine:%s",
-                                            "use_player_texture": %b
+                            String texture = elytraSection.getString("texture");
+                            if (texture != null)
+                                resourcePack.jsonFile("assets/lost_engine/equipment/%s.json".formatted(key.toLowerCase(Locale.ROOT)), JsonParser.parseString("""
+                                        {
+                                          "layers": {
+                                            "wings": [
+                                              {
+                                                "texture": "lost_engine:%s",
+                                                "use_player_texture": %b
+                                              }
+                                            ]
                                           }
-                                        ]
-                                      }
-                                    }
-                                    """.formatted(texture, elytraSection.getBoolean("use_player_skin", false))));
+                                        }
+                                        """.formatted(texture, elytraSection.getBoolean("use_player_skin", false))));
                         }
                     }
                 }
