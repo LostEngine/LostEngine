@@ -39,7 +39,7 @@ The build will be located in `build/libs/`
   - [ ] Inventory/Crafting table
   - [ ] Furnace
 - [X] Glyphs
-- [ ] GUIs
+- [X] GUIs
 - [ ] World generation
 - [ ] Escape menu
 - [ ] Language overrides
@@ -50,7 +50,7 @@ The build will be located in `build/libs/`
   - [X] Max Damage/Durability
   - [X] Max Stack Size
   - [X] Rarity
-  - [ ] Toottip Display (only hide components)
+  - [ ] Tooltip Display (only hide components)
   - [X] Unbreakable
   - [X] Use Cooldown
   - [ ] Blocked Enchantments
@@ -61,6 +61,8 @@ The build will be located in `build/libs/`
         - [X] Armor
         - [ ] Elytra/Trident
     - [X] Translations
+    - [X] Glyphs
+    - [ ] GUIs
     - [ ] Custom blocks
 - [ ] Commands
   - [X] `/give`
