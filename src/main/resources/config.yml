@@ -3,7 +3,8 @@ pack_hosting:
   self_hosted:
     enabled: true
     hostname: 0.0.0.0
-    port: 7270
+    use_minecraft_port: true # instead of using a second port for the Web server, it will use Minecraft's TCP server to make an HTTP server
+    # port: 7270
   external_host:
     enabled: false
     url: ""

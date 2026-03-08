@@ -18,7 +18,6 @@ import dev.lost.engine.items.customitems.CustomItem;
 import dev.lost.engine.utils.BedrockUtils;
 import dev.lost.engine.utils.ItemUtils;
 import dev.lost.engine.utils.ReflectionUtils;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -41,7 +40,6 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.VarInt;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.protocol.Packet;
@@ -87,7 +85,6 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 import java.util.*;
-import java.util.function.BiFunction;
 
 public class PacketListener {
 
@@ -113,102 +110,9 @@ public class PacketListener {
                 Key.key("lost_engine", "packet_listener"),
                 channel -> channel.pipeline().addBefore("packet_handler", "lost_engine_packet_listener", new ChannelDupeHandler())
         );
-        ChannelInitializeListenerHolder.addListener(
-                Key.key("lost_engine", "raw_packet_listener"),
-                channel -> channel.pipeline().addBefore("decoder", "lost_engine_raw_packet_listener", new RawChannelDupeHandler())
-        );
     }
 
-    private static class RawChannelDupeHandler extends ChannelDuplexHandler {
-        private Boolean isNotBedrockClient = null;
-
-        private boolean isNotBedrockClient(@NotNull ChannelHandlerContext ctx) {
-            if (isNotBedrockClient != null) return isNotBedrockClient;
-            Channel channel = ctx.channel();
-            Connection connection = (Connection) channel.pipeline().get("packet_handler");
-            if (connection != null && connection.getPacketListener() instanceof ServerCommonPacketListenerImpl serverCommonPacketListener) {
-                return isNotBedrockClient = !BedrockUtils.isBedrockPlayer(serverCommonPacketListener.getOwner().id());
-            }
-            return true;
-        }
-
-        private @Nullable ChannelDupeHandler getDupeHandler(@NotNull ChannelHandlerContext ctx) {
-            return (ChannelDupeHandler) ctx.pipeline().get("lost_engine_packet_listener");
-        }
-
-        private boolean isPlay(@NotNull ChannelHandlerContext ctx) {
-            Channel channel = ctx.channel();
-            Connection connection = (Connection) channel.pipeline().get("packet_handler");
-            return connection != null && connection.getPacketListener() instanceof ServerGamePacketListenerImpl;
-        }
-
-        @Override
-        public void channelRead(@NotNull ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (isPlay(ctx) && isNotBedrockClient(ctx) && msg instanceof ByteBuf byteBuf) {
-                byteBuf.markReaderIndex();
-                try {
-                    FriendlyByteBuf friendlyBuf = new FriendlyByteBuf(byteBuf);
-                    int packetId = friendlyBuf.readVarInt();
-
-                    if (packetId == 0x37) { // set_creative_mode_slot
-                        short slot = friendlyBuf.readShort();
-                        int itemCount = friendlyBuf.readVarInt();
-                        if (itemCount > 0) {
-                            int itemId = friendlyBuf.readVarInt();
-                            int componentsToAdd = friendlyBuf.readVarInt();
-                            int componentsToRemove = friendlyBuf.readVarInt();
-                            if (itemId == BuiltInRegistries.ITEM.getId(Items.PAINTING) && componentsToAdd == 1 && componentsToRemove == 0) {
-                                int componentTypeId = friendlyBuf.readVarInt();
-                                if (componentTypeId == BuiltInRegistries.DATA_COMPONENT_TYPE.getId(DataComponents.PAINTING_VARIANT)) {
-                                    /// {@link net.minecraft.network.codec.ByteBufCodecs#lengthPrefixed(int, BiFunction)
-                                    int i = friendlyBuf.readVarInt();
-                                    int i1 = friendlyBuf.readerIndex();
-                                    int paintingId = VarInt.read(friendlyBuf.slice(i1, i));
-                                    ChannelDupeHandler channelDupeHandler = getDupeHandler(ctx);
-                                    if (channelDupeHandler != null) {
-                                        CustomItem customItem = channelDupeHandler.paintingItems.get(paintingId);
-                                        if (customItem != null) {
-                                            int newItemId = BuiltInRegistries.ITEM.getId(customItem.asItem());
-                                            ByteBuf newPacket = ctx.alloc().buffer();
-                                            FriendlyByteBuf out = new FriendlyByteBuf(newPacket);
-                                            out.writeVarInt(0x37);
-                                            out.writeShort(slot);
-                                            out.writeVarInt(itemCount);
-                                            out.writeVarInt(newItemId);
-                                            out.writeVarInt(0);
-                                            out.writeVarInt(0);
-
-                                            ctx.fireChannelRead(newPacket);
-                                            byteBuf.release();
-
-                                            ServerPlayer player = channelDupeHandler.getPlayer(ctx);
-                                            if (player != null) {
-                                                player.getBukkitEntity().getScheduler().runDelayed(
-                                                        LostEngine.getInstance(),
-                                                        scheduledTask -> player.inventoryMenu.sendAllDataToRemote(),
-                                                        null,
-                                                        1
-                                                );
-                                            }
-
-                                            return;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    LostEngine.logger().error("Failed to parse raw packet set_creative_mode_slot (0x37)", e);
-                } finally {
-                    byteBuf.resetReaderIndex();
-                }
-            }
-            super.channelRead(ctx, msg);
-        }
-    }
-
-    private static class ChannelDupeHandler extends ChannelDuplexHandler {
+    static class ChannelDupeHandler extends ChannelDuplexHandler {
         private ServerPlayer player;
         private boolean isWaitingForResourcePack = false;
         private Boolean isBedrockClient = null;
@@ -217,7 +121,7 @@ public class PacketListener {
         volatile int minY = 0;
         volatile int maxY = 0;
         private final Long2IntOpenHashMap customBlockStateCache = new Long2IntOpenHashMap();
-        private final Int2ObjectOpenHashMap<CustomItem> paintingItems = new Int2ObjectOpenHashMap<>();
+        final Int2ObjectOpenHashMap<CustomItem> paintingItems = new Int2ObjectOpenHashMap<>();
         private Long locToSkip = null;
 
         /**
@@ -249,7 +153,7 @@ public class PacketListener {
             return false;
         }
 
-        private @Nullable ServerPlayer getPlayer(ChannelHandlerContext ctx) {
+        @Nullable ServerPlayer getPlayer(ChannelHandlerContext ctx) {
             if (player != null) return player;
             Channel channel = ctx.channel();
             Connection connection = (Connection) channel.pipeline().get("packet_handler");
