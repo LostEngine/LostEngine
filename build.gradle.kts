@@ -15,6 +15,7 @@ version = "0.0.6-mc1.21.11"
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven {
         name = "papermc-repo"
         url = uri("https://repo.papermc.io/repository/maven-public/")
@@ -37,6 +38,8 @@ dependencies {
     implementation(project(":furnace"))
     implementation("dev.misieur:fast:1.0.2")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
+
+    implementation("org.luaj:luaj-jse:3.0-SNAPSHOT")
 
     compileOnly("org.geysermc.geyser:api:2.9.3-SNAPSHOT")
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
@@ -73,11 +76,11 @@ val installNpm by tasks.registering(NpmTask::class) {
 }
 
 tasks.processResources {
-    dependsOn(buildNpm)
-    from("webeditor/dist") {
-        include("*.html")
-        into("generated")
-    }
+//    dependsOn(buildNpm)
+//    from("webeditor/dist") {
+//        include("*.html")
+//        into("generated")
+//    }
     from("LICENSE.MD") {
         into("META-INF")
     }
