@@ -6,6 +6,7 @@ import dev.lost.annotations.Nullable;
 import dev.lost.engine.blocks.customblocks.CustomBlock;
 import dev.lost.engine.bootstrap.LostEngineBootstrap;
 import dev.lost.engine.items.customitems.*;
+import dev.lost.engine.lua.LuaScripts;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -35,7 +36,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.Contract;
+import org.luaj.vm2.LuaValue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -68,8 +72,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -78,10 +82,12 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
                 properties.sword(material, attackDamage, attackSpeed),
-                "sword"
+                "sword",
+                luaValue
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_SWORD");
         LostEngineBootstrap.dataPackGenerator.addSword(fullName);
@@ -94,8 +100,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -104,9 +110,10 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
-                pr -> new CustomShovelItem(material, attackDamage, attackSpeed, pr, fullName),
+                pr -> new CustomShovelItem(material, attackDamage, attackSpeed, pr, fullName, luaValue),
                 properties
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_SHOVEL");
@@ -120,8 +127,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -130,10 +137,12 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
                 properties.pickaxe(material, attackDamage, attackSpeed),
-                "pickaxe"
+                "pickaxe",
+                luaValue
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_PICKAXE");
         LostEngineBootstrap.dataPackGenerator.addPickaxe(fullName);
@@ -146,8 +155,8 @@ public class ItemInjector {
             float attackDamage,
             float attackSpeed,
             ToolMaterial material,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -156,9 +165,10 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
-                pr -> new CustomAxeItem(material, attackDamage, attackSpeed, pr, fullName),
+                pr -> new CustomAxeItem(material, attackDamage, attackSpeed, pr, fullName, luaValue),
                 properties
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_AXE");
@@ -171,8 +181,8 @@ public class ItemInjector {
             String name,
             float attackSpeed,
             ToolMaterial material,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -181,9 +191,10 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
-                pr -> new CustomHoeItem(material, -material.attackDamageBonus(), attackSpeed, pr, fullName),
+                pr -> new CustomHoeItem(material, -material.attackDamageBonus(), attackSpeed, pr, fullName, luaValue),
                 properties
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "WOODEN_HOE");
@@ -194,8 +205,8 @@ public class ItemInjector {
     @SuppressWarnings("unchecked")
     public static @NotNull Item injectItem(
             String name,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         Item.Properties properties = new Item.Properties();
         if (components != null) {
             for (Map.Entry<DataComponentType<?>, ?> component : components.entrySet()) {
@@ -203,9 +214,11 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 "lost_engine:" + name,
-                properties
+                properties,
+                luaValue
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "FILLED_MAP");
         return item;
@@ -216,8 +229,8 @@ public class ItemInjector {
             String name,
             ArmorMaterial armorMaterial,
             ArmorType armorType,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -226,28 +239,29 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         return switch (armorType) {
             case HELMET -> {
                 LostEngineBootstrap.dataPackGenerator.addHelmet(fullName);
-                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.HELMET));
+                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.HELMET), luaValue);
                 LostEngineBootstrap.materialManager.setMaterial(item, "IRON_HELMET");
                 yield item;
             }
             case CHESTPLATE -> {
                 LostEngineBootstrap.dataPackGenerator.addChestplate(fullName);
-                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.CHESTPLATE));
+                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.CHESTPLATE), luaValue);
                 LostEngineBootstrap.materialManager.setMaterial(item, "IRON_CHESTPLATE");
                 yield item;
             }
             case LEGGINGS -> {
                 LostEngineBootstrap.dataPackGenerator.addLeggings(fullName);
-                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.LEGGINGS));
+                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.LEGGINGS), luaValue);
                 LostEngineBootstrap.materialManager.setMaterial(item, "IRON_LEGGINGS");
                 yield item;
             }
             case BOOTS -> {
                 LostEngineBootstrap.dataPackGenerator.addBoots(fullName);
-                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.BOOTS));
+                Item item = registerItem(fullName, properties.humanoidArmor(armorMaterial, net.minecraft.world.item.equipment.ArmorType.BOOTS), luaValue);
                 LostEngineBootstrap.materialManager.setMaterial(item, "IRON_BOOTS");
                 yield item;
             }
@@ -259,8 +273,8 @@ public class ItemInjector {
             String name,
             @Nullable String repairItem,
             int durability,
-            Map<DataComponentType<?>, Object> components
-    ) {
+            Map<DataComponentType<?>, Object> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -270,6 +284,7 @@ public class ItemInjector {
         }
         if (repairItem != null) properties.repairable(BuiltInRegistries.ITEM.getValue(Identifier.parse(repairItem)));
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
                 properties.component(DataComponents.GLIDER, Unit.INSTANCE)
@@ -281,7 +296,8 @@ public class ItemInjector {
                                         .setDamageOnHurt(false)
                                         .build()
                         )
-                        .durability(durability)
+                        .durability(durability),
+                luaValue
         );
         LostEngineBootstrap.materialManager.setMaterial(item, "ELYTRA");
         return item;
@@ -292,8 +308,8 @@ public class ItemInjector {
             String name,
             int durability,
             float attackDamage,
-            @Nullable Map<DataComponentType<?>, ?> components
-    ) {
+            @Nullable Map<DataComponentType<?>, ?> components,
+            String script) {
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
         if (components != null) {
@@ -302,9 +318,10 @@ public class ItemInjector {
             }
         }
 
+        LuaValue luaValue = getLuaValue(script);
         Item item = registerItem(
                 fullName,
-                pr -> new CustomTridentItem(pr, fullName),
+                pr -> new CustomTridentItem(pr, fullName, luaValue),
                 new Item.Properties()
                         .durability(durability)
                         .attributes(
@@ -365,12 +382,14 @@ public class ItemInjector {
         if (customBlock instanceof CustomBlock) {
             BlockState clientBlockState = ((CustomBlock) customBlock).getClientBlockState();
             dynamicMaterial = clientBlockState.getBlock().asItem().getDefaultInstance().copy();
-            for (TypedDataComponent<?> component : dynamicMaterial.getComponents()) dynamicMaterial.remove(component.type());
+            for (TypedDataComponent<?> component : dynamicMaterial.getComponents())
+                dynamicMaterial.remove(component.type());
             Map<String, String> properties = blockStateToPropertyMap(clientBlockState);
             dynamicMaterial.set(DataComponents.BLOCK_STATE, new BlockItemStateProperties(properties));
         } else {
             dynamicMaterial = Items.BARRIER.getDefaultInstance();
-            for (TypedDataComponent<?> component : dynamicMaterial.getComponents()) dynamicMaterial.remove(component.type());
+            for (TypedDataComponent<?> component : dynamicMaterial.getComponents())
+                dynamicMaterial.remove(component.type());
         }
         String fullName = "lost_engine:" + name;
         Item.Properties properties = new Item.Properties();
@@ -382,7 +401,7 @@ public class ItemInjector {
 
         return registerItem(
                 vanillaItemId(fullName),
-                pr -> new CustomBlockItem(customBlock, pr, dynamicMaterial, fullName),
+                pr -> new CustomBlockItem(customBlock, pr, dynamicMaterial, fullName, null), // TODO: Lua scripts for blocks
                 properties
         );
     }
@@ -391,12 +410,12 @@ public class ItemInjector {
         return ResourceKey.create(Registries.ITEM, Identifier.parse(id));
     }
 
-    public static @NotNull Item registerItem(String id, Item.Properties properties) {
-        return registerItem(vanillaItemId(id), props -> new GenericCustomItem(props, id), properties);
+    public static @NotNull Item registerItem(String id, Item.Properties properties, LuaValue luaValue) {
+        return registerItem(vanillaItemId(id), props -> new GenericCustomItem(props, id, luaValue), properties);
     }
 
-    public static @NotNull Item registerItem(String id, Item.Properties properties, String toolType) {
-        return registerItem(vanillaItemId(id), props -> new GenericCustomItem(props, id, toolType), properties);
+    public static @NotNull Item registerItem(String id, Item.Properties properties, String toolType, LuaValue luaValue) {
+        return registerItem(vanillaItemId(id), props -> new GenericCustomItem(props, id, toolType, luaValue), properties);
     }
 
     public static @NotNull Item registerItem(String id, Function<Item.Properties, Item> factory, Item.Properties properties) {
@@ -410,6 +429,23 @@ public class ItemInjector {
         }
 
         return Registry.register(BuiltInRegistries.ITEM, key, item);
+    }
+
+    @Contract("null -> null")
+    @SuppressWarnings("UnstableApiUsage")
+    private static @Nullable LuaValue getLuaValue(@Nullable String scriptPath) {
+        if (scriptPath == null) return null;
+        Path path = LostEngineBootstrap.context.getDataDirectory().resolve("resources").resolve(scriptPath);
+        if (!Files.exists(path)) {
+            LostEngineBootstrap.context.getLogger().warn("Script {} not found ({})", scriptPath, path.toAbsolutePath());
+            return null;
+        }
+        try {
+            String script = Files.readString(path);
+            return LuaScripts.loadScript(script);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }

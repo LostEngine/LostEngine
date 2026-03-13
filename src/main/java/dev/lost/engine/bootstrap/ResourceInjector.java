@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static dev.lost.engine.bootstrap.LostEngineBootstrap.context;
+
 @SuppressWarnings("UnstableApiUsage")
 public class ResourceInjector {
 
@@ -76,16 +78,17 @@ public class ResourceInjector {
             new UseCooldownProperty()
     );
 
-    public static void injectResources(@NotNull BootstrapContext context) throws Exception {
+    public static void injectResources() throws Exception {
         File resourceFolder = new File(context.getDataDirectory().toFile(), "resources");
         if (!resourceFolder.exists())
             FastFiles.extractFolderFromJar("resources", resourceFolder.toPath());
 
         List<FileUtils.ItemConfig> configs = FileUtils.yamlFiles(resourceFolder);
         for (FileUtils.ItemConfig config : configs) {
+            String namespace = FileUtils.getFirstResourceSubfolder(resourceFolder, config.file());
             injectMaterials(config.config());
-            injectItems(context, config.config());
-            injectBlocks(context, config.config());
+            injectItems(config.config(), namespace);
+            injectBlocks(config.config());
         }
     }
 
@@ -134,7 +137,7 @@ public class ResourceInjector {
         }
     }
 
-    private static void injectItems(@NotNull BootstrapContext context, @NotNull YamlConfiguration config) {
+    private static void injectItems(@NotNull YamlConfiguration config, String namespace) {
         ConfigurationSection itemsSection = config.getConfigurationSection("items");
         if (itemsSection == null)
             return;
@@ -148,8 +151,10 @@ public class ResourceInjector {
             Map<DataComponentType<?>, Object> components = new Object2ObjectOpenHashMap<>();
 
             applyComponents(context, itemSection, components);
+            String script = itemSection.getString("script");
+            if (script != null) script = namespace + "/" + script.replaceAll("\\.lua$", "") + ".lua";
             switch (type) {
-                case "generic" -> ItemInjector.injectItem(key, components);
+                case "generic" -> ItemInjector.injectItem(key, components, script);
 
                 case "sword" -> {
                     float attackDamage = (float) itemSection.getDouble("attack_damage", 3.0F);
@@ -157,7 +162,7 @@ public class ResourceInjector {
                     String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
                     ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    ItemInjector.injectSword(key, attackDamage, attackSpeed, material, components);
+                    ItemInjector.injectSword(key, attackDamage, attackSpeed, material, components, script);
                 }
 
                 case "shovel" -> {
@@ -166,7 +171,7 @@ public class ResourceInjector {
                     String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
                     ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, components);
+                    ItemInjector.injectShovel(key, attackDamage, attackSpeed, material, components, script);
                 }
 
                 case "pickaxe" -> {
@@ -175,7 +180,7 @@ public class ResourceInjector {
                     String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
                     ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, components);
+                    ItemInjector.injectPickaxe(key, attackDamage, attackSpeed, material, components, script);
                 }
 
                 case "axe" -> {
@@ -184,7 +189,7 @@ public class ResourceInjector {
                     String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
                     ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, components);
+                    ItemInjector.injectAxe(key, attackDamage, attackSpeed, material, components, script);
                 }
 
                 case "hoe" -> {
@@ -192,7 +197,7 @@ public class ResourceInjector {
                     String materialName = itemSection.getString("material", "NETHERITE").toUpperCase(Locale.ROOT);
                     ToolMaterial material = getOrThrow(toolMaterials, materialName, "Invalid tool material: " + materialName + " for item " + key);
 
-                    ItemInjector.injectHoe(key, attackSpeed, material, components);
+                    ItemInjector.injectHoe(key, attackSpeed, material, components, script);
                 }
 
                 case "armor" -> {
@@ -206,19 +211,19 @@ public class ResourceInjector {
                                 throw new IllegalStateException("Invalide armor type: " + itemSection.getString("armor_type", "CHESTPLATE").toUpperCase(Locale.ROOT) + " for item " + key + " (HELMET, CHESTPLATE, LEGGINGS, or BOOTS)");
                     };
                     ArmorMaterial material = getOrThrow(armorMaterials, materialName, "Invalid armor material: " + materialName + " for item " + key);
-                    ItemInjector.injectArmor(key, material, armorType, components);
+                    ItemInjector.injectArmor(key, material, armorType, components, script);
                 }
 
                 case "elytra" -> {
                     int durability = itemSection.getInt("elytra.durability", 432);
                     String repairItem = itemSection.getString("elytra.repair_item", null);
-                    ItemInjector.injectElytra(key, repairItem, durability, components);
+                    ItemInjector.injectElytra(key, repairItem, durability, components, script);
                 }
 
                 case "trident" -> {
                     int durability = itemSection.getInt("trident.durability", 250);
                     float attackDamage = (float) itemSection.getDouble("trident.attack_damage", 8.0F);
-                    ItemInjector.injectTrident(key, durability, attackDamage, components);
+                    ItemInjector.injectTrident(key, durability, attackDamage, components, script);
                 }
 
                 default -> context.getLogger().warn("Unknown item type: {} for item: {}", type, key);
@@ -327,7 +332,7 @@ public class ResourceInjector {
         return value;
     }
 
-    private static void injectBlocks(@NotNull BootstrapContext context, @NotNull YamlConfiguration config) {
+    private static void injectBlocks(@NotNull YamlConfiguration config) {
         ConfigurationSection blocksSection = config.getConfigurationSection("blocks");
         if (blocksSection == null) return;
 
