@@ -1,34 +1,31 @@
-package dev.lost.engine;
+package dev.lost.engine.webserver;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-import dev.lost.engine.bootstrap.ResourceInjector;
 import dev.lost.annotations.NotNull;
 import dev.lost.annotations.Nullable;
+import dev.lost.engine.LostEngine;
+import dev.lost.engine.bootstrap.ResourceInjector;
+import dev.lost.engine.webserver.request.SimpleHttpRequest;
+import dev.lost.engine.webserver.response.SimpleHttpResponse;
+import dev.misieur.fast.FastFiles;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.*;
-import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class WebServer {
+public class WebRequestHandler {
 
-    private static HttpServer server;
     @Getter
-    private static final String token;
+    static final String token;
     @Getter
     static final String readOnlyToken;
 
@@ -50,52 +47,29 @@ public class WebServer {
         readOnlyToken = sb.toString();
     }
 
-    public static void start(int port) throws IOException {
-        server = HttpServer.create(new InetSocketAddress(port), 0);
+    public static void handle(@NotNull SimpleHttpRequest req, @NotNull SimpleHttpResponse res) throws IOException {
+        String path = req.path();
+        String method = req.method();
 
-        server.createContext("/", exchange -> {
-            String path = exchange.getRequestURI().getPath();
-            String method = exchange.getRequestMethod();
+        if (method.equalsIgnoreCase("OPTIONS")) {
+            res.sendOptions();
+            return;
+        }
 
-            if (method.equalsIgnoreCase("OPTIONS")) {
-                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-                exchange.sendResponseHeaders(204, -1);
-                return;
+        try {
+            if (path.startsWith("/api/")) {
+                handleApiRoutes(req, res);
+            } else {
+                handleStaticFiles(req, res);
             }
-
-            try {
-                if (path.startsWith("/api/")) {
-                    handleApiRoutes(exchange, path, method);
-                } else {
-                    handleStaticFiles(exchange, path);
-                }
-            } catch (IOException e) {
-                LostEngine.logger().error("Error handling http request", e);
-                sendResponse(exchange, 500, "Internal Server Error", "text/plain");
-            }
-        });
-
-        server.setExecutor(Executors.newFixedThreadPool(10, runnable -> {
-            Thread t = new Thread(runnable);
-            t.setName("web-server-worker");
-            t.setDaemon(true);
-            return t;
-        }));
-        server.start();
-    }
-
-    public static void stop() {
-        if (server != null) {
-            server.stop(0);
-            server = null;
+        } catch (Exception e) {
+            LostEngine.logger().error("Error handling http request", e);
+            res.send(500, "Internal Server Error", "text/plain");
         }
     }
 
-    private static void handleApiRoutes(@NotNull HttpExchange exchange, @NotNull String path, String method) throws IOException {
-
-        String query = exchange.getRequestURI().getQuery();
+    static void handleApiRoutes(@NotNull SimpleHttpRequest req, @NotNull SimpleHttpResponse res) throws IOException {
+        String query = req.query();
         String token = getToken(query);
 
         boolean isReadOnlyToken;
@@ -103,19 +77,19 @@ public class WebServer {
             isReadOnlyToken = true;
         } else {
             isReadOnlyToken = false;
-            if (token == null || !token.equals(WebServer.token)) {
-                sendResponse(exchange, 403, "Forbidden", "text/html");
+            if (token == null || !token.equals(WebRequestHandler.token)) {
+                res.send(403, "Forbidden", "text/html");
                 return;
             }
         }
 
-        if (path.equals("/api/status") && method.equals("GET")) {
+        if (req.path().equals("/api/status") && req.method().equals("GET")) {
             String json = "{\"status\": \"online\"}";
-            sendResponse(exchange, 200, json, "application/json");
+            res.send(200, json, "application/json");
             return;
         }
 
-        if (path.equals("/api/data") && method.equals("GET")) {
+        if (req.path().equals("/api/data") && req.method().equals("GET")) {
             JsonObject json = new JsonObject();
             JsonArray items = new JsonArray();
             BuiltInRegistries.ITEM.forEach(item -> items.add(BuiltInRegistries.ITEM.getKey(item).toString()));
@@ -127,21 +101,21 @@ public class WebServer {
             JsonArray armorMaterials = new JsonArray();
             ResourceInjector.getArmorMaterials().forEach((id, toolMaterial) -> armorMaterials.add(id));
             json.add("armor_materials", toolMaterials);
-            sendResponse(exchange, 200, json.toString(), "application/json");
+            res.send(200, json.toString(), "application/json");
             return;
         }
 
-        if (path.equals("/api/download_resource") && method.equals("GET")) {
+        if (req.path().equals("/api/download_resource") && req.method().equals("GET")) {
             String rawPath = extractQueryParam(query, "path");
 
             if (rawPath == null || rawPath.isEmpty()) {
-                sendResponse(exchange, 400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(rawPath);
             if (cleanPath == null) {
-                sendResponse(exchange, 403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
                 return;
             }
 
@@ -149,60 +123,54 @@ public class WebServer {
             File target = new File(baseDir, cleanPath);
 
             if (!target.exists() || !target.isFile()) {
-                sendResponse(exchange, 404, "{\"error\": \"File not found\"}", "application/json");
+                res.send(404, "{\"error\": \"File not found\"}", "application/json");
                 return;
             }
 
             String mime = getMimeType(target.getName());
             try (FileInputStream fis = new FileInputStream(target)) {
                 byte[] bytes = fis.readAllBytes();
-                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-                exchange.getResponseHeaders().set("Content-Type", mime);
-                exchange.sendResponseHeaders(200, bytes.length);
-
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(bytes);
-                }
+                res.send(200, bytes, mime);
             } catch (IOException e) {
-                sendResponse(exchange, 500, "{\"error\": \"Failed to read file\"}", "application/json");
+                res.send(500, "{\"error\": \"Failed to read file\"}", "application/json");
             }
 
             return;
         }
 
-        if (path.equals("/api/upload_resource") && method.equals("POST")) {
+        if (req.path().equals("/api/upload_resource") && req.method().equals("POST")) {
             if (isReadOnlyToken) {
-                sendResponse(exchange, 403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html");
                 return;
             }
-            String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
+            String contentType = req.getHeader("Content-Type");
             if (contentType == null || !contentType.startsWith("multipart/form-data")) {
-                sendResponse(exchange, 400, "{\"error\": \"Content-Type must be multipart/form-data\"}", "application/json");
+                res.send(400, "{\"error\": \"Content-Type must be multipart/form-data\"}", "application/json");
                 return;
             }
 
             String boundary = getBoundary(contentType);
             if (boundary == null) {
-                sendResponse(exchange, 400, "{\"error\": \"Boundary missing in Content-Type\"}", "application/json");
+                res.send( 400, "{\"error\": \"Boundary missing in Content-Type\"}", "application/json");
                 return;
             }
 
             MultipartParts parts;
             try {
-                parts = parseMultipart(exchange.getRequestBody(), boundary);
+                parts = parseMultipart(req.body(), boundary);
             } catch (Exception e) {
-                sendResponse(exchange, 400, "{\"error\": \"Invalid multipart data\"}", "application/json");
+                res.send(400, "{\"error\": \"Invalid multipart data\"}", "application/json");
                 return;
             }
 
             if (parts.path == null || parts.fileBytes == null) {
-                sendResponse(exchange, 400, "{\"error\": \"Missing 'path' or 'file' part\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' or 'file' part\"}", "application/json");
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(parts.path);
             if (cleanPath == null) {
-                sendResponse(exchange, 403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
                 return;
             }
 
@@ -212,7 +180,7 @@ public class WebServer {
             try {
                 File parent = target.getParentFile();
                 if (!parent.exists() && !parent.mkdirs()) {
-                    sendResponse(exchange, 500, "{\"error\": \"Failed to create directories\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to create directories\"}", "application/json");
                     return;
                 }
 
@@ -220,32 +188,32 @@ public class WebServer {
                     fos.write(parts.fileBytes);
                 }
             } catch (IOException e) {
-                sendResponse(exchange, 500, "{\"error\": \"Failed to save file\"}", "application/json");
+                res.send(500, "{\"error\": \"Failed to save file\"}", "application/json");
                 return;
             }
 
             LostEngine.logger().info("(Web editor) Uploaded file: {}", cleanPath);
-            sendResponse(exchange, 200,
+            res.send(200,
                     "{\"message\":\"File uploaded successfully\",\"path\":\"" + cleanPath + "\"}",
                     "application/json");
             return;
         }
 
-        if (path.equals("/api/delete_resource") && method.equals("DELETE")) {
+        if (req.path().equals("/api/delete_resource") && req.method().equals("DELETE")) {
             if (isReadOnlyToken) {
-                sendResponse(exchange, 403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html");
                 return;
             }
             String rawPath = extractQueryParam(query, "path");
 
             if (rawPath == null || rawPath.isEmpty()) {
-                sendResponse(exchange, 400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(rawPath);
             if (cleanPath == null) {
-                sendResponse(exchange, 403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
                 return;
             }
 
@@ -254,44 +222,44 @@ public class WebServer {
             boolean isDir = target.isDirectory();
 
             if (!target.exists()) {
-                sendResponse(exchange, 404, "{\"error\": \"File or directory not found\"}", "application/json");
+                res.send(404, "{\"error\": \"File or directory not found\"}", "application/json");
                 return;
             }
 
             if (!deleteRecursive(target)) {
-                sendResponse(exchange, 500, "{\"error\": \"Failed to delete resource\"}", "application/json");
+                res.send(500, "{\"error\": \"Failed to delete resource\"}", "application/json");
                 return;
             }
 
             LostEngine.logger().info("(Web editor) Deleted {}: {}", isDir ? "folder" : "file", cleanPath);
-            sendResponse(exchange, 200,
+            res.send(200,
                     "{\"message\":\"Resource deleted successfully\",\"path\":\"" + cleanPath + "\"}",
                     "application/json");
             return;
         }
 
-        if (path.equals("/api/move_resource") && method.equals("POST")) {
+        if (req.path().equals("/api/move_resource") && req.method().equals("POST")) {
             if (isReadOnlyToken) {
-                sendResponse(exchange, 403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html");
                 return;
             }
             String rawPath = extractQueryParam(query, "path");
             String rawDestination = extractQueryParam(query, "destination");
 
             if (rawPath == null || rawPath.isEmpty()) {
-                sendResponse(exchange, 400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
                 return;
             }
 
             if (rawDestination == null || rawDestination.isEmpty()) {
-                sendResponse(exchange, 400, "{\"error\": \"Missing 'destination' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'destination' parameter\"}", "application/json");
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(rawPath);
             String cleanDestination = sanitizeResourcePath(rawDestination);
             if (cleanPath == null || cleanDestination == null) {
-                sendResponse(exchange, 403, "{\"error\": \"Invalid or unsafe path/destination\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path/destination\"}", "application/json");
                 return;
             }
 
@@ -300,7 +268,7 @@ public class WebServer {
             File targetFile = new File(baseDir, cleanDestination);
 
             if (!file.exists()) {
-                sendResponse(exchange, 404, "{\"error\": \"File or directory not found\"}", "application/json");
+                res.send(404, "{\"error\": \"File or directory not found\"}", "application/json");
                 return;
             }
 
@@ -312,60 +280,64 @@ public class WebServer {
                         .resolve(cleanPath.replaceAll("/", "_" + ThreadLocalRandom.current().nextInt()))
                         .toFile();
                 if (!moveRecursive(file, tempDir)) {
-                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (source -> tempDir)\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to move resource (source -> tempDir)\"}", "application/json");
                     return;
                 }
 
                 if (!moveRecursive(tempDir, targetFile)) {
-                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (tempDir -> destination)\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to move resource (tempDir -> destination)\"}", "application/json");
                     return;
                 }
             } else {
                 if (!moveRecursive(file, targetFile)) {
-                    sendResponse(exchange, 500, "{\"error\": \"Failed to move resource (source -> destination)\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to move resource (source -> destination)\"}", "application/json");
                     return;
                 }
             }
 
             boolean isDir = file.isDirectory();
             LostEngine.logger().info("(Web editor) Moved {}: '{}' to '{}'", isDir ? "folder" : "file", cleanPath, cleanDestination);
-            sendResponse(exchange, 200,
+            res.send(200,
                     "{\"message\":\"Resource moved successfully\",\"destination\":\"" + cleanDestination + "\"}",
                     "application/json");
             return;
         }
 
-        sendResponse(exchange, 404, "{\"error\": \"API Endpoint Not Found\"}", "application/json");
+        res.send(404, "{\"error\": \"API Endpoint Not Found\"}", "application/json");
     }
 
-    private static void handleStaticFiles(@NotNull HttpExchange exchange, @NotNull String path) throws IOException {
-        List<String> userAgents = exchange.getRequestHeaders().get("User-Agent");
+    static void handleStaticFiles(@NotNull SimpleHttpRequest req, @NotNull SimpleHttpResponse res) throws IOException, URISyntaxException {
+        String userAgent = req.getHeader("User-Agent");
 
-        if (userAgents == null || userAgents.isEmpty()) {
-            sendResponse(exchange, 400, "Bad Request", "text/html");
+        if (userAgent == null || userAgent.isBlank()) {
+            res.send(400, "Bad Request", "text/html");
             return;
         }
 
-        if (userAgents.getFirst().toLowerCase().contains("minecraft java")) {
+        if (userAgent.toLowerCase().contains("minecraft java")) {
             File file = LostEngine.getResourcePackFile();
-            serveFile(exchange, file, "application/zip");
+            res.send(file, "application/zip");
             return;
         }
 
-        if (path.equals("/favicon.ico")) {
-            sendResponse(exchange, 404, "Not Found", "text/html");
+        if (req.path().equals("/favicon.ico")) {
+            res.send(404, "Not Found", "text/html");
             return;
         }
 
-        String query = exchange.getRequestURI().getQuery();
+        String query = req.query();
         String token = getToken(query);
 
-        if (token == null || (!token.equals(WebServer.token) && !token.equals(readOnlyToken))) {
-            sendResponse(exchange, 403, "Forbidden", "text/html");
+        if (token == null || (!token.equals(WebRequestHandler.token) && !token.equals(readOnlyToken))) {
+            res.send(403, "Forbidden", "text/html");
             return;
         }
 
-        serveResource(exchange, "generated/index.html", "text/html");
+        Path tempHtmlIndex = LostEngine.getInstance()
+                .getDataPath()
+                .resolve(".lost_engine/cache/generated/index.html");
+        if (!Files.exists(tempHtmlIndex)) FastFiles.extractFolderFromJar("generated", tempHtmlIndex.getParent());
+        res.send(tempHtmlIndex.toFile(), "text/html");
     }
 
     private static String getToken(String query) {
@@ -382,51 +354,6 @@ public class WebServer {
             }
         }
         return token;
-    }
-
-    private static void serveFile(@NotNull HttpExchange exchange, @NotNull File file, String mimeType) throws IOException {
-        if (!file.exists()) {
-            sendResponse(exchange, 404, "File Not Found", "text/html");
-            return;
-        }
-
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().set("Content-Type", mimeType);
-        exchange.sendResponseHeaders(200, file.length());
-
-        try (OutputStream os = exchange.getResponseBody();
-             FileInputStream fs = new FileInputStream(file)) {
-            fs.transferTo(os);
-        }
-    }
-
-    private static void serveResource(@NotNull HttpExchange exchange, String resourcePath, String mimeType) throws IOException {
-        try (InputStream is = WebServer.class.getResourceAsStream("/" + resourcePath)) {
-            if (is == null) {
-                sendResponse(exchange, 404, "Not Found", "text/html");
-                return;
-            }
-
-            byte[] content = is.readAllBytes();
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().set("Content-Type", mimeType);
-            exchange.sendResponseHeaders(200, content.length);
-
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(content);
-            }
-        }
-    }
-
-
-    private static void sendResponse(@NotNull HttpExchange exchange, int statusCode, @NotNull String response, String contentType) throws IOException {
-        byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().set("Content-Type", contentType);
-        exchange.sendResponseHeaders(statusCode, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
     }
 
     private static @NotNull JsonArray buildFileTree(@NotNull File directory) {
@@ -461,11 +388,6 @@ public class WebServer {
     private static @Nullable String getBoundary(@NotNull String contentType) {
         int idx = contentType.indexOf("boundary=");
         return idx == -1 ? null : contentType.substring(idx + 9).trim();
-    }
-
-    private static class MultipartParts {
-        String path;
-        byte[] fileBytes;
     }
 
     private static @NotNull MultipartParts parseMultipart(@NotNull InputStream is, String boundary) throws IOException {
@@ -577,4 +499,8 @@ public class WebServer {
         }
     }
 
+    private static class MultipartParts {
+        String path;
+        byte[] fileBytes;
+    }
 }

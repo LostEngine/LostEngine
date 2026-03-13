@@ -6,7 +6,10 @@ import dev.lost.engine.commands.GiveCommand;
 import dev.lost.engine.commands.LostEngineCommand;
 import dev.lost.engine.commands.SetBlockCommand;
 import dev.lost.engine.items.customitems.CustomItem;
+import dev.lost.engine.listeners.BytePacketListener;
+import dev.lost.engine.listeners.HttpPacketListener;
 import dev.lost.engine.listeners.PacketListener;
+import dev.lost.engine.webserver.WebServer;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
@@ -80,11 +83,15 @@ public final class LostEngine extends JavaPlugin {
 
         // Creating the resource pack server
         if (getConfig().getBoolean("pack_hosting.self_hosted.enabled")) {
-            resourcePackUrl = "http://" + getConfig().getString("pack_hosting.self_hosted.hostname", "127.0.0.1") + ":" + getConfig().getInt("self_hosted.port", 7270);
-            try {
-                WebServer.start(getConfig().getInt("self_hosted.port", 7270));
-            } catch (IOException e) {
-                getSLF4JLogger().error("Failed to start http server", e);
+            if (getConfig().getBoolean("pack_hosting.self_hosted.use_minecraft_port")) {
+                resourcePackUrl = "http://" + getConfig().getString("pack_hosting.self_hosted.hostname", "127.0.0.1") + ":" + Bukkit.getPort();
+            } else {
+                resourcePackUrl = "http://" + getConfig().getString("pack_hosting.self_hosted.hostname", "127.0.0.1") + ":" + getConfig().getInt("pack_hosting.self_hosted.port", 7270);
+                try {
+                    WebServer.start(getConfig().getInt("pack_hosting.self_hosted.port", 7270));
+                } catch (IOException e) {
+                    getSLF4JLogger().error("Failed to start http server", e);
+                }
             }
         } else if (getConfig().getBoolean("pack_hosting.external_host.enabled")) {
             resourcePackUrl = getConfig().getString("pack_hosting.external_host.url");
@@ -136,6 +143,8 @@ public final class LostEngine extends JavaPlugin {
 
         // Listeners
         PacketListener.inject();
+        BytePacketListener.inject();
+        HttpPacketListener.inject();
     }
 
     @Override
