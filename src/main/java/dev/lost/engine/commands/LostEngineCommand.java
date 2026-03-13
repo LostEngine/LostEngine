@@ -5,9 +5,10 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.lost.annotations.NotNull;
 import dev.lost.engine.LostEngine;
 import dev.lost.engine.ResourcePackBuilder;
-import dev.lost.engine.WebServer;
 import dev.lost.engine.utils.FileUtils;
 import dev.lost.engine.utils.HashUtils;
+import dev.lost.engine.webserver.WebRequestHandler;
+import dev.lost.engine.webserver.WebServer;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.dialog.Dialog;
@@ -23,7 +24,6 @@ import org.bukkit.entity.Player;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,7 +67,7 @@ public class LostEngineCommand {
                                                                     .clickEvent(
                                                                             ClickEvent.openUrl(LostEngine.getResourcePackUrl() +
                                                                                     "?token=" +
-                                                                                    WebServer.getToken()
+                                                                                    WebRequestHandler.getToken()
                                                                             )
                                                                     )
                                                     ),
@@ -76,7 +76,7 @@ public class LostEngineCommand {
                                                                     .clickEvent(
                                                                             ClickEvent.openUrl(LostEngine.getResourcePackUrl() +
                                                                                     "?token=" +
-                                                                                    WebServer.getReadOnlyToken()
+                                                                                    WebRequestHandler.getReadOnlyToken()
                                                                             )
                                                                     )
                                                     )
@@ -92,12 +92,12 @@ public class LostEngineCommand {
                     "Web editor link: " +
                             LostEngine.getResourcePackUrl() +
                             "?token=" +
-                            WebServer.getToken() +
+                            WebRequestHandler.getToken() +
                             "\n" +
                             "Read-only link: " +
                             LostEngine.getResourcePackUrl() +
                             "?token=" +
-                            WebServer.getReadOnlyToken()
+                            WebRequestHandler.getReadOnlyToken()
             );
         }
         return 1;
@@ -127,47 +127,46 @@ public class LostEngineCommand {
                 sender.sendMessage("Failed to build resource pack: " + e.getMessage());
             }
             plugin.getSLF4JLogger().error("Failed to build resource pack", e);
-            return 0;
+            return 1;
+        }
+
+        try {
+            String resourcePackHashString = HashUtils.getFileHashString(LostEngine.getResourcePackFile());
+            LostEngine.setResourcePackHash(resourcePackHashString);
+            LostEngine.setResourcePackUUID(UUID.nameUUIDFromBytes(resourcePackHashString.getBytes()));
+        } catch (IOException | NoSuchAlgorithmException e) {
+            if (sender instanceof Player)
+                sender.sendMessage("Failed to get resource pack hash: " + e.getMessage());
+            plugin.getSLF4JLogger().error("Failed to get resource pack hash", e);
+            return 1;
         }
 
         if (plugin.getConfig().getBoolean("pack_hosting.self_hosted.enabled")) {
-            String resourcePackUrl = "http://" + plugin.getConfig().getString("pack_hosting.self_hosted.hostname", "127.0.0.1") + ":" + plugin.getConfig().getInt("self_hosted.port", 7270);
-            LostEngine.setResourcePackUrl(resourcePackUrl);
-            try {
-                String resourcePackHashString = HashUtils.getFileHashString(LostEngine.getResourcePackFile());
-                LostEngine.setResourcePackHash(resourcePackHashString);
-                LostEngine.setResourcePackUUID(UUID.nameUUIDFromBytes(resourcePackHashString.getBytes()));
-
-                WebServer.start(plugin.getConfig().getInt("self_hosted.port", 7270));
-                Bukkit.getOnlinePlayers().forEach(player -> {
-                    player.removeResourcePacks();
-                    player.addResourcePack(
-                            UUID.nameUUIDFromBytes(resourcePackHash),
-                            resourcePackUrl,
-                            resourcePackHash,
-                            plugin.getConfig().getString("pack_hosting.resource_pack_prompt", "Prompt"),
-                            true
-                    );
-                });
-            } catch (IOException | NoSuchAlgorithmException e) {
-                if (sender instanceof Player) {
-                    sender.sendMessage("Failed to start resource pack server: " + e.getMessage());
+            String resourcePackUrl;
+            if (plugin.getConfig().getBoolean("pack_hosting.self_hosted.use_minecraft_port")) {
+                resourcePackUrl = "http://" + plugin.getConfig().getString("pack_hosting.self_hosted.hostname", "127.0.0.1") + ":" + Bukkit.getPort();
+            } else {
+                resourcePackUrl = "http://" + plugin.getConfig().getString("pack_hosting.self_hosted.hostname", "127.0.0.1") + ":" + plugin.getConfig().getInt("pack_hosting.self_hosted.port", 7270);
+                try {
+                    WebServer.start(plugin.getConfig().getInt("pack_hosting.self_hosted.port", 7270));
+                } catch (IOException e) {
+                    plugin.getSLF4JLogger().error("Failed to start http server", e);
                 }
-                plugin.getSLF4JLogger().error("Failed to start resource pack server", e);
             }
-        } else if (plugin.getConfig().getBoolean("pack_hosting.external_host.enabled")) {
-            String resourcePackUrl = plugin.getConfig().getString("pack_hosting.external_host.url");
             Bukkit.getOnlinePlayers().forEach(player -> {
                 player.removeResourcePacks();
                 player.addResourcePack(
                         UUID.nameUUIDFromBytes(resourcePackHash),
-                        Objects.requireNonNull(resourcePackUrl, "Resource pack URL is not set but external hosting is enabled in the config!"),
+                        resourcePackUrl,
                         resourcePackHash,
                         plugin.getConfig().getString("pack_hosting.resource_pack_prompt", "Prompt"),
                         true
                 );
             });
+        } else if (plugin.getConfig().getBoolean("pack_hosting.external_host.enabled")) {
+            LostEngine.setResourcePackUrl(plugin.getConfig().getString("pack_hosting.external_host.url"));
         }
+
 
         if (sender instanceof Player) sender.sendMessage("Resource pack built successfully.");
         plugin.getSLF4JLogger().info("Resource pack built successfully.");
