@@ -3,6 +3,7 @@ package dev.lost.engine.lua;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.lost.annotations.NotNull;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.commands.arguments.item.ItemParser;
 import net.minecraft.core.BlockPos;
@@ -21,18 +22,23 @@ import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
-import org.luaj.vm2.lib.LibFunction;
-import org.luaj.vm2.lib.OneArgFunction;
-import org.luaj.vm2.lib.TwoArgFunction;
-import org.luaj.vm2.lib.ZeroArgFunction;
+import org.luaj.vm2.lib.*;
 import org.luaj.vm2.lib.jse.JsePlatform;
 import org.luaj.vm2.luajc.LuaJC;
+
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Hashtable;
+import java.util.UUID;
 
 import static net.minecraft.world.level.block.Block.UPDATE_ALL;
 
 public class LuaScripts {
 
     private static final Globals GLOBALS = JsePlatform.standardGlobals();
+    private static final ByteClassLoader LOADER = new ByteClassLoader(LuaScripts.class.getClassLoader());
+    private static LuaJC compiler;
 
     static {
         LuaTable server = new LuaTable();
@@ -56,14 +62,38 @@ public class LuaScripts {
         GLOBALS.set("os", LuaValue.NIL);
         GLOBALS.set("package", LuaValue.NIL);
         GLOBALS.set("io", LuaValue.NIL);
-        LuaJC.install(GLOBALS);
+        LuaScripts.compiler = LuaJC.instance;
     }
 
-    public static LuaValue loadScript(String script) {
-        return GLOBALS.load(script);
+    public static LuaValue loadScript(String script) throws IOException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        Hashtable<?, ?> classes = compiler.compileAll(
+                new java.io.StringReader(script),
+                "script",
+                UUID.randomUUID().toString(),
+                GLOBALS,
+                true
+        );
+        Object2ObjectOpenHashMap<String, Class<?>> loadedClasses = new Object2ObjectOpenHashMap<>();
+
+        for (Object key : classes.keySet()) {
+            String className = (String) key;
+            byte[] bytecode = (byte[]) classes.get(key);
+
+            Class<?> clazz = LOADER.define(className, bytecode);
+            loadedClasses.put(className, clazz);
+        }
+
+        VarArgFunction chunk =
+                (VarArgFunction) loadedClasses.get("script")
+                        .getDeclaredConstructor()
+                        .newInstance();
+        chunk.initupvalue1(GLOBALS);
+        chunk.call();
+        return GLOBALS;
     }
 
-    public static void onClick(@NotNull LuaValue luaValue, @NotNull ServerPlayer player, double x, float y, float z) {
+    public static void onClick(@Nullable LuaValue luaValue, @NotNull ServerPlayer player, double x, double y, double z) {
+        if (luaValue == null) return;
         LuaValue function = luaValue.get("onClick");
         if (function != null)
             function.invoke(new LuaValue[]{
@@ -133,11 +163,11 @@ public class LuaScripts {
             @Override
             public Varargs invoke(Varargs args) {
                 try {
-                    LuaValue block = args.arg(0);
+                    LuaValue block = args.arg(1);
                     BlockState blockState = BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, block.checkjstring(), false).blockState();
-                    int x = args.arg(1).checkint();
-                    int y = args.arg(2).checkint();
-                    int z = args.arg(3).checkint();
+                    int x = args.arg(2).checkint();
+                    int y = args.arg(3).checkint();
+                    int z = args.arg(4).checkint();
                     BlockPos blockPos = new BlockPos(x, y, z);
                     level.setBlock(
                             blockPos,
@@ -153,12 +183,12 @@ public class LuaScripts {
         luaWorld.set("spawnEntity", new LibFunction() {
             @Override
             public Varargs invoke(Varargs args) {
-                String entityName = args.arg(0).checkjstring();
+                String entityName = args.arg(1).checkjstring();
                 Entity entity = BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.parse(entityName)).create(level, EntitySpawnReason.COMMAND);
                 if (entity != null) {
-                    double x = args.arg(1).checkdouble();
-                    double y = args.arg(2).checkdouble();
-                    double z = args.arg(3).checkdouble();
+                    double x = args.arg(2).checkdouble();
+                    double y = args.arg(3).checkdouble();
+                    double z = args.arg(4).checkdouble();
                     entity.setPos(x, y, z);
                     level.addFreshEntity(entity, CreatureSpawnEvent.SpawnReason.CUSTOM);
                 }

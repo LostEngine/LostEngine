@@ -27,6 +27,7 @@ public class LostEngineBootstrap implements PluginBootstrap {
     public static DataPackGenerator dataPackGenerator;
     public static MaterialManager materialManager;
     public static boolean replaceClickableBlocks;
+    public static BootstrapContext context;
 
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {
@@ -55,6 +56,7 @@ public class LostEngineBootstrap implements PluginBootstrap {
                                                                                d8888P""", TimeUtils.formatNanos(elapsedNanos));
             context.getLogger().info("Start injecting custom items...");
             startTime = System.nanoTime();
+            LostEngineBootstrap.context = context;
             boolean customMaterialEnabled = false;
             readConfig: {
                 File file = context.getDataDirectory().resolve("config.yml").toFile();
@@ -66,7 +68,7 @@ public class LostEngineBootstrap implements PluginBootstrap {
 
             dataPackGenerator = new DataPackGenerator();
             materialManager = new MaterialManager(customMaterialEnabled);
-            injectResources(context);
+            injectResources();
             elapsedNanos = System.nanoTime() - startTime;
             context.getLogger().info("\u001b[1A\u001b[2KFinished injecting custom items! ({})", TimeUtils.formatNanos(elapsedNanos));
             context.getLogger().info("Start building the data pack...");

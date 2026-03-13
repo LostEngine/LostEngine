@@ -4,6 +4,7 @@ import dev.lost.annotations.NotNull;
 import dev.lost.engine.lua.LuaScripts;
 import lombok.Getter;
 import net.minecraft.core.component.TypedDataComponent;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -31,14 +32,6 @@ public class GenericCustomItem extends Item implements CustomItem {
         this(properties, id, null, luaValue);
     }
 
-    public GenericCustomItem(Properties properties, String id, String toolType) {
-        this(properties, id, toolType, null);
-    }
-
-    public GenericCustomItem(Properties properties, String id) {
-        this(properties, id, null, null);
-    }
-
     @Override
     public ItemStack getDynamicMaterial() {
         ItemStack itemStack = Items.RECOVERY_COMPASS.getDefaultInstance();
@@ -53,6 +46,8 @@ public class GenericCustomItem extends Item implements CustomItem {
 
     @Override
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
-        LuaScripts.onClick();
+        if (player instanceof ServerPlayer sp)
+            LuaScripts.onClick(luaValue, sp, player.getX(), player.getY(), player.getZ());
+        return super.use(level, player, hand);
     }
 }
