@@ -115,7 +115,7 @@ export function FileViewer({
 
             const code = editor.getValue();
             // We add the API at the end of the code
-            const errors: EmmyluaError[] = analyzer.check_file(code + "\n\n\n" + luaAPI);
+            const errors: EmmyluaError[] = analyzer.check_code(code + "\n\n\n" + luaAPI);
 
             const lineCount = model.getLineCount();
             const markers: editor.IMarkerData[] = errors.map(err => {
