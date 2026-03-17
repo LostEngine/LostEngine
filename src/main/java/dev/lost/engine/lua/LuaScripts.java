@@ -112,7 +112,9 @@ public class LuaScripts {
                 return LuaValue.varargsOf(new LuaValue[]{
                         LuaValue.valueOf(player.getX()),
                         LuaValue.valueOf(player.getY()),
-                        LuaValue.valueOf(player.getZ())
+                        LuaValue.valueOf(player.getZ()),
+                        LuaValue.valueOf(player.getYRot()),
+                        LuaValue.valueOf(player.getXRot())
                 });
             }
         });

@@ -1,0 +1,25 @@
+[package]
+name = "wasmluaparser"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+emmylua_code_analysis = "0.21"
+serde-wasm-bindgen = "0.6"
+tokio-util = "0.7.15"
+emmy_lsp_types = "0.1.0"
+luars = "0.14"
+getrandom = { version = "0.3", features = ["wasm_js"] }
+console_error_panic_hook = "0.1.7"
+web-sys = { version = "0.3", features = ["console"] }
+stylua = { version = "2.4", features = ["lua52", "lua53", "lua54", "cfxlua", "luajit", "luau"] }
+
+[patch.crates-io]
+libc = { path = "./libc_shim" }
+emmylua_code_analysis = { git = "https://github.com/LostEngine/patched-libraries", branch = "EmmyLuaLs/emmylua-analyzer-rust" }
+luars = { git = "https://github.com/LostEngine/patched-libraries", branch = "CppCXY/lua-rs" }
+emmy_lsp_types = { git = "https://github.com/LostEngine/patched-libraries", branch = "EmmyLuaLs/emmy_lsp_types" }

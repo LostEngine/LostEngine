@@ -76,11 +76,11 @@ val installNpm by tasks.registering(NpmTask::class) {
 }
 
 tasks.processResources {
-//    dependsOn(buildNpm)
-//    from("webeditor/dist") {
-//        include("*.html")
-//        into("generated")
-//    }
+    dependsOn(buildNpm)
+    from("webeditor/dist") {
+        include("*.html")
+        into("generated")
+    }
     from("LICENSE.MD") {
         into("META-INF")
     }

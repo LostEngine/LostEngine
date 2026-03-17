@@ -1,4 +1,4 @@
-import React from "preact/compat";
+import {useState} from "preact/compat";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Check, ChevronsUpDown} from "lucide-react";
@@ -10,7 +10,7 @@ export function ValueCombobox<T extends string>({
     setValue,
     values,
     name,
-    lowerCase,
+    lowerCase
 }: {
     value?: T;
     setValue: (value?: T) => void;
@@ -18,7 +18,7 @@ export function ValueCombobox<T extends string>({
     name: string;
     lowerCase?: boolean;
 }) {
-    const [open, setOpen] = React.useState(false);
+    const [open, setOpen] = useState(false);
 
     function format(text?: string, lowerCase?: boolean) {
         if (lowerCase) return text;
@@ -31,12 +31,12 @@ export function ValueCombobox<T extends string>({
     return (
         <Popover open={open} onOpenChange={setOpen} modal={true}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-[200px] justify-between">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-50 justify-between">
                     {value ? format(value, lowerCase) : `Select ${name}...`}
                     <ChevronsUpDown className="opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0">
+            <PopoverContent className="w-50 p-0">
                 <Command>
                     <CommandInput placeholder={`Search ${name}...`} className="h-9" />
                     <CommandList>

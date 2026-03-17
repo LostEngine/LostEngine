@@ -39,6 +39,7 @@
         "tailwind-merge": "^3.4.0",
         "tailwindcss": "^4.1.17",
         "vite-plugin-singlefile": "^2.3.0",
+        "wasmluaparser": "file:wasmluaparser/pkg",
         "yaml": "^2.8.2",
         "zustand": "^5.0.11"
     },
