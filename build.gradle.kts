@@ -38,7 +38,7 @@ dependencies {
     implementation("dev.misieur:fast:1.0.2")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
 
-    implementation("org.luaj:luaj-jse:3.0.2")
+    implementation("org.luaj:luaj-jse:3.0.1")
 
     compileOnly("org.geysermc.geyser:api:2.9.3-SNAPSHOT")
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
