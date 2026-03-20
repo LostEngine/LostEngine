@@ -65,7 +65,7 @@ node {
 }
 
 val buildNpm by tasks.registering(NpmTask::class) {
-    dependsOn(installNpm)
+    dependsOn(installNpm, buildWasmLuaParser)
     workingDir.set(file("webeditor"))
     args.set(listOf("run", "build"))
 }
