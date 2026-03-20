@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class WebRequestHandler {
@@ -127,7 +128,7 @@ public class WebRequestHandler {
                 return;
             }
 
-            String mime = getMimeType(target.getName());
+            String mime = Optional.ofNullable(Files.probeContentType(target.toPath())).orElse("application/octet-stream");
             try (FileInputStream fis = new FileInputStream(target)) {
                 byte[] bytes = fis.readAllBytes();
                 res.send(200, bytes, mime);
@@ -320,11 +321,6 @@ public class WebRequestHandler {
             return;
         }
 
-        if (req.path().equals("/favicon.ico")) {
-            res.send(404, "Not Found", "text/html");
-            return;
-        }
-
         String query = req.query();
         String token = getToken(query);
 
@@ -333,11 +329,19 @@ public class WebRequestHandler {
             return;
         }
 
-        Path tempHtmlIndex = LostEngine.getInstance()
+        String cleanPath = sanitizeResourcePath(req.path());
+
+        Path cacheGeneratedPath = LostEngine.getInstance()
                 .getDataPath()
-                .resolve(".lost_engine/cache/generated/index.html");
-        if (!Files.exists(tempHtmlIndex)) FastFiles.extractFolderFromJar("generated", tempHtmlIndex.getParent());
-        res.send(tempHtmlIndex.toFile(), "text/html");
+                .resolve(".lost_engine/cache/generated");
+
+        if (!Files.exists(cacheGeneratedPath) || Files.isDirectory(cacheGeneratedPath)) FastFiles.extractFolderFromJar("generated", cacheGeneratedPath);
+        Path filePath = cacheGeneratedPath.resolve(cleanPath);
+
+        if (!Files.isRegularFile(filePath))
+            res.send(404, "Not Found", "text/html");
+        else
+            res.send(filePath.toFile(), Files.probeContentType(filePath));
     }
 
     private static String getToken(String query) {
@@ -447,20 +451,6 @@ public class WebRequestHandler {
             if (kv.length == 2 && kv[0].equals(key)) return kv[1];
         }
         return null;
-    }
-
-    private static @NotNull String getMimeType(@NotNull String name) {
-        String lower = name.toLowerCase();
-        if (lower.endsWith(".png")) return "image/png";
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-        if (lower.endsWith(".gif")) return "image/gif";
-        if (lower.endsWith(".json")) return "application/json";
-        if (lower.endsWith(".txt")) return "text/plain";
-        if (lower.endsWith(".zip")) return "application/zip";
-        if (lower.endsWith(".html") || lower.endsWith(".htm")) return "text/html";
-        if (lower.endsWith(".css")) return "text/css";
-        if (lower.endsWith(".js")) return "application/javascript";
-        return "application/octet-stream";
     }
 
     private static boolean deleteRecursive(@NotNull File file) {

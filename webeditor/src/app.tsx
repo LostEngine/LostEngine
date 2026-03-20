@@ -97,7 +97,7 @@ type ApiData = {
     armor_materials: string[];
 };
 
-//export const apiPrefix = "http://localhost:7270/api";
+//export const apiPrefix = "http://localhost:25565/api";
 export const apiPrefix = "/api";
 
 type DataStore = {

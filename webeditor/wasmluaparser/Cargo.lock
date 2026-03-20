@@ -101,9 +101,9 @@ dependencies = [
 
 [[package]]
 name = "base62"
-version = "2.2.3"
+version = "2.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1adf9755786e27479693dedd3271691a92b5e242ab139cacb9fb8e7fb5381111"
+checksum = "cd637ac531c60eb7fbc4684dc061c2d7d90d73d758181aa02eeff0464b9eee4b"
 
 [[package]]
 name = "base64"
@@ -125,10 +125,11 @@ checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
 name = "borsh"
-version = "1.6.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1da5ab77c1437701eeff7c88d968729e7766172279eab0676857b3d63af7a6f"
+checksum = "cfd1e3f8955a5d7de9fab72fc8373fade9fb8a703968cb200ae3dc6cf08e185a"
 dependencies = [
+ "bytes",
  "cfg_aliases",
 ]
 
@@ -508,7 +509,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 [[package]]
 name = "emmy_lsp_types"
 version = "0.1.999"
-source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmy_lsp_types#ee9d6a643fa679a2b7f42e3e6480fc86b76c0c70"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmy_lsp_types#5f828027c8bfb1ff990ec3fa8b7e09e626eaf18b"
 dependencies = [
  "bitflags 2.11.0",
  "percent-encoding",
@@ -521,7 +522,7 @@ dependencies = [
 [[package]]
 name = "emmylua_code_analysis"
 version = "0.21.999"
-source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#c497deee7f213101c7efad97da4f077c81937b61"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#415795f0988c9d4081783b6ef58f866f0f35ab19"
 dependencies = [
  "dirs",
  "emmy_lsp_types",
@@ -554,7 +555,7 @@ dependencies = [
 [[package]]
 name = "emmylua_diagnostic_macro"
 version = "0.5.0"
-source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#c497deee7f213101c7efad97da4f077c81937b61"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#415795f0988c9d4081783b6ef58f866f0f35ab19"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -564,11 +565,21 @@ dependencies = [
 [[package]]
 name = "emmylua_parser"
 version = "0.24.0"
-source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#c497deee7f213101c7efad97da4f077c81937b61"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#415795f0988c9d4081783b6ef58f866f0f35ab19"
 dependencies = [
  "rowan",
  "rust-i18n",
  "serde",
+]
+
+[[package]]
+name = "emmylua_parser_desc"
+version = "0.24.0"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#415795f0988c9d4081783b6ef58f866f0f35ab19"
+dependencies = [
+ "emmylua_parser",
+ "rowan",
+ "unicode-general-category",
 ]
 
 [[package]]
@@ -1946,7 +1957,7 @@ dependencies = [
 [[package]]
 name = "schema_to_emmylua"
 version = "0.1.0"
-source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#c497deee7f213101c7efad97da4f077c81937b61"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#415795f0988c9d4081783b6ef58f866f0f35ab19"
 dependencies = [
  "serde_json",
 ]
@@ -2456,7 +2467,19 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c55a2eff8b69ce66c84f85e1da1c233edc36ceb85a2058d11b0d6a3c7e7569c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -2603,6 +2626,12 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
+
+[[package]]
+name = "unicode-general-category"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b993bddc193ae5bd0d623b49ec06ac3e9312875fdae725a975c51db1cc1677f"
 
 [[package]]
 name = "unicode-ident"
@@ -2759,10 +2788,18 @@ dependencies = [
  "console_error_panic_hook",
  "emmy_lsp_types",
  "emmylua_code_analysis",
+ "emmylua_parser",
+ "emmylua_parser_desc",
  "getrandom 0.3.4",
+ "itertools 0.11.0",
  "luars",
+ "once_cell",
+ "rowan",
+ "serde",
  "serde-wasm-bindgen",
+ "serde_json",
  "stylua",
+ "tokio",
  "tokio-util",
  "wasm-bindgen",
  "web-sys",
@@ -3190,18 +3227,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.42"
+version = "0.8.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2578b716f8a7a858b7f02d5bd870c14bf4ddbbcf3a4c05414ba6503640505e3"
+checksum = "5c5030500cb2d66bdfbb4ebc9563be6ce7005a4b5d0f26be0c523870fe372ca6"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.42"
+version = "0.8.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e6cc098ea4d3bd6246687de65af3f920c430e236bee1e3bf2e441463f08a02f"
+checksum = "a5f86989a046a79640b9d8867c823349a139367bda96549794fcc3313ce91f4e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3273,3 +3310,8 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[patch.unused]]
+name = "emmylua_ls"
+version = "0.21.999"
+source = "git+https://github.com/LostEngine/patched-libraries?branch=EmmyLuaLs%2Femmylua-analyzer-rust#415795f0988c9d4081783b6ef58f866f0f35ab19"

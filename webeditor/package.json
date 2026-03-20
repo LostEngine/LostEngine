@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "tsc -b && vite build && node scripts/append-licenses.js",
+        "build": "tsc -b && vite build",
         "preview": "vite preview"
     },
     "dependencies": {
@@ -38,7 +38,6 @@
         "sonner": "^2.0.7",
         "tailwind-merge": "^3.4.0",
         "tailwindcss": "^4.1.17",
-        "vite-plugin-singlefile": "^2.3.0",
         "wasmluaparser": "file:wasmluaparser/pkg",
         "yaml": "^2.8.2",
         "zustand": "^5.0.11"

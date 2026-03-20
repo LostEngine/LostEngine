@@ -8,7 +8,7 @@ import {type CSSProperties, render} from "preact";
 import {ZoomableImage} from "@/fileviewer/zoomableimage.tsx";
 import {ConfigEditor} from "@/fileviewer/configeditor/configeditor.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area";
-import type {editor, languages} from "monaco-editor/esm/vs/editor/editor.api.d.ts";
+import type {editor, languages, Position, IDisposable} from "monaco-editor/esm/vs/editor/editor.api.d.ts";
 import missingLogo from "@/assets/missing.svg";
 import {ValueCombobox} from "@/fileviewer/configeditor/valuecombobox.tsx";
 import {luaAPI} from "@/fileviewer/lua/api.ts";
@@ -32,6 +32,8 @@ export function FileViewer({
     const [selectedLanguage, setSelectedLanguage] = useState<string>("plaintext");
     const [languages, setLanguages] = useState<languages.ILanguageExtensionPoint[]>([]);
     const widgetContainerRef = useRef<HTMLDivElement | undefined>();
+    const completionItemProviderRef = useRef<IDisposable | undefined>();
+    const documentFormattingEditProviderRef = useRef<IDisposable | undefined>();
 
     useEffect(() => {
         if (filePath) setSelectedLanguage(getLanguage(filePath) || "plaintext");
@@ -142,9 +144,10 @@ export function FileViewer({
             monaco.editor.setModelMarkers(model, "owner", []);
         };
 
-        monaco.languages.registerDocumentFormattingEditProvider("lua", {
-            provideDocumentFormattingEdits(model: editor.ITextModel): languages.ProviderResult<languages.TextEdit[]> {
-                const text = analyzer.format_code(model.getValue());
+        if (documentFormattingEditProviderRef.current) documentFormattingEditProviderRef.current.dispose();
+        documentFormattingEditProviderRef.current = monaco.languages.registerDocumentFormattingEditProvider("lua", {
+            provideDocumentFormattingEdits(model: editor.ITextModel, options: languages.FormattingOptions): languages.ProviderResult<languages.TextEdit[]> {
+                const text = analyzer.format_code(model.getValue(), options.tabSize, options.insertSpaces);
                 return [{
                     range: {
                         startColumn: 0,
@@ -154,6 +157,29 @@ export function FileViewer({
                     },
                     text: text
                 }]
+            }
+        });
+
+        if (completionItemProviderRef.current) completionItemProviderRef.current.dispose();
+        completionItemProviderRef.current = monaco.languages.registerCompletionItemProvider("lua", {
+            provideCompletionItems(model: editor.ITextModel, position: Position, context: languages.CompletionContext): languages.ProviderResult<languages.CompletionList> {
+                const completion: EmmyluaCompletion[] = analyzer.get_completion(model.getValue() + "\n\n\n" + luaAPI, position.lineNumber - 1, position.column - 1, context.triggerKind.valueOf());
+                if (completion) {
+                    return {
+                        suggestions: completion.map(value => {
+                            return ({
+                                label: value.label,
+                                detail: value.labelDetails?.detail,
+                                kind: value.kind,
+                                sortText: value.sortText,
+                                insertText: value.insertText ? value.insertText : value.label,
+                                documentation: {
+                                    value: value.documentation?.value
+                                },
+                            })
+                        }) as languages.CompletionItem[]
+                    }
+                }
             }
         });
 
@@ -327,4 +353,19 @@ type EmmyluaError = {
     severity: number;
     code: string;
     message: string;
+}
+
+type EmmyluaCompletion = {
+    label?: string,
+    labelDetails?: {
+        detail?: string,
+    }
+    kind?: number,
+    sortText?: string,
+    insertText?: string,
+    insertTextFormat?: number,
+    documentation?: {
+        kind?: string;
+        value?: string;
+    }
 }
