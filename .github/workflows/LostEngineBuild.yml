@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: "WebEditor"
-          path: "webeditor/dist/*.html"
+          path: "webeditor/dist/**"
           if-no-files-found: error
 
 
