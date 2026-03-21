@@ -22,7 +22,7 @@ public record NettyHttpResponse(ChannelHandlerContext ctx, HttpHeaders headers) 
     }
 
     @Override
-    public void send(int status, byte[] body, String contentType) {
+    public void send(int status, byte[] body, String contentType, String newSessionID) {
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.valueOf(status),
@@ -32,14 +32,16 @@ public record NettyHttpResponse(ChannelHandlerContext ctx, HttpHeaders headers) 
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, body.length);
+        if (newSessionID != null)
+            response.headers().set(HttpHeaderNames.SET_COOKIE, "SESSIONID=%s; Path=/; HttpOnly; SameSite=Strict".formatted(newSessionID));
 
         ctx.writeAndFlush(response);
     }
 
     @Override
-    public void send(File file, String contentType) throws IOException {
+    public void send(File file, String contentType, String newSessionID) throws IOException {
         if (!file.exists()) {
-            send(404, "File Not Found", "text/html");
+            send(404, "File Not Found", "text/html", null);
             return;
         }
 
@@ -50,6 +52,8 @@ public record NettyHttpResponse(ChannelHandlerContext ctx, HttpHeaders headers) 
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, file.length());
+        if (newSessionID != null)
+            response.headers().set(HttpHeaderNames.SET_COOKIE, "SESSIONID=%s; Path=/; HttpOnly; SameSite=Strict".formatted(newSessionID));
 
         ctx.write(response);
         ChannelFuture future = ctx.write(new DefaultFileRegion(raf.getChannel(), 0, raf.length()));
@@ -57,7 +61,8 @@ public record NettyHttpResponse(ChannelHandlerContext ctx, HttpHeaders headers) 
         future.addListener(f -> {
             try {
                 raf.close();
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         });
     }
 

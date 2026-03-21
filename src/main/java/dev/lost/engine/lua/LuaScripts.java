@@ -1,28 +1,21 @@
 package dev.lost.engine.lua;
 
-import com.mojang.brigadier.StringReader;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.lost.annotations.NotNull;
+import dev.lost.engine.lua.luatables.LuaBlockHit;
+import dev.lost.engine.lua.luatables.LuaPlayer;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import net.minecraft.commands.arguments.blocks.BlockStateParser;
-import net.minecraft.commands.arguments.item.ItemParser;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.state.BlockState;
-import org.bukkit.event.entity.CreatureSpawnEvent;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import org.bukkit.Bukkit;
 import org.luaj.vm2.Globals;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.Varargs;
-import org.luaj.vm2.lib.*;
+import org.luaj.vm2.lib.OneArgFunction;
+import org.luaj.vm2.lib.VarArgFunction;
+import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JsePlatform;
 import org.luaj.vm2.luajc.LuaJC;
 
@@ -31,8 +24,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Hashtable;
 import java.util.UUID;
-
-import static net.minecraft.world.level.block.Block.UPDATE_ALL;
 
 public class LuaScripts {
 
@@ -58,10 +49,28 @@ public class LuaScripts {
                 return LuaValue.NIL;
             }
         });
+        server.set("broadcast", new OneArgFunction() {
+            @Override
+            public LuaValue call(LuaValue msg) {
+                Bukkit.broadcast(
+                        MiniMessage.miniMessage()
+                                .deserialize(
+                                        msg.checkjstring()
+                                )
+                );
+                return LuaValue.NIL;
+            }
+        });
         GLOBALS.set("server", server);
         GLOBALS.set("os", LuaValue.NIL);
         GLOBALS.set("package", LuaValue.NIL);
         GLOBALS.set("io", LuaValue.NIL);
+        GLOBALS.set("luajava", LuaValue.NIL);
+        GLOBALS.set("dofile", LuaValue.NIL);
+        GLOBALS.set("loadfile", LuaValue.NIL);
+        GLOBALS.set("load", LuaValue.NIL);
+        GLOBALS.set("require", LuaValue.NIL);
+        GLOBALS.set("collectgarbage", LuaValue.NIL);
         LuaScripts.compiler = LuaJC.instance;
     }
 
@@ -92,112 +101,25 @@ public class LuaScripts {
         return GLOBALS;
     }
 
-    public static void onClick(@Nullable LuaValue luaValue, @NotNull ServerPlayer player, double x, double y, double z) {
+    public static void onClick(@Nullable LuaValue luaValue, @NotNull ServerPlayer player) {
         if (luaValue == null) return;
         LuaValue function = luaValue.get("onClick");
-        if (function != null)
+        if (function != null) {
+            LuaValue luaBlockHit = LuaValue.NIL;
+            getBlockHit:
+            {
+                HitResult hit = player.pick(player.blockInteractionRange(), 0, false);
+                if (!(hit instanceof BlockHitResult blockHit) || blockHit.getType() != HitResult.Type.BLOCK)
+                    break getBlockHit;
+                luaBlockHit = LuaBlockHit.getLuaBlockHit(blockHit);
+            }
+
             function.invoke(new LuaValue[]{
-                    getLuaPlayer(player),
-                    LuaValue.valueOf(x),
-                    LuaValue.valueOf(y),
-                    LuaValue.valueOf(z)
+                    LuaPlayer.getLuaPlayer(player),
+                    luaBlockHit
             });
+        }
     }
 
-    private static @NotNull LuaTable getLuaPlayer(ServerPlayer player) {
-        LuaTable luaPlayer = new LuaTable();
-        luaPlayer.set("getPosition", new LibFunction() {
-            @Override
-            public Varargs invoke(Varargs args) {
-                return LuaValue.varargsOf(new LuaValue[]{
-                        LuaValue.valueOf(player.getX()),
-                        LuaValue.valueOf(player.getY()),
-                        LuaValue.valueOf(player.getZ()),
-                        LuaValue.valueOf(player.getYRot()),
-                        LuaValue.valueOf(player.getXRot())
-                });
-            }
-        });
-        luaPlayer.set("giveItem", new TwoArgFunction() {
-            public LuaValue call(LuaValue item, LuaValue count) {
-                ItemParser parser = new ItemParser(MinecraftServer.getServer().registryAccess());
-                try {
-                    ItemParser.ItemResult result = parser.parse(new StringReader(item.checkjstring()));
-                    ItemStack itemStack = result.item().value().getDefaultInstance();
-                    itemStack.restorePatch(result.components());
-                    itemStack.setCount(count.isint() ? count.checkint() : 1);
-                } catch (CommandSyntaxException e) {
-                    e.printStackTrace();
-                }
-                return LuaValue.NIL;
-            }
-        });
-        luaPlayer.set("sendMessage", new OneArgFunction() {
-            public LuaValue call(LuaValue msg) {
-                player.sendSystemMessage(Component.literal(msg.checkjstring()));
-                return LuaValue.NIL;
-            }
-        });
-        luaPlayer.set("execute", new OneArgFunction() {
-            @Override
-            public LuaValue call(LuaValue msg) {
-                MinecraftServer.getServer().getCommands().performPrefixedCommand(
-                        player.createCommandSourceStack(),
-                        msg.checkjstring()
-                );
-                return LuaValue.NIL;
-            }
-        });
-        LuaTable world = getLuaWorld(player.level());
-        luaPlayer.set("getWorld", new ZeroArgFunction() {
-            @Override
-            public LuaValue call() {
-                return world;
-            }
-        });
-        return luaPlayer;
-    }
-
-    private static @NotNull LuaTable getLuaWorld(ServerLevel level) {
-        LuaTable luaWorld = new LuaTable();
-
-        luaWorld.set("setBlock", new LibFunction() {
-            @Override
-            public Varargs invoke(Varargs args) {
-                try {
-                    LuaValue block = args.arg(1);
-                    BlockState blockState = BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK, block.checkjstring(), false).blockState();
-                    int x = args.arg(2).checkint();
-                    int y = args.arg(3).checkint();
-                    int z = args.arg(4).checkint();
-                    BlockPos blockPos = new BlockPos(x, y, z);
-                    level.setBlock(
-                            blockPos,
-                            blockState,
-                            UPDATE_ALL
-                    );
-                } catch (CommandSyntaxException e) {
-                    e.printStackTrace();
-                }
-                return LuaValue.NIL;
-            }
-        });
-        luaWorld.set("spawnEntity", new LibFunction() {
-            @Override
-            public Varargs invoke(Varargs args) {
-                String entityName = args.arg(1).checkjstring();
-                Entity entity = BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.parse(entityName)).create(level, EntitySpawnReason.COMMAND);
-                if (entity != null) {
-                    double x = args.arg(2).checkdouble();
-                    double y = args.arg(3).checkdouble();
-                    double z = args.arg(4).checkdouble();
-                    entity.setPos(x, y, z);
-                    level.addFreshEntity(entity, CreatureSpawnEvent.SpawnReason.CUSTOM);
-                }
-                return LuaValue.NIL;
-            }
-        });
-        return luaWorld;
-    }
 
 }

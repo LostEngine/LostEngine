@@ -42,7 +42,7 @@ public class CustomShovelItem extends ShovelItem implements CustomItem {
     @Override
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         if (player instanceof ServerPlayer sp)
-            LuaScripts.onClick(luaValue, sp, player.getX(), player.getY(), player.getZ());
+            LuaScripts.onClick(luaValue, sp);
         return super.use(level, player, hand);
     }
 }

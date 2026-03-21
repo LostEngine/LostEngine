@@ -8,10 +8,10 @@ import {type CSSProperties, render} from "preact";
 import {ZoomableImage} from "@/fileviewer/zoomableimage.tsx";
 import {ConfigEditor} from "@/fileviewer/configeditor/configeditor.tsx";
 import {ScrollArea} from "@/components/ui/scroll-area";
-import type {editor, languages, Position, IDisposable} from "monaco-editor/esm/vs/editor/editor.api.d.ts";
+import type {editor, IDisposable, languages, Position} from "monaco-editor/esm/vs/editor/editor.api.d.ts";
 import missingLogo from "@/assets/missing.svg";
 import {ValueCombobox} from "@/fileviewer/configeditor/valuecombobox.tsx";
-import {luaAPI} from "@/fileviewer/lua/api.ts";
+import {luaApi, luaApiLines} from "@/fileviewer/lua/api.ts";
 import init, {LuaAnalyzer} from "wasmluaparser";
 
 export function FileViewer({
@@ -30,14 +30,14 @@ export function FileViewer({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
     const [selectedLanguage, setSelectedLanguage] = useState<string>("plaintext");
-    const [languages, setLanguages] = useState<languages.ILanguageExtensionPoint[]>([]);
+    const [monacoLanguages, setMonacoLanguages] = useState<languages.ILanguageExtensionPoint[]>([]);
     const widgetContainerRef = useRef<HTMLDivElement | undefined>();
     const completionItemProviderRef = useRef<IDisposable | undefined>();
     const documentFormattingEditProviderRef = useRef<IDisposable | undefined>();
 
     useEffect(() => {
         if (filePath) setSelectedLanguage(getLanguage(filePath) || "plaintext");
-    }, [filePath, languages]);
+    }, [filePath, monacoLanguages]);
 
     useEffect(() => {
         if (!filePath || !token || content !== undefined) {
@@ -81,10 +81,10 @@ export function FileViewer({
     if (error) return <div className="text-red-500">{error}</div>;
 
     const getLanguage = (filePath: string) => {
-        if (!languages) return;
+        if (!monacoLanguages) return;
         const ext = filePath.split(".").pop()?.toLowerCase();
         if (!ext) return;
-        const languageMap = languages.reduce((acc, lang) => {
+        const languageMap = monacoLanguages.reduce((acc, lang) => {
             lang.extensions?.forEach(ext =>
                 acc[ext.startsWith('.') ? ext.substring(1) : ext] = lang.id
             );
@@ -98,7 +98,7 @@ export function FileViewer({
             <ValueCombobox
                 value={selectedLanguage}
                 setValue={value => setSelectedLanguage(value || "plaintext")}
-                values={languages?.map((lang: languages.ILanguageExtensionPoint) => lang.id)}
+                values={monacoLanguages?.map((lang: languages.ILanguageExtensionPoint) => lang.id)}
                 name="language"
             />,
             container
@@ -117,18 +117,17 @@ export function FileViewer({
 
             const code = editor.getValue();
             // We add the API at the end of the code
-            const errors: EmmyluaError[] = analyzer.check_code(code + "\n\n\n" + luaAPI);
+            const errors: EmmyluaError[] = analyzer.check_code(luaApi + code);
 
-            const lineCount = model.getLineCount();
             const markers: editor.IMarkerData[] = errors.map(err => {
                 // We have to verify the errors aren't from the API we put at the end of the code
-                if (err.range.start.line < lineCount && err.range.end.line < lineCount)
+                if (err.range.start.line > luaApiLines && err.range.end.line > luaApiLines)
                     return ({
                         message: err.message,
                         severity: monaco.MarkerSeverity.Error,
-                        startLineNumber: err.range.start.line + 1,
+                        startLineNumber: err.range.start.line + 2 - luaApiLines,
                         startColumn: err.range.start.character + 1,
-                        endLineNumber: err.range.end.line + 1,
+                        endLineNumber: err.range.end.line + 2 - luaApiLines,
                         endColumn: err.range.end.character + 1,
                         code: err.code,
                     });
@@ -163,7 +162,7 @@ export function FileViewer({
         if (completionItemProviderRef.current) completionItemProviderRef.current.dispose();
         completionItemProviderRef.current = monaco.languages.registerCompletionItemProvider("lua", {
             provideCompletionItems(model: editor.ITextModel, position: Position, context: languages.CompletionContext): languages.ProviderResult<languages.CompletionList> {
-                const completion: EmmyluaCompletion[] = analyzer.get_completion(model.getValue() + "\n\n\n" + luaAPI, position.lineNumber - 1, position.column - 1, context.triggerKind.valueOf());
+                const completion: EmmyluaCompletion[] = analyzer.get_completion(luaApi + model.getValue(), position.lineNumber - 2 + luaApiLines, position.column - 1, context.triggerKind.valueOf());
                 if (completion) {
                     return {
                         suggestions: completion.map(value => {
@@ -173,6 +172,7 @@ export function FileViewer({
                                 kind: value.kind,
                                 sortText: value.sortText,
                                 insertText: value.insertText ? value.insertText : value.label,
+                                insertTextRules: 4, // languages.CompletionItemInsertTextRule.InsertAsSnippet
                                 documentation: {
                                     value: value.documentation?.value
                                 },
@@ -218,7 +218,7 @@ export function FileViewer({
     };
 
     const handleEditorWillMount = (monaco: Monaco) => {
-        setLanguages(monaco.languages.getLanguages());
+        setMonacoLanguages(monaco.languages.getLanguages());
     };
 
     const lower = filePath?.toLowerCase();

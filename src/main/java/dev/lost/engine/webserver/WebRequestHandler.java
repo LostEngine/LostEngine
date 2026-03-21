@@ -20,7 +20,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class WebRequestHandler {
@@ -29,6 +32,8 @@ public class WebRequestHandler {
     static final String token;
     @Getter
     static final String readOnlyToken;
+
+    private static final List<UUID> SESSION_IDS = new CopyOnWriteArrayList<>();
 
     static {
         // 32 alphanumeric (A-Z+a-z) characters
@@ -65,7 +70,7 @@ public class WebRequestHandler {
             }
         } catch (Exception e) {
             LostEngine.logger().error("Error handling http request", e);
-            res.send(500, "Internal Server Error", "text/plain");
+            res.send(500, "Internal Server Error", "text/plain", null);
         }
     }
 
@@ -79,14 +84,14 @@ public class WebRequestHandler {
         } else {
             isReadOnlyToken = false;
             if (token == null || !token.equals(WebRequestHandler.token)) {
-                res.send(403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html", null);
                 return;
             }
         }
 
         if (req.path().equals("/api/status") && req.method().equals("GET")) {
             String json = "{\"status\": \"online\"}";
-            res.send(200, json, "application/json");
+            res.send(200, json, "application/json", null);
             return;
         }
 
@@ -102,7 +107,7 @@ public class WebRequestHandler {
             JsonArray armorMaterials = new JsonArray();
             ResourceInjector.getArmorMaterials().forEach((id, toolMaterial) -> armorMaterials.add(id));
             json.add("armor_materials", toolMaterials);
-            res.send(200, json.toString(), "application/json");
+            res.send(200, json.toString(), "application/json", null);
             return;
         }
 
@@ -110,13 +115,13 @@ public class WebRequestHandler {
             String rawPath = extractQueryParam(query, "path");
 
             if (rawPath == null || rawPath.isEmpty()) {
-                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json", null);
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(rawPath);
             if (cleanPath == null) {
-                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json", null);
                 return;
             }
 
@@ -124,16 +129,16 @@ public class WebRequestHandler {
             File target = new File(baseDir, cleanPath);
 
             if (!target.exists() || !target.isFile()) {
-                res.send(404, "{\"error\": \"File not found\"}", "application/json");
+                res.send(404, "{\"error\": \"File not found\"}", "application/json", null);
                 return;
             }
 
             String mime = Optional.ofNullable(Files.probeContentType(target.toPath())).orElse("application/octet-stream");
             try (FileInputStream fis = new FileInputStream(target)) {
                 byte[] bytes = fis.readAllBytes();
-                res.send(200, bytes, mime);
+                res.send(200, bytes, mime, null);
             } catch (IOException e) {
-                res.send(500, "{\"error\": \"Failed to read file\"}", "application/json");
+                res.send(500, "{\"error\": \"Failed to read file\"}", "application/json", null);
             }
 
             return;
@@ -141,18 +146,18 @@ public class WebRequestHandler {
 
         if (req.path().equals("/api/upload_resource") && req.method().equals("POST")) {
             if (isReadOnlyToken) {
-                res.send(403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html", null);
                 return;
             }
             String contentType = req.getHeader("Content-Type");
             if (contentType == null || !contentType.startsWith("multipart/form-data")) {
-                res.send(400, "{\"error\": \"Content-Type must be multipart/form-data\"}", "application/json");
+                res.send(400, "{\"error\": \"Content-Type must be multipart/form-data\"}", "application/json", null);
                 return;
             }
 
             String boundary = getBoundary(contentType);
             if (boundary == null) {
-                res.send( 400, "{\"error\": \"Boundary missing in Content-Type\"}", "application/json");
+                res.send(400, "{\"error\": \"Boundary missing in Content-Type\"}", "application/json", null);
                 return;
             }
 
@@ -160,18 +165,18 @@ public class WebRequestHandler {
             try {
                 parts = parseMultipart(req.body(), boundary);
             } catch (Exception e) {
-                res.send(400, "{\"error\": \"Invalid multipart data\"}", "application/json");
+                res.send(400, "{\"error\": \"Invalid multipart data\"}", "application/json", null);
                 return;
             }
 
             if (parts.path == null || parts.fileBytes == null) {
-                res.send(400, "{\"error\": \"Missing 'path' or 'file' part\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' or 'file' part\"}", "application/json", null);
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(parts.path);
             if (cleanPath == null) {
-                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json", null);
                 return;
             }
 
@@ -181,7 +186,7 @@ public class WebRequestHandler {
             try {
                 File parent = target.getParentFile();
                 if (!parent.exists() && !parent.mkdirs()) {
-                    res.send(500, "{\"error\": \"Failed to create directories\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to create directories\"}", "application/json", null);
                     return;
                 }
 
@@ -189,32 +194,32 @@ public class WebRequestHandler {
                     fos.write(parts.fileBytes);
                 }
             } catch (IOException e) {
-                res.send(500, "{\"error\": \"Failed to save file\"}", "application/json");
+                res.send(500, "{\"error\": \"Failed to save file\"}", "application/json", null);
                 return;
             }
 
             LostEngine.logger().info("(Web editor) Uploaded file: {}", cleanPath);
             res.send(200,
                     "{\"message\":\"File uploaded successfully\",\"path\":\"" + cleanPath + "\"}",
-                    "application/json");
+                    "application/json", null);
             return;
         }
 
         if (req.path().equals("/api/delete_resource") && req.method().equals("DELETE")) {
             if (isReadOnlyToken) {
-                res.send(403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html", null);
                 return;
             }
             String rawPath = extractQueryParam(query, "path");
 
             if (rawPath == null || rawPath.isEmpty()) {
-                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json", null);
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(rawPath);
             if (cleanPath == null) {
-                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path\"}", "application/json", null);
                 return;
             }
 
@@ -223,44 +228,44 @@ public class WebRequestHandler {
             boolean isDir = target.isDirectory();
 
             if (!target.exists()) {
-                res.send(404, "{\"error\": \"File or directory not found\"}", "application/json");
+                res.send(404, "{\"error\": \"File or directory not found\"}", "application/json", null);
                 return;
             }
 
             if (!deleteRecursive(target)) {
-                res.send(500, "{\"error\": \"Failed to delete resource\"}", "application/json");
+                res.send(500, "{\"error\": \"Failed to delete resource\"}", "application/json", null);
                 return;
             }
 
             LostEngine.logger().info("(Web editor) Deleted {}: {}", isDir ? "folder" : "file", cleanPath);
             res.send(200,
                     "{\"message\":\"Resource deleted successfully\",\"path\":\"" + cleanPath + "\"}",
-                    "application/json");
+                    "application/json", null);
             return;
         }
 
         if (req.path().equals("/api/move_resource") && req.method().equals("POST")) {
             if (isReadOnlyToken) {
-                res.send(403, "Forbidden", "text/html");
+                res.send(403, "Forbidden", "text/html", null);
                 return;
             }
             String rawPath = extractQueryParam(query, "path");
             String rawDestination = extractQueryParam(query, "destination");
 
             if (rawPath == null || rawPath.isEmpty()) {
-                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'path' parameter\"}", "application/json", null);
                 return;
             }
 
             if (rawDestination == null || rawDestination.isEmpty()) {
-                res.send(400, "{\"error\": \"Missing 'destination' parameter\"}", "application/json");
+                res.send(400, "{\"error\": \"Missing 'destination' parameter\"}", "application/json", null);
                 return;
             }
 
             String cleanPath = sanitizeResourcePath(rawPath);
             String cleanDestination = sanitizeResourcePath(rawDestination);
             if (cleanPath == null || cleanDestination == null) {
-                res.send(403, "{\"error\": \"Invalid or unsafe path/destination\"}", "application/json");
+                res.send(403, "{\"error\": \"Invalid or unsafe path/destination\"}", "application/json", null);
                 return;
             }
 
@@ -269,7 +274,7 @@ public class WebRequestHandler {
             File targetFile = new File(baseDir, cleanDestination);
 
             if (!file.exists()) {
-                res.send(404, "{\"error\": \"File or directory not found\"}", "application/json");
+                res.send(404, "{\"error\": \"File or directory not found\"}", "application/json", null);
                 return;
             }
 
@@ -281,17 +286,17 @@ public class WebRequestHandler {
                         .resolve(cleanPath.replaceAll("/", "_" + ThreadLocalRandom.current().nextInt()))
                         .toFile();
                 if (!moveRecursive(file, tempDir)) {
-                    res.send(500, "{\"error\": \"Failed to move resource (source -> tempDir)\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to move resource (source -> tempDir)\"}", "application/json", null);
                     return;
                 }
 
                 if (!moveRecursive(tempDir, targetFile)) {
-                    res.send(500, "{\"error\": \"Failed to move resource (tempDir -> destination)\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to move resource (tempDir -> destination)\"}", "application/json", null);
                     return;
                 }
             } else {
                 if (!moveRecursive(file, targetFile)) {
-                    res.send(500, "{\"error\": \"Failed to move resource (source -> destination)\"}", "application/json");
+                    res.send(500, "{\"error\": \"Failed to move resource (source -> destination)\"}", "application/json", null);
                     return;
                 }
             }
@@ -300,24 +305,24 @@ public class WebRequestHandler {
             LostEngine.logger().info("(Web editor) Moved {}: '{}' to '{}'", isDir ? "folder" : "file", cleanPath, cleanDestination);
             res.send(200,
                     "{\"message\":\"Resource moved successfully\",\"destination\":\"" + cleanDestination + "\"}",
-                    "application/json");
+                    "application/json", null);
             return;
         }
 
-        res.send(404, "{\"error\": \"API Endpoint Not Found\"}", "application/json");
+        res.send(404, "{\"error\": \"API Endpoint Not Found\"}", "application/json", null);
     }
 
     static void handleStaticFiles(@NotNull SimpleHttpRequest req, @NotNull SimpleHttpResponse res) throws IOException, URISyntaxException {
         String userAgent = req.getHeader("User-Agent");
 
         if (userAgent == null || userAgent.isBlank()) {
-            res.send(400, "Bad Request", "text/html");
+            res.send(400, "Bad Request", "text/html", null);
             return;
         }
 
         if (userAgent.toLowerCase().contains("minecraft java")) {
             File file = LostEngine.getResourcePackFile();
-            res.send(file, "application/zip");
+            res.send(file, "application/zip", null);
             return;
         }
 
@@ -325,23 +330,54 @@ public class WebRequestHandler {
         String token = getToken(query);
 
         if (token == null || (!token.equals(WebRequestHandler.token) && !token.equals(readOnlyToken))) {
-            res.send(403, "Forbidden", "text/html");
-            return;
+            UUID sessionID = null;
+            String cookieHeader = req.getHeader("Cookie");
+            if (cookieHeader != null) {
+                String[] cookiePairs = cookieHeader.split(";");
+                for (String cookie : cookiePairs) {
+                    String[] parts = cookie.trim().split("=");
+                    if (parts.length == 2 && parts[0].equals("SESSIONID")) {
+                        sessionID = UUID.fromString(parts[1]);
+                    }
+                }
+            }
+            if (!SESSION_IDS.contains(sessionID)) {
+                res.send(403, "Forbidden", "text/html", null);
+                return;
+            }
         }
 
-        String cleanPath = sanitizeResourcePath(req.path());
+        String cleanPath = sanitizeResourcePath(
+                Optional.ofNullable(req.path())
+                        .map(s -> {
+                            String normalized = s.replaceFirst("^/", "");
+                            return normalized.isEmpty() ? null : normalized;
+                        })
+                        .orElse("index.html")
+        );
 
         Path cacheGeneratedPath = LostEngine.getInstance()
                 .getDataPath()
-                .resolve(".lost_engine/cache/generated");
+                .resolve(".lost_engine/cache/generated/");
 
-        if (!Files.exists(cacheGeneratedPath) || Files.isDirectory(cacheGeneratedPath)) FastFiles.extractFolderFromJar("generated", cacheGeneratedPath);
+        if (!Files.exists(cacheGeneratedPath))
+            FastFiles.extractFolderFromJar("generated", cacheGeneratedPath);
         Path filePath = cacheGeneratedPath.resolve(cleanPath);
 
         if (!Files.isRegularFile(filePath))
-            res.send(404, "Not Found", "text/html");
-        else
-            res.send(filePath.toFile(), Files.probeContentType(filePath));
+            res.send(404, "Not Found", "text/html", null);
+        else {
+            UUID sessionID = null;
+            if (cleanPath.equals("index.html")) {
+                sessionID = UUID.randomUUID();
+                SESSION_IDS.add(sessionID);
+            }
+            res.send(
+                    filePath.toFile(),
+                    Optional.ofNullable(Files.probeContentType(filePath)).orElse("application/octet-stream"),
+                    sessionID != null ? sessionID.toString() : null
+            );
+        }
     }
 
     private static String getToken(String query) {
