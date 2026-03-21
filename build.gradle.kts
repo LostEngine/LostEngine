@@ -35,7 +35,7 @@ dependencies {
 
     compileOnly(project(":annotations"))
     implementation(project(":furnace"))
-    implementation("dev.misieur:fast:1.0.2")
+    implementation("dev.misieur:fast:1.0.3")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
 
     implementation("org.luaj:luaj-jse:3.0.1")
