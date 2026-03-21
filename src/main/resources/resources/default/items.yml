@@ -37,6 +37,7 @@ items:
     type: sword
     icon: item/sword
     material: LOST
+    script: scripts/sword
   shovel:
     name:
       en_US: "Lost Shovel"

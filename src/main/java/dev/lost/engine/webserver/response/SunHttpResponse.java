@@ -14,9 +14,13 @@ public record SunHttpResponse(HttpExchange exchange) implements SimpleHttpRespon
         exchange.getResponseHeaders().set(name, value);
     }
 
-    public void send(int status, byte @NotNull [] body, String contentType) throws IOException {
+    public void send(int status, byte @NotNull [] body, String contentType, String newSessionID) throws IOException {
         exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", contentType);
+        if (newSessionID != null) exchange.getResponseHeaders().add(
+                "Set-Cookie",
+                "SESSIONID=%s; Path=/; HttpOnly; SameSite=Strict".formatted(newSessionID)
+        );
         exchange.sendResponseHeaders(status, body.length);
 
         try (OutputStream os = exchange.getResponseBody()) {
@@ -25,14 +29,18 @@ public record SunHttpResponse(HttpExchange exchange) implements SimpleHttpRespon
     }
 
     @Override
-    public void send(@NotNull File file, String contentType) throws IOException {
+    public void send(@NotNull File file, String contentType, String newSessionID) throws IOException {
         if (!file.exists()) {
-            send(404, "File Not Found", "text/html");
+            send(404, "File Not Found", "text/html", newSessionID);
             return;
         }
 
         exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Content-Type", contentType);
+        if (newSessionID != null) exchange.getResponseHeaders().add(
+                "Set-Cookie",
+                "SESSIONID=%s; Path=/; HttpOnly; SameSite=Strict".formatted(newSessionID)
+        );
         exchange.sendResponseHeaders(200, file.length());
 
         try (OutputStream os = exchange.getResponseBody();

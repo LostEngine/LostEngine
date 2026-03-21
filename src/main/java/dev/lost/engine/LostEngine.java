@@ -10,6 +10,7 @@ import dev.lost.engine.listeners.BytePacketListener;
 import dev.lost.engine.listeners.HttpPacketListener;
 import dev.lost.engine.listeners.PacketListener;
 import dev.lost.engine.webserver.WebServer;
+import dev.misieur.fast.FastFiles;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
@@ -24,6 +25,7 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -50,6 +52,7 @@ public final class LostEngine extends JavaPlugin {
         instance = this;
         getConfig().options().copyDefaults(true);
         saveConfig();
+        cleanCache();
         LostEngineMappingGenerator mappingGenerator = null;
         if (getConfig().getBoolean("geyser_compatibility", false)) {
             mappingGenerator = new LostEngineMappingGenerator();
@@ -150,9 +153,16 @@ public final class LostEngine extends JavaPlugin {
     @Override
     public void onDisable() {
         WebServer.stop();
+        cleanCache();
     }
 
     public static @NotNull Logger logger() {
         return instance.getSLF4JLogger();
     }
+
+    private void cleanCache() {
+        Path cacheDir = getDataPath().resolve(".lost_engine/cache");
+        if (Files.exists(cacheDir)) FastFiles.deleteFolder(cacheDir);
+    }
+
 }

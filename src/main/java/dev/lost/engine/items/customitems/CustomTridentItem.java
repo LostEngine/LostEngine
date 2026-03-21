@@ -3,17 +3,21 @@ package dev.lost.engine.items.customitems;
 import dev.lost.annotations.CanBreakOnUpdates;
 import dev.lost.annotations.NotNull;
 import dev.lost.engine.entities.CustomThrownTrident;
+import dev.lost.engine.lua.LuaScripts;
 import lombok.Getter;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Position;
 import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
@@ -27,15 +31,18 @@ import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.luaj.vm2.LuaValue;
 
 public class CustomTridentItem extends TridentItem implements CustomItem {
 
     @Getter
     private final String id;
+    private final LuaValue luaValue;
 
-    public CustomTridentItem(Properties properties, String id) {
+    public CustomTridentItem(Properties properties, String id, LuaValue luaValue) {
         super(properties);
         this.id = id;
+        this.luaValue = luaValue;
     }
 
     @Override
@@ -144,4 +151,10 @@ public class CustomTridentItem extends TridentItem implements CustomItem {
         return thrownTrident;
     }
 
+    @Override
+    public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
+        if (player instanceof ServerPlayer sp)
+            LuaScripts.onClick(luaValue, sp);
+        return super.use(level, player, hand);
+    }
 }

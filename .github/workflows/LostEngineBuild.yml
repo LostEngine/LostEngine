@@ -34,6 +34,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
       - name: Build LostEngine
         run: ./gradlew shadowJar
 
@@ -48,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: "WebEditor"
-          path: "webeditor/dist/*.html"
+          path: "webeditor/dist/**"
           if-no-files-found: error
 
 

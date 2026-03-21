@@ -97,7 +97,7 @@ type ApiData = {
     armor_materials: string[];
 };
 
-//export const apiPrefix = "http://localhost:7270/api";
+//export const apiPrefix = "http://localhost:25565/api";
 export const apiPrefix = "/api";
 
 type DataStore = {
@@ -906,13 +906,14 @@ function FileUploadDialog({
                     value={files}
                     onValueChange={setFiles}
                     multiple
-                    maxSize={25 * 1024 * 1024}
+                    maxSize={536870912}
                     onFileReject={(file, message) => {
                         toast.error(
                             message +
                                 " (" +
                                 file.name +
-                                ") LostEngine Web Editor is not made for uploading big files, use FTP to upload files bigger than 25 MB."
+                                ") LostEngine is not made for uploading big files, " +
+                                "uploading your whole computer through LostEngine's integrated web server might not be a good idea.",
                         );
                     }}
                 >

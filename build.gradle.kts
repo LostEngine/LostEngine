@@ -35,8 +35,11 @@ dependencies {
 
     compileOnly(project(":annotations"))
     implementation(project(":furnace"))
-    implementation("dev.misieur:fast:1.0.2")
+    implementation("dev.misieur:fast:1.0.3")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
+
+    implementation("org.luaj:luaj-jse:3.0.1")
+    runtimeOnly("org.apache.bcel:bcel:6.12.0")
 
     compileOnly("org.geysermc.geyser:api:2.9.3-SNAPSHOT")
     compileOnly("org.geysermc.floodgate:api:2.2.4-SNAPSHOT")
@@ -62,7 +65,7 @@ node {
 }
 
 val buildNpm by tasks.registering(NpmTask::class) {
-    dependsOn(installNpm)
+    dependsOn(installNpm, buildWasmLuaParser)
     workingDir.set(file("webeditor"))
     args.set(listOf("run", "build"))
 }
@@ -72,10 +75,15 @@ val installNpm by tasks.registering(NpmTask::class) {
     args.set(listOf("install"))
 }
 
+val buildWasmLuaParser by tasks.registering(Exec::class) {
+    workingDir = file("webeditor/wasmluaparser")
+    commandLine("wasm-pack", "build", "--target", "web")
+}
+
 tasks.processResources {
     dependsOn(buildNpm)
     from("webeditor/dist") {
-        include("*.html")
+        include("**")
         into("generated")
     }
     from("LICENSE.MD") {
@@ -95,5 +103,8 @@ tasks.shadowJar {
     archiveClassifier.set("")
     minimize {
         exclude(dependency("dev.misieur:justamaterial"))
+        exclude(dependency("org.luaj:luaj-jse"))
+        exclude(dependency("org.apache.bcel:bcel"))
     }
+    exclude("org/apache/commons/**")
 }
