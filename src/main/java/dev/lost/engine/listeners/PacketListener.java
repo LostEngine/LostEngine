@@ -514,13 +514,15 @@ public class PacketListener {
                 }
                 if (LostEngine.getResourcePackUrl() == null) break;
                 handler.isWaitingForResourcePack = true;
-                return new ClientboundResourcePackPushPacket(
+                var temp = new ClientboundResourcePackPushPacket(
                         LostEngine.getResourcePackUUID(),
                         LostEngine.getResourcePackUrl(),
                         LostEngine.getResourcePackHash(),
                         true,
                         Optional.of(Component.literal(LostEngine.getInstance().getConfig().getString("pack_hosting.resource_pack_prompt", "Prompt")))
                 );
+                LostEngine.logger().info(temp.toString());
+                return temp;
             }
             case ClientboundSetHeldSlotPacket(int slot) -> {
                 if (handler.isBedrockClient) break;

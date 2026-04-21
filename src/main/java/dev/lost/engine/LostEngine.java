@@ -78,10 +78,8 @@ public final class LostEngine extends JavaPlugin {
                     );
                 }
             }
-            resourcePackHash = getFileHashString(resourcePackFile);
-            resourcePackUUID = UUID.nameUUIDFromBytes(resourcePackHash.getBytes());
-        } catch (IOException | NoSuchAlgorithmException e) {
-            getSLF4JLogger().error("Failed to build resource pack", e);
+        } catch (IOException e) {
+            logger().error("Failed to build resource pack", e);
         }
 
         // Creating the resource pack server
@@ -96,8 +94,20 @@ public final class LostEngine extends JavaPlugin {
                     getSLF4JLogger().error("Failed to start http server", e);
                 }
             }
+            try {
+                resourcePackHash = getFileHashString(resourcePackFile);
+            } catch (IOException | NoSuchAlgorithmException e) {
+                logger().error("Failed to get resource pack hash", e);
+            }
+            resourcePackUUID = UUID.nameUUIDFromBytes(resourcePackHash.getBytes());
         } else if (getConfig().getBoolean("pack_hosting.external_host.enabled")) {
             resourcePackUrl = getConfig().getString("pack_hosting.external_host.url");
+            if (resourcePackUrl == null || resourcePackUrl.isEmpty()) {
+                logger().error("External host URL is not set while it is enable in the config.");
+            } else {
+                resourcePackHash = "";
+                resourcePackUUID = UUID.nameUUIDFromBytes(resourcePackUrl.getBytes());
+            }
         }
 
         ObjectArrayList<CustomItem> customItemsList = new ObjectArrayList<>();
@@ -112,7 +122,7 @@ public final class LostEngine extends JavaPlugin {
             try {
                 logger().info("Geyser compatibility is enabled, generating mapping file...");
                 for (CustomItem item: customItems) {
-                    mappingGenerator.addItem(item.asItem(), item.getId().replaceAll(":", "_"));
+                    mappingGenerator.addItem(item.asItem(), item.getId().replace(":", "_"));
                 }
                 mappingGenerator.build(getDataFolder());
                 logger().info("Finished generating mapping file!");

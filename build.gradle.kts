@@ -67,6 +67,10 @@ node {
 val buildNpm by tasks.registering(NpmTask::class) {
     dependsOn(installNpm, buildWasmLuaParser)
     workingDir.set(file("webeditor"))
+
+    inputs.dir("webeditor")
+    outputs.dir("webeditor/dist")
+
     args.set(listOf("run", "build"))
 }
 
@@ -77,6 +81,8 @@ val installNpm by tasks.registering(NpmTask::class) {
 
 val buildWasmLuaParser by tasks.registering(Exec::class) {
     workingDir = file("webeditor/wasmluaparser")
+    inputs.dir("webeditor/wasmluaparser")
+    outputs.dir("webeditor/wasmluaparser/pkg")
     commandLine("wasm-pack", "build", "--target", "web")
 }
 
