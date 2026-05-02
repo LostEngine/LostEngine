@@ -92,7 +92,7 @@ tasks.processResources {
         include("**")
         into("generated")
     }
-    from("LICENSE.MD") {
+    from("LICENSE.md") {
         into("META-INF")
     }
 

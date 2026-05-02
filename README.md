@@ -1,3 +1,6 @@
+## License
+[LostEngine](https://github.com/LostEngine/LostEngine) is licensed under the MIT license, which means you can use its code in your project as long as the MIT license text is included everywhere the code is distributed. Moreover, crediting the project and its contributors is also appreciated.
+
 ## Building from source:
 Make sure you have [git](https://git-scm.com/install/) and Java 21+ installed
 ```
