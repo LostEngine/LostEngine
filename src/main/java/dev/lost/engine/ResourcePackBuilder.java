@@ -14,7 +14,7 @@ import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
-import dev.misieur.fast.FastBufferedImage;
+import dev.lost.furnace.utils.BufferedImageUtils;
 import dev.misieur.packobf.log.LogLevel;
 import dev.misieur.packobf.options.Compression;
 import dev.misieur.packobf.options.Options;
@@ -493,7 +493,7 @@ public class ResourcePackBuilder {
                                 LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", key, width, height);
                                 continue;
                             }
-                            BufferedImage resizedImage = FastBufferedImage.resizeImage(image, width, height);
+                            BufferedImage resizedImage = BufferedImageUtils.resizeImage(image, width, height);
                             int defaultAscent = height / 2 + 3; // compared to Minecraft Java, this is the ascent that Bedrock characters have
                             int ascentOffset = (defaultAscent - ascent) * 2;
                             if (ascentOffset != 0) {

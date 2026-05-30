@@ -35,7 +35,6 @@ dependencies {
 
     compileOnly(project(":annotations"))
     implementation(project(":furnace"))
-    implementation("dev.misieur:fast:1.0.3")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
     implementation("dev.misieur:packobf:0.2.1")
 

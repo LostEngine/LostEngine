@@ -10,7 +10,7 @@ import dev.lost.engine.listeners.BytePacketListener;
 import dev.lost.engine.listeners.HttpPacketListener;
 import dev.lost.engine.listeners.PacketListener;
 import dev.lost.engine.webserver.WebServer;
-import dev.misieur.fast.FastFiles;
+import dev.lost.furnace.utils.FilesUtils;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
@@ -172,7 +172,7 @@ public final class LostEngine extends JavaPlugin {
 
     private void cleanCache() {
         Path cacheDir = getDataPath().resolve(".lost_engine/cache");
-        if (Files.exists(cacheDir)) FastFiles.deleteFolder(cacheDir);
+        if (Files.exists(cacheDir)) FilesUtils.deleteFolder(cacheDir);
     }
 
 }

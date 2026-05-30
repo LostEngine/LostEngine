@@ -2,7 +2,7 @@ package dev.lost.engine.bootstrap.components;
 
 import dev.lost.annotations.NotNull;
 import dev.lost.engine.bootstrap.components.annotations.Property;
-import dev.misieur.fast.FastEnum;
+import dev.lost.furnace.utils.FastEnum;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
