@@ -28,6 +28,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm'
+          cache: 'gradle'
 
       # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
       # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
@@ -39,8 +40,13 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
 
       - name: Build LostEngine
         run: ./gradlew shadowJar
