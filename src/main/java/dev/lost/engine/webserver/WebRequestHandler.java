@@ -9,7 +9,7 @@ import dev.lost.engine.LostEngine;
 import dev.lost.engine.bootstrap.ResourceInjector;
 import dev.lost.engine.webserver.request.SimpleHttpRequest;
 import dev.lost.engine.webserver.response.SimpleHttpResponse;
-import dev.misieur.fast.FastFiles;
+import dev.lost.furnace.utils.FilesUtils;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
 
@@ -361,7 +361,7 @@ public class WebRequestHandler {
                 .resolve(".lost_engine/cache/generated/");
 
         if (!Files.exists(cacheGeneratedPath))
-            FastFiles.extractFolderFromJar("generated", cacheGeneratedPath);
+            FilesUtils.extractFolderFromJar("generated", cacheGeneratedPath);
         Path filePath = cacheGeneratedPath.resolve(cleanPath);
 
         if (!Files.isRegularFile(filePath))

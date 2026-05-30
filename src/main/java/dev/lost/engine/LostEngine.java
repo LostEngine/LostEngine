@@ -10,7 +10,7 @@ import dev.lost.engine.listeners.BytePacketListener;
 import dev.lost.engine.listeners.HttpPacketListener;
 import dev.lost.engine.listeners.PacketListener;
 import dev.lost.engine.webserver.WebServer;
-import dev.misieur.fast.FastFiles;
+import dev.lost.furnace.utils.FilesUtils;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
@@ -63,7 +63,7 @@ public final class LostEngine extends JavaPlugin {
         File bedrockResourcePack = new File(getDataFolder().getAbsolutePath(), getConfig().getString("resource_pack.file_name", "resource-pack") + ".mcpack");
         try {
             logger().info("Building resource pack...");
-            ResourcePackBuilder.buildResourcePack(this, resourcePackFile, bedrockResourcePack, mappingGenerator);
+            ResourcePackBuilder.buildResourcePack(this, resourcePackFile, bedrockResourcePack, mappingGenerator, null);
             logger().info("Finished building resource pack!");
 
             if (getConfig().getBoolean("geyser_compatibility", false) && bedrockResourcePack.exists() && bedrockResourcePack.isFile()) {
@@ -172,7 +172,7 @@ public final class LostEngine extends JavaPlugin {
 
     private void cleanCache() {
         Path cacheDir = getDataPath().resolve(".lost_engine/cache");
-        if (Files.exists(cacheDir)) FastFiles.deleteFolder(cacheDir);
+        if (Files.exists(cacheDir)) FilesUtils.deleteFolder(cacheDir);
     }
 
 }

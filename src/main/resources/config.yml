@@ -10,6 +10,13 @@ pack_hosting:
     url: ""
 resource_pack:
   file_name: "resource-pack"
+  compression:
+    enabled: true # enable the PackOBF resource pack optimizer
+    general: Normal # Simplest, Normal, Max
+    shader: None # None, Minify, MinifyAndObfuscate
+    rename_files: true # rename files in the resource pack that don't need to keep their original name. (obfuscation)
+    block_unzipping: true # prevent the resource pack files from being written to disk.
+    corrupt_png_files: true # corrupts PNG files and make them smaller.
   glyphs:
     offset_characters: # Java Edition only
       enabled: true

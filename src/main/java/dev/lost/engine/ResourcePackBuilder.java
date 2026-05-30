@@ -14,14 +14,21 @@ import dev.lost.furnace.files.unknown.UnknownFile;
 import dev.lost.furnace.resourcepack.BedrockResourcePack;
 import dev.lost.furnace.resourcepack.JavaResourcePack;
 import dev.lost.furnace.resourcepack.ResourcePack;
-import dev.misieur.fast.FastBufferedImage;
+import dev.lost.furnace.utils.BufferedImageUtils;
+import dev.misieur.packobf.log.LogLevel;
+import dev.misieur.packobf.options.Compression;
+import dev.misieur.packobf.options.Options;
+import dev.misieur.packobf.options.ShaderCompression;
+import dev.misieur.packobf.progress.*;
 import it.unimi.dsi.fastutil.ints.Int2CharOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 import org.intellij.lang.annotations.Pattern;
 
 import javax.imageio.ImageIO;
@@ -29,19 +36,21 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 @SuppressWarnings("PatternValidation") // Stupid thing I don't even know why it's here
 public class ResourcePackBuilder {
 
     // TODO: Clean up this class
-    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile, File bedrockResourcePackFile, @Nullable LostEngineMappingGenerator mappingGenerator) throws IOException {
+    public static void buildResourcePack(@NotNull LostEngine plugin, File resourcePackFile, File bedrockResourcePackFile, @Nullable LostEngineMappingGenerator mappingGenerator, @Nullable Player player) throws IOException {
         JavaResourcePack resourcePack = ResourcePack.java();
         BedrockResourcePack bedrockResourcePack = plugin.getConfig().getBoolean("geyser_compatibility", false)
                 ? ResourcePack.bedrock() :
@@ -90,7 +99,7 @@ public class ResourcePackBuilder {
                                         "lost_engine:item/" + key + "_throwing",
                                         "lost_engine:item/" + key + "_trident_in_hand",
                                         paintingItemJsonGenerator,
-                                        "lost_engine:" +  key + "_painting"
+                                        "lost_engine:" + key + "_painting"
                                 );
                                 if (bedrockResourcePack != null) {
                                     createBedrockTextureData(bedrockResourcePack, "textures/" + textureName, key);
@@ -111,7 +120,7 @@ public class ResourcePackBuilder {
                                                 "assets/lost_engine/items/" + key + ".json",
                                                 "lost_engine:" + modelName.replaceAll("\\.json", ""),
                                                 paintingItemJsonGenerator,
-                                                "lost_engine:" +  key + "_painting"
+                                                "lost_engine:" + key + "_painting"
                                         );
                                     } else if (modelFile.getName().endsWith(".lomodel")) {
                                         plugin.getSLF4JLogger().error("LOModel format is not supported for item models yet: {}", modelFile.getAbsolutePath());
@@ -139,7 +148,7 @@ public class ResourcePackBuilder {
                                             "assets/lost_engine/items/" + key + ".json",
                                             "lost_engine:item/" + key,
                                             paintingItemJsonGenerator,
-                                            "lost_engine:" +  key + "_painting"
+                                            "lost_engine:" + key + "_painting"
                                     );
                                     if (bedrockResourcePack != null) {
                                         createBedrockTextureData(bedrockResourcePack, "textures/" + textureName, key);
@@ -247,7 +256,7 @@ public class ResourcePackBuilder {
                                     "assets/lost_engine/items/" + key + ".json",
                                     "lost_engine:block/" + key,
                                     paintingItemJsonGenerator,
-                                    "lost_engine:" +  key + "_painting"
+                                    "lost_engine:" + key + "_painting"
                             );
                             Identifier resourceLocation = Identifier.parse("lost_engine:" + key);
                             if (BuiltInRegistries.BLOCK.containsKey(resourceLocation)) {
@@ -316,11 +325,78 @@ public class ResourcePackBuilder {
         blockStateGenerator.build(resourcePack);
         paintingItemJsonGenerator.build(resourcePack);
 
-        resourcePack.build(resourcePackFile, dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION);
+        StringBuilder log = new StringBuilder();
+        AtomicInteger errorCount = new AtomicInteger(); // PackOBF may call this async
+        final AtomicInteger lastState = new AtomicInteger(-1);
+        resourcePack.build(resourcePackFile, new dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions(
+                LostEngine.getInstance().getConfig().getBoolean("resource_pack.compression.enabled", true) ?
+                new Options(
+                        switch (LostEngine.getInstance().getConfig().getString("resource_pack.compression.general", "normal").toLowerCase(Locale.ROOT).trim()) {
+                            case "simplest" -> Compression.SIMPLEST;
+                            case "normal" -> Compression.NORMAL;
+                            case "max" -> Compression.MAX;
+                            default ->
+                                    throw new IllegalStateException("Invalid general compression value: " + LostEngine.getInstance().getConfig().getString("resource_pack.compression.general"));
+                        },
+                        switch (LostEngine.getInstance().getConfig().getString("resource_pack.compression.shader", "minify").toLowerCase(Locale.ROOT).trim()) {
+                            case "none" -> ShaderCompression.NONE;
+                            case "minify" -> ShaderCompression.MINIFY;
+                            case "minifyandobfuscate" -> ShaderCompression.MINIFY_AND_OBFUSCATE;
+                            default ->
+                                    throw new IllegalStateException("Invalid shader compression value: " + LostEngine.getInstance().getConfig().getString("resource_pack.compression.shader"));
+                        },
+                        LostEngine.getInstance().getConfig().getBoolean("resource_pack.compression.rename_files"),
+                        LostEngine.getInstance().getConfig().getBoolean("resource_pack.compression.block_unzipping"),
+                        LostEngine.getInstance().getConfig().getBoolean("resource_pack.compression.corrupt_png_files")
+                ) : null,
+                LostEngine.getInstance().getDataPath().resolve(".lost_engine").resolve("packobf_cache.bin"),
+                (level, message) -> {
+                    if (level == LogLevel.ERROR) errorCount.incrementAndGet();
+                    log.append(level.name().toUpperCase(Locale.ROOT)).append(": ").append(message).append("\n");
+                },
+                progress -> {
+                    if (player != null) switch (progress) {
+                        case IdleProgress p -> player.sendActionBar(Component.text("Initializing PackOBF..."));
+                        case ReadingZipProgress p ->
+                                player.sendActionBar(Component.text("Reading resource pack... " + p.current() + "/" + p.total()));
+                        case ParsingProgress p ->
+                                player.sendActionBar(Component.text("Parsing resource pack... " + p.current()));
+                        case BuildingProgress p ->
+                                player.sendActionBar(Component.text("Building resource pack... " + p.current().index() + "/" + p.total() + " " + p.current().name()));
+                        case DoneProgress p -> player.sendActionBar(Component.text("Done!"));
+                    }
+                    else {
+                        int previous = lastState.getAndSet(progress.state().value());
+
+                        if (previous != progress.state().value()) {
+                            switch (progress.state()) {
+                                case IDLE -> LostEngine.logger().info("Initializing PackOBF...");
+                                case READING_ZIP -> LostEngine.logger().info("Reading resource pack...");
+                                case PARSING -> LostEngine.logger().info("Parsing resource pack...");
+                                case BUILDING -> LostEngine.logger().info("Building resource pack...");
+                                case DONE -> LostEngine.logger().info("Done!");
+                            }
+                        }
+                    }
+                }
+        ));
+        Path logPath = LostEngine.getInstance().getDataPath().resolve("packobf.log");
+        try (FileOutputStream fos = new FileOutputStream(logPath.toFile())) {
+            fos.write(log.toString().getBytes());
+        }
+        if (errorCount.get() > 0) {
+            if (player != null) player.sendMessage(Component.text("There was " + errorCount.get() + " error(s) while building the resource pack. Check the " + logPath + " file for more details."));
+            LostEngine.logger().error("There was {} error(s) while building the resource pack. Check the {} file for more details.", errorCount.get(), logPath);
+        }
         if (bedrockResourcePack != null) {
             bedrockResourcePack.build(
                     bedrockResourcePackFile,
-                    dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions.MAX_COMPRESSION
+                    new dev.lost.furnace.resourcepackbuilder.ResourcePackBuilder.BuildOptions(
+                            null,
+                            null,
+                            null,
+                            null
+                    )
             );
         }
     }
@@ -417,7 +493,7 @@ public class ResourcePackBuilder {
                                 LostEngine.logger().warn("Glyph {} is too large for bedrock font: {}x{}, please lower height in the glyph config in order for it to work.", key, width, height);
                                 continue;
                             }
-                            BufferedImage resizedImage = FastBufferedImage.resizeImage(image, width, height);
+                            BufferedImage resizedImage = BufferedImageUtils.resizeImage(image, width, height);
                             int defaultAscent = height / 2 + 3; // compared to Minecraft Java, this is the ascent that Bedrock characters have
                             int ascentOffset = (defaultAscent - ascent) * 2;
                             if (ascentOffset != 0) {
