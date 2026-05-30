@@ -52,6 +52,9 @@ public class LostEngineCommand {
 
     @SuppressWarnings("UnstableApiUsage") // Dialog API
     private static int editor(@NotNull CommandContext<CommandSourceStack> context) {
+        if (!LostEngine.getInstance().getConfig().getBoolean("pack_hosting.self_hosted")) {
+            context.getSource().getSender().sendMessage("Self hosted resource pack hosting needs to be enabled in the config.yml to use the web editor.");
+        }
         Player player = Optional.ofNullable(context.getSource().getExecutor())
                 .filter(Player.class::isInstance)
                 .map(Player.class::cast)
@@ -120,7 +123,13 @@ public class LostEngineCommand {
 
         byte[] resourcePackHash;
         try {
-            ResourcePackBuilder.buildResourcePack(plugin, LostEngine.getResourcePackFile(), FileUtils.withExtension(LostEngine.getResourcePackFile(), "mcpack"), null);
+            ResourcePackBuilder.buildResourcePack(
+                    plugin,
+                    LostEngine.getResourcePackFile(),
+                    FileUtils.withExtension(LostEngine.getResourcePackFile(), "mcpack"),
+                    null,
+                    sender instanceof Player p ? p : null
+            );
             resourcePackHash = getFileHash(LostEngine.getResourcePackFile());
         } catch (IOException | NoSuchAlgorithmException e) {
             if (sender instanceof Player) {

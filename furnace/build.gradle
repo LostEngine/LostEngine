@@ -23,6 +23,7 @@ dependencies {
     compileOnly 'com.google.code.gson:gson:2.13.2'
     compileOnly 'org.jetbrains:annotations:26.0.2-1'
     compileOnly 'dev.misieur:fast:1.0.1'
+    compileOnly 'dev.misieur:packobf:0.2.1'
 
     compileOnly(project(":annotations"))
 

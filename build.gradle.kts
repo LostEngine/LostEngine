@@ -37,6 +37,7 @@ dependencies {
     implementation(project(":furnace"))
     implementation("dev.misieur:fast:1.0.3")
     implementation("dev.misieur:justamaterial:1.0-SNAPSHOT")
+    implementation("dev.misieur:packobf:0.2.1")
 
     implementation("org.luaj:luaj-jse:3.0.1")
     runtimeOnly("org.apache.bcel:bcel:6.12.0")

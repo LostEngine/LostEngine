@@ -63,7 +63,7 @@ public final class LostEngine extends JavaPlugin {
         File bedrockResourcePack = new File(getDataFolder().getAbsolutePath(), getConfig().getString("resource_pack.file_name", "resource-pack") + ".mcpack");
         try {
             logger().info("Building resource pack...");
-            ResourcePackBuilder.buildResourcePack(this, resourcePackFile, bedrockResourcePack, mappingGenerator);
+            ResourcePackBuilder.buildResourcePack(this, resourcePackFile, bedrockResourcePack, mappingGenerator, null);
             logger().info("Finished building resource pack!");
 
             if (getConfig().getBoolean("geyser_compatibility", false) && bedrockResourcePack.exists() && bedrockResourcePack.isFile()) {

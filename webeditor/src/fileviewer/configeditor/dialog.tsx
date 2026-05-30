@@ -288,7 +288,7 @@ export function NewItemDialog({
                                         <CardTitle>{step.title}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <ScrollArea className="max-h-[400px] w-ful overflow-y-auto">
+                                        <ScrollArea className="max-h-100 w-full overflow-y-auto">
                                             <div className="grid gap-6">
                                                 {step.fields.map((field) => (
                                                     <div key={field.name} className="grid gap-3">
